@@ -1,12 +1,17 @@
 /**
- * core/storage.js — save / load persistence (placeholder).
+ * core/storage.js — low-level localStorage save adapter.
  *
- * Uses localStorage so the game works on GitHub Pages with zero backend.
- * Future plug-in: add schema versioning, migration, export/import of save
- * strings, and cross-tab sync.
+ * Provides synchronous get/put/delete against localStorage so the game works
+ * on GitHub Pages with zero backend. Envelope shape, versioning, migration,
+ * autosave and export/import live in the SaveManager (js/managers/
+ * save-manager.js), which builds on this adapter — this file stays a thin,
+ * generic persistence layer. Future plug-in: cross-tab sync.
  */
 
 const SAVE_KEY = 'idle-cultivation-game:save';
+
+/** true while the previous save failed (logs once, then stays quiet). */
+let _saveFailed = false;
 
 export const Storage = {
   /**
@@ -24,16 +29,23 @@ export const Storage = {
   },
 
   /**
-   * Persist a serializable save object.
+   * Persist a serializable save object. A write failure is logged once (not
+   * on every autosave tick — the game runs for days) and clears again on the
+   * first successful write.
+   *
    * @param {object} data — plain-data save object from Game.serialize().
    * @returns {boolean} true when the save was written successfully.
    */
   save(data) {
     try {
       window.localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      _saveFailed = false;
       return true;
     } catch (error) {
-      console.error('Failed to write save:', error);
+      if (!_saveFailed) {
+        _saveFailed = true;
+        console.error('Failed to write save:', error);
+      }
       return false;
     }
   },

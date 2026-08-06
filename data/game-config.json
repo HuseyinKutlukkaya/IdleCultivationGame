@@ -16,6 +16,11 @@
     "uiRefreshRateMs": 100,
     "maxFrameDeltaMs": 250
   },
+  "save": {
+    "comment": "SaveManager tuning. autosaveIntervalMs is how often the game autosaves (0 disables the interval); saveOnUnload persists on beforeunload.",
+    "autosaveIntervalMs": 30000,
+    "saveOnUnload": true
+  },
   "offline": {
     "enabled": true,
     "maxOfflineMs": 28800000

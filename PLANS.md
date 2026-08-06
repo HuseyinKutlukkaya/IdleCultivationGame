@@ -84,7 +84,8 @@ serializes GameState.
 API: `subscribe(event, callback)`, `unsubscribe(event, callback)`,
 `emit(event, payload)`, `clear()`.
 Events describe facts, not commands. Payloads are minimal.
-Event naming: `game:loaded`, `game:saved`, `resource:changed`, `qi:gained`,
+Event naming: `game:loaded`, `game:saved`, `game:restored`, `resource:changed`,
+`qi:gained`,
 `realm:breakthrough`, `inventory:changed`, `item:created`, `pill:consumed`,
 `technique:learned`, `sect:joined`, `sect:created`, `disciple:recruited`,
 `tribulation:started`, `tribulation:finished`, `reincarnation:started`,

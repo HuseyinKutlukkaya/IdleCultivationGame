@@ -8,25 +8,24 @@
  *   - realm progression & breakthroughs
  *   - offline progress calculation
  *
- * Right now it wires config/save/state together and drives the GameLoop,
+ * Right now it wires config/state together, drives the GameLoop and exposes
+ * serialize()/restore() for the SaveManager (js/managers/save-manager.js),
  * so the plug-in points are obvious and ready for the gameplay phases.
  */
 
 import { EventBus } from './event-bus.js';
 import { GameLoop } from './game-loop.js';
 import { GameState } from './game-state.js';
+import { deepMerge } from '../utils/deep-merge.js';
 
 export class Game {
   /**
-   * @param {object} config  — parsed contents of data/game-config.json
-   * @param {object|null} save — restored save state from Storage.load(),
-   *                             or null when there is no previous save.
+   * @param {object} config — parsed contents of data/game-config.json.
    */
-  constructor(config, save) {
-    // Future plug-in: initialize resources (e.g. qi, spirit stones),
-    // apply saved state, and attach gameplay systems.
+  constructor(config) {
+    // Future plug-in: initialize resources (e.g. qi, spirit stones) and
+    // attach gameplay systems. Saved state is applied via restore().
     this.config = config;
-    this.save = save;
     // Centralized state shared by all systems (see game-state.js).
     this.state = GameState;
     this.isRunning = false;
@@ -54,8 +53,8 @@ export class Game {
 
   /**
    * Stop the simulation loop.
-   * Future plug-in: persist current state here (SaveManager is a separate
-   * roadmap item — persistence comes later).
+   * Note: persistence is handled by SaveManager (autosave interval +
+   * beforeunload); Game.stop() only halts the loop.
    */
   stop() {
     this.loop.stop();
@@ -64,12 +63,31 @@ export class Game {
 
   /**
    * Produce a serializable snapshot of the game state for saving.
-   * @returns {object} plain-data save object
+   * The GameState singleton is mutated in place by systems, so a deep copy
+   * is taken to keep the snapshot stable regardless of later changes.
+   *
+   * @returns {object} plain-data snapshot of GameState.
    */
   serialize() {
-    // Future plug-in: return resources, progression, timestamps, etc.
-    return {
-      savedAt: Date.now(),
-    };
+    return JSON.parse(JSON.stringify(GameState));
+  }
+
+  /**
+   * Apply a deserialized state snapshot onto the shared GameState singleton.
+   * Deep-merges so a save written by an older version simply leaves any
+   * newly-added keys at their current (fresh-default) values — old saves
+   * keep working. The singleton is mutated in place so every system that
+   * already holds a reference to GameState sees the restored values.
+   *
+   * @param {object} snapshot — plain-data state from SaveManager.load() or
+   *        importSave(), as produced by serialize().
+   * @returns {void}
+   */
+  restore(snapshot) {
+    if (snapshot === null || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+      console.warn('Game.restore: ignoring invalid state snapshot.');
+      return;
+    }
+    deepMerge(GameState, snapshot);
   }
 }

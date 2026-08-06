@@ -15,6 +15,7 @@ import { DataManager } from './core/data-manager.js';
 import { EventBus } from './core/event-bus.js';
 import { Game } from './core/game.js';
 import { Storage } from './core/storage.js';
+import { SaveManager } from './managers/save-manager.js';
 import { initFooter } from './ui/footer.js';
 import { initScrollReveal } from './ui/reveal.js';
 
@@ -43,26 +44,43 @@ async function bootstrap() {
       throw new Error('game-config.json failed to load.');
     }
 
-    // Restore any previously saved progress.
-    const save = Storage.load();
-    if (save) {
-      setStatus('Save found — resuming…');
-    }
-
     // Load content definitions (realms, techniques, pills, ...) from data/.
     const dataManager = new DataManager({ eventBus: EventBus });
     await dataManager.loadAll();
 
-    // Instantiate the core game object and start the simulation loop.
-    const game = new Game(config, save);
+    // Instantiate the core game object.
+    const game = new Game(config);
+
+    // Persistence: restore any previous save, then autosave. Per the
+    // startup sequence the save loads before the game loop starts.
+    const manifest = dataManager.getManifest();
+    const saveManager = new SaveManager({
+      eventBus: EventBus,
+      storage: Storage,
+      serialize: () => game.serialize(),
+      restore: (state) => game.restore(state),
+      engineVersion: (config.meta && config.meta.version) || '0.0.0',
+      contentVersion: (manifest && manifest.version) || 0,
+      autosaveIntervalMs: (config.save && config.save.autosaveIntervalMs) || 0,
+      saveOnUnload: config.save ? config.save.saveOnUnload !== false : true,
+    });
+    const restored = saveManager.load();
+
+    // Start the simulation loop, then begin autosave.
     game.start();
+    saveManager.start();
+    if (restored) {
+      setStatus('Save found — resuming…');
+    }
 
     // Expose the game instances for debugging.
     window.__game = game;
     window.__dataManager = dataManager;
+    window.__saveManager = saveManager;
 
     setStatus(
-      `Scaffold ready — ${dataManager.totalDefinitions()} definitions loaded. Game loop running.`
+      `Scaffold ready — ${dataManager.totalDefinitions()} definitions loaded. Game loop running.` +
+        (restored ? ' Save restored.' : '')
     );
   } catch (error) {
     console.error('Bootstrap failed:', error);

@@ -17,8 +17,8 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [x] EventBus — done (js/core/event-bus.js)
 - [x] Config loader (js/core/config.js)
 - [x] DataManager (load + cache + validate JSON definitions) — done (js/core/data-manager.js)
-- [ ] GameLoop (requestAnimationFrame ticker, delta time)
-- [ ] SaveManager (save/load/autosave/export/import/migration)
+- [x] GameLoop (requestAnimationFrame ticker, delta time) — done (js/core/game-loop.js)
+- [x] SaveManager (save/load/autosave/export/import/migration) — done (js/managers/save-manager.js)
 - [ ] Renderer (state → DOM, batch updates, no gameplay)
 - [ ] Offline progress (last timestamp, elapsed calc, caps, summary)
 
@@ -29,7 +29,7 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [ ] Inventory (basic)
 - [ ] Notifications (queue-based)
 - [ ] Settings
-- [ ] Autosave (interval + on unload)
+- [x] Autosave (interval + on unload) — done in SaveManager (js/managers/save-manager.js)
 
 ## Phase 3 — Cultivation
 - [ ] Realms (JSON-driven)
