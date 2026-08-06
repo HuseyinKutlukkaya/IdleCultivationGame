@@ -1,4 +1,4 @@
-# 山海录 · Idle Cultivation Game
+#  Idle Cultivation Game
 
 > *Within this repository lies a small world, recorded like an immortal's
 > cultivation journal — dark, elegant, and ever-expanding.*
