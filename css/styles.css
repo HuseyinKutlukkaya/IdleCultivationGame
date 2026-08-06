@@ -380,19 +380,48 @@ a:hover {
 }
 
 /* --------------------------------------------------------------------------
-   8. Game panel placeholders
-   Future system plug-in: these cards become live game panels; keep the
-   card layout and let the inner markup be replaced by real game UI.
+   8. Game layout (placeholder panels)
+   Static shell of the in-game screens. All values are placeholders.
+   Future system plug-in: keep the panel chrome; swap the inner markup
+   for live, data-bound UI from modules under js/.
    -------------------------------------------------------------------------- */
-.panels {
+.game {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--space-3);
 }
 
-.panel {
-  position: relative;
-  overflow: hidden;
+.resource-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.resource {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.resource__value {
+  color: var(--color-text-bright);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.game-panel {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -402,60 +431,176 @@ a:hover {
     var(--color-bg-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* Subtle sheen that sweeps across the card on hover */
-.panel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.04) 45%, transparent 60%);
-  transform: translateX(-120%);
-  transition: transform 0.6s ease;
-  pointer-events: none;
+.game-panel--wide {
+  grid-column: 1 / -1;
 }
 
-.panel:hover {
-  transform: translateY(-4px);
-  border-color: rgba(217, 164, 65, 0.45);
-  box-shadow: var(--shadow-panel), 0 0 0 1px rgba(217, 164, 65, 0.12);
+.game-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.panel:hover::after {
-  transform: translateX(120%);
-}
-
-.panel__icon {
-  font-size: 1.7rem;
+.game-panel__icon {
+  font-size: 1.3rem;
   line-height: 1;
 }
 
-.panel__title {
-  margin: 0 0 0.25rem;
+.game-panel__title {
+  margin: 0;
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--color-text-bright);
 }
 
-.panel__desc {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-}
-
-.panel__tag {
-  align-self: flex-start;
+.game-panel__tag {
+  margin-left: auto;
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-accent);
-  background: var(--color-accent-soft);
-  border: 1px solid rgba(217, 164, 65, 0.25);
+  color: var(--color-text-faint);
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  margin-top: auto;
+}
+
+.game-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.realm-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--color-accent);
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.stat__label {
+  color: var(--color-text-muted);
+}
+
+.stat__value {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress {
+  height: 8px;
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-hover));
+  border-radius: 999px;
+}
+
+.upgrade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.upgrade:last-child {
+  border-bottom: none;
+}
+
+.upgrade__cost {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.log__item {
+  display: flex;
+  gap: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.log__time {
+  color: var(--color-text-faint);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+}
+
+.setting__hint {
+  color: var(--color-text-faint);
+  font-size: 0.8rem;
+}
+
+.switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-text-faint);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.switch--on {
+  background: var(--color-accent-soft);
+  border-color: rgba(217, 164, 65, 0.45);
+}
+
+.switch--on::after {
+  transform: translateX(14px);
+  background: var(--color-accent);
 }
 
 /* --------------------------------------------------------------------------
@@ -593,6 +738,12 @@ a:hover {
 /* --------------------------------------------------------------------------
    14. Responsive tweaks
    -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .game-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 640px) {
   .nav {
     flex-direction: column;
@@ -608,7 +759,7 @@ a:hover {
     padding-top: var(--space-5);
   }
 
-  .panels {
+  .game-grid {
     grid-template-columns: 1fr;
   }
 }

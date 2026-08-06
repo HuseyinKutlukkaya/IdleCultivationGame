@@ -30,7 +30,7 @@
         <span class="nav__title">Idle Cultivation</span>
       </a>
       <nav class="nav__links" aria-label="Primary">
-        <a class="nav__link" href="#panels">Modules</a>
+        <a class="nav__link" href="#game">Game</a>
         <a class="nav__link" href="#about">About</a>
         <a class="nav__link" href="#roadmap">Roadmap</a>
       </nav>
@@ -84,73 +84,183 @@
          ============================================================ -->
     <main class="main">
       <!-- ============================================================
-           GAME PANEL PLACEHOLDERS
-           Future system plug-in: each .panel becomes a live game panel
-           (or a tab) with its own module under js/.
+           GAME LAYOUT (PLACEHOLDER)
+           Static shell of the in-game screens. All values are
+           placeholders — no gameplay implemented yet. Future system
+           plug-in: each .game-panel is backed by its own module under
+           js/, replacing static markup with live, data-bound UI.
            ============================================================ -->
-      <section class="section" id="panels">
+      <section class="section" id="game">
         <header class="section__header" data-reveal>
-          <h2 class="section__title">Game Modules</h2>
+          <h2 class="section__title">Game</h2>
           <p class="section__subtitle">
-            Placeholders for the systems that will power your cultivation —
-            no gameplay implemented yet.
+            Basic layout with placeholder values — no gameplay implemented yet.
           </p>
         </header>
 
-        <div class="panels">
-          <article class="panel" data-reveal style="--reveal-delay: 0.05s">
-            <span class="panel__icon" aria-hidden="true">🧘</span>
-            <div class="panel__body">
-              <h3 class="panel__title">Cultivation</h3>
-              <p class="panel__desc">Meditate to generate qi and deepen your foundation.</p>
-            </div>
-            <span class="panel__tag">Planned</span>
-          </article>
+        <div class="game" data-reveal>
+          <!-- Resource bar: key currencies + current realm. -->
+          <div class="resource-bar" role="list" aria-label="Resources">
+            <span class="resource" role="listitem">
+              <span class="resource__icon" aria-hidden="true">✨</span>
+              <span class="resource__label">Qi</span>
+              <span class="resource__value">0</span>
+            </span>
+            <span class="resource" role="listitem">
+              <span class="resource__icon" aria-hidden="true">💎</span>
+              <span class="resource__label">Spirit Stones</span>
+              <span class="resource__value">0</span>
+            </span>
+            <span class="resource" role="listitem">
+              <span class="resource__icon" aria-hidden="true">🌿</span>
+              <span class="resource__label">Herbs</span>
+              <span class="resource__value">0</span>
+            </span>
+            <span class="resource" role="listitem">
+              <span class="resource__icon" aria-hidden="true">⛰️</span>
+              <span class="resource__label">Realm</span>
+              <span class="resource__value">Mortal</span>
+            </span>
+          </div>
 
-          <article class="panel" data-reveal style="--reveal-delay: 0.1s">
-            <span class="panel__icon" aria-hidden="true">💎</span>
-            <div class="panel__body">
-              <h3 class="panel__title">Resources</h3>
-              <p class="panel__desc">Spirit stones, herbs, and materials for your journey.</p>
-            </div>
-            <span class="panel__tag">Planned</span>
-          </article>
+          <div class="game-grid">
+            <!-- Cultivation Realm -->
+            <article class="game-panel">
+              <header class="game-panel__head">
+                <span class="game-panel__icon" aria-hidden="true">⛰️</span>
+                <h3 class="game-panel__title">Cultivation Realm</h3>
+                <span class="game-panel__tag">Placeholder</span>
+              </header>
+              <div class="game-panel__body">
+                <p class="realm-name">Mortal Realm</p>
+                <div class="stat">
+                  <span class="stat__label">Realm progress</span>
+                  <span class="stat__value">0 / 1,000</span>
+                </div>
+                <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="1000" aria-label="Realm progress">
+                  <span class="progress__fill" style="width: 0%"></span>
+                </div>
+                <div class="stat">
+                  <span class="stat__label">Breakthrough cost</span>
+                  <span class="stat__value">—</span>
+                </div>
+                <div class="stat">
+                  <span class="stat__label">Next realm</span>
+                  <span class="stat__value">Qi Condensation</span>
+                </div>
+              </div>
+            </article>
 
-          <article class="panel" data-reveal style="--reveal-delay: 0.15s">
-            <span class="panel__icon" aria-hidden="true">⛰️</span>
-            <div class="panel__body">
-              <h3 class="panel__title">Realms</h3>
-              <p class="panel__desc">Break through bottlenecks and ascend to higher realms.</p>
-            </div>
-            <span class="panel__tag">Planned</span>
-          </article>
+            <!-- Cultivation Progress -->
+            <article class="game-panel">
+              <header class="game-panel__head">
+                <span class="game-panel__icon" aria-hidden="true">🧘</span>
+                <h3 class="game-panel__title">Cultivation Progress</h3>
+                <span class="game-panel__tag">Placeholder</span>
+              </header>
+              <div class="game-panel__body">
+                <div class="stat">
+                  <span class="stat__label">Qi</span>
+                  <span class="stat__value">0 / 100</span>
+                </div>
+                <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Qi">
+                  <span class="progress__fill" style="width: 0%"></span>
+                </div>
+                <div class="stat">
+                  <span class="stat__label">Qi per second</span>
+                  <span class="stat__value">0.0</span>
+                </div>
+                <div class="stat">
+                  <span class="stat__label">Meditations completed</span>
+                  <span class="stat__value">0</span>
+                </div>
+              </div>
+            </article>
 
-          <article class="panel" data-reveal style="--reveal-delay: 0.2s">
-            <span class="panel__icon" aria-hidden="true">📜</span>
-            <div class="panel__body">
-              <h3 class="panel__title">Techniques</h3>
-              <p class="panel__desc">Unlock skills and passive bonuses as you grow.</p>
-            </div>
-            <span class="panel__tag">Planned</span>
-          </article>
+            <!-- Resources -->
+            <article class="game-panel">
+              <header class="game-panel__head">
+                <span class="game-panel__icon" aria-hidden="true">💎</span>
+                <h3 class="game-panel__title">Resources</h3>
+                <span class="game-panel__tag">Placeholder</span>
+              </header>
+              <div class="game-panel__body">
+                <div class="stat"><span class="stat__label">Spirit Stones</span><span class="stat__value">0</span></div>
+                <div class="stat"><span class="stat__label">Herbs</span><span class="stat__value">0</span></div>
+                <div class="stat"><span class="stat__label">Qi Condensation Pills</span><span class="stat__value">0</span></div>
+                <div class="stat"><span class="stat__label">Jade</span><span class="stat__value">0</span></div>
+              </div>
+            </article>
 
-          <article class="panel" data-reveal style="--reveal-delay: 0.25s">
-            <span class="panel__icon" aria-hidden="true">🏆</span>
-            <div class="panel__body">
-              <h3 class="panel__title">Achievements</h3>
-              <p class="panel__desc">Track milestones and celebrate every breakthrough.</p>
-            </div>
-            <span class="panel__tag">Planned</span>
-          </article>
+            <!-- Upgrades -->
+            <article class="game-panel">
+              <header class="game-panel__head">
+                <span class="game-panel__icon" aria-hidden="true">📜</span>
+                <h3 class="game-panel__title">Upgrades</h3>
+                <span class="game-panel__tag">Placeholder</span>
+              </header>
+              <div class="game-panel__body">
+                <div class="upgrade"><span class="upgrade__name">Foundation Breathing</span><span class="upgrade__cost">10 💎</span></div>
+                <div class="upgrade"><span class="upgrade__name">Qi Gathering</span><span class="upgrade__cost">25 💎</span></div>
+                <div class="upgrade"><span class="upgrade__name">Meridian Cleansing</span><span class="upgrade__cost">50 💎</span></div>
+                <div class="upgrade"><span class="upgrade__name">Spirit Root Enhancement</span><span class="upgrade__cost">100 💎</span></div>
+              </div>
+            </article>
 
-          <article class="panel" data-reveal style="--reveal-delay: 0.3s">
-            <span class="panel__icon" aria-hidden="true">⚙️</span>
-            <div class="panel__body">
-              <h3 class="panel__title">Settings</h3>
-              <p class="panel__desc">Options, save management, and offline progression.</p>
-            </div>
-            <span class="panel__tag">Planned</span>
-          </article>
+            <!-- Activity Log -->
+            <article class="game-panel game-panel--wide">
+              <header class="game-panel__head">
+                <span class="game-panel__icon" aria-hidden="true">📋</span>
+                <h3 class="game-panel__title">Activity Log</h3>
+                <span class="game-panel__tag">Placeholder</span>
+              </header>
+              <ul class="log">
+                <li class="log__item"><span class="log__time">--:--</span> <span>System ready — awaiting cultivation.</span></li>
+                <li class="log__item"><span class="log__time">--:--</span> <span>Log entries will appear here.</span></li>
+              </ul>
+            </article>
+
+            <!-- Inventory -->
+            <article class="game-panel">
+              <header class="game-panel__head">
+                <span class="game-panel__icon" aria-hidden="true">🎒</span>
+                <h3 class="game-panel__title">Inventory</h3>
+                <span class="game-panel__tag">Placeholder</span>
+              </header>
+              <div class="game-panel__body">
+                <div class="stat"><span class="stat__label">Qi Condensation Pill</span><span class="stat__value">× 0</span></div>
+                <div class="stat"><span class="stat__label">Spirit Herb</span><span class="stat__value">× 0</span></div>
+                <div class="stat"><span class="stat__label">Empty slots</span><span class="stat__value">20</span></div>
+              </div>
+            </article>
+
+            <!-- Settings -->
+            <article class="game-panel">
+              <header class="game-panel__head">
+                <span class="game-panel__icon" aria-hidden="true">⚙️</span>
+                <h3 class="game-panel__title">Settings</h3>
+                <span class="game-panel__tag">Placeholder</span>
+              </header>
+              <div class="game-panel__body">
+                <div class="setting">
+                  <span class="setting__label">Offline progress</span>
+                  <span class="switch switch--on" aria-hidden="true"></span>
+                </div>
+                <div class="setting">
+                  <span class="setting__label">Sound</span>
+                  <span class="switch" aria-hidden="true"></span>
+                </div>
+                <div class="setting">
+                  <span class="setting__label">Notifications</span>
+                  <span class="switch" aria-hidden="true"></span>
+                </div>
+                <div class="setting">
+                  <span class="setting__label">Save management</span>
+                  <span class="setting__hint">Reset</span>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -174,7 +284,7 @@
           <h2 class="section__title">Roadmap</h2>
         </header>
         <ul class="roadmap" data-reveal>
-          <li class="roadmap__item"><span class="roadmap__status roadmap__status--done">Done</span> Static scaffold, landing page &amp; panel placeholders</li>
+          <li class="roadmap__item"><span class="roadmap__status roadmap__status--done">Done</span> Static scaffold, landing page &amp; game layout</li>
           <li class="roadmap__item"><span class="roadmap__status roadmap__status--todo">Next</span> Core loop: cultivation &amp; resource generation</li>
           <li class="roadmap__item"><span class="roadmap__status roadmap__status--todo">Later</span> Realms, breakthroughs, and offline progress</li>
         </ul>
