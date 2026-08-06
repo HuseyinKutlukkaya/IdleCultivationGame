@@ -8,6 +8,18 @@ pure HTML, CSS and JavaScript that runs anywhere static, including GitHub Pages.
 
 ---
 
+## A passion project
+
+Above all, this is a **passion project** — a personal playground for learning
+and practicing modern AI-assisted engineering, done the proper way. It's a
+deliberate exercise in working *with* AI agents as disciplined collaborators:
+structured roles, shared architectural rules, data-driven design, and
+one-logical-feature-per-commit. Every part of the setup is meant to be
+studied, reused, and improved.
+
+The game itself matters, but so does the craft of building it well.
+
+---
 ## What is this?
 
 A cultivation sandbox that grows with you. Meditate to gather Qi, break through
