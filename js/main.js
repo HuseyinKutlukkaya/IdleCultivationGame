@@ -13,6 +13,7 @@
 import { loadConfig } from './config.js';
 import { Game } from './game.js';
 import { Storage } from './storage.js';
+import { initUI } from './ui.js';
 
 /**
  * Small boot orchestrator.
@@ -27,6 +28,9 @@ async function bootstrap() {
   };
 
   setStatus('Loading…');
+
+  // Presentation-layer wiring (scroll reveal, footer year, etc.).
+  initUI();
 
   try {
     // Load central game config (rates, starting values, tuning).

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- SEO / social metadata -->
-  <meta name="description" content="Idle Cultivation Game — an incremental cultivation idle game. Coming soon." />
+  <meta name="description" content="Idle Cultivation Game — an incremental cultivation idle game. Hone your spirit, cycle your qi, and ascend realm by realm. Coming soon." />
   <meta name="theme-color" content="#0f1115" />
   <meta property="og:title" content="Idle Cultivation Game" />
   <meta property="og:description" content="An incremental cultivation idle game. Coming soon." />
@@ -30,38 +30,128 @@
         <span class="nav__title">Idle Cultivation</span>
       </a>
       <nav class="nav__links" aria-label="Primary">
+        <a class="nav__link" href="#panels">Modules</a>
         <a class="nav__link" href="#about">About</a>
         <a class="nav__link" href="#roadmap">Roadmap</a>
-        <a class="nav__link" href="#footer">Contact</a>
       </nav>
     </header>
 
     <!-- ============================================================
-         MAIN LANDING CONTENT
-         Placeholder marketing/landing page shown before gameplay
-         exists. Future system plug-in: replace this section with the
-         in-game HUD / play area.
+         HERO
+         Pure presentation. Future system plug-in: wire the CTA to the
+         game-start state once gameplay modules exist.
          ============================================================ -->
-    <main class="main">
-      <section class="hero">
-        <p class="hero__eyebrow">An incremental cultivation idle game</p>
-        <h1 class="hero__title">Idle Cultivation Game</h1>
-        <p class="hero__tagline">
-          Hone your spirit, cycle your qi, and ascend realm by realm —
-          even while you are away.
-        </p>
+    <section class="hero">
+      <div class="hero__aura" aria-hidden="true"></div>
+      <span class="orb orb--1" aria-hidden="true"></span>
+      <span class="orb orb--2" aria-hidden="true"></span>
+      <span class="orb orb--3" aria-hidden="true"></span>
 
-        <!-- Placeholder CTA. Future system plug-in: wire to game start
-             state once gameplay modules exist. -->
+      <p class="hero__eyebrow">
+        <span class="hero__eyebrow-line" aria-hidden="true"></span>
+        An incremental cultivation idle game
+        <span class="hero__eyebrow-line" aria-hidden="true"></span>
+      </p>
+
+      <h1 class="hero__title">
+        <span class="hero__title-main">Idle Cultivation</span>
+        <span class="hero__title-accent">Game</span>
+      </h1>
+
+      <p class="hero__tagline">
+        Hone your spirit, cycle your qi, and ascend realm by realm —
+        even while you are away.
+      </p>
+
+      <div class="hero__actions">
         <button class="btn btn--primary" id="start-game-btn" disabled>
           Coming Soon
         </button>
+        <a class="btn btn--ghost" href="#roadmap">Explore the Roadmap</a>
+      </div>
 
-        <ul class="hero__features" aria-label="Planned features">
-          <li>🧘 Meditate to cultivate qi</li>
-          <li>📈 Passive progress while offline</li>
-          <li>⛰️ Ascend through realms</li>
-        </ul>
+      <ul class="hero__features" aria-label="Planned features">
+        <li>🧘 Meditate to cultivate qi</li>
+        <li>📈 Passive progress while offline</li>
+        <li>⛰️ Ascend through realms</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================
+         MAIN LANDING CONTENT
+         Future system plug-in: replace the panels/sections below with
+         the in-game HUD / play area.
+         ============================================================ -->
+    <main class="main">
+      <!-- ============================================================
+           GAME PANEL PLACEHOLDERS
+           Future system plug-in: each .panel becomes a live game panel
+           (or a tab) with its own module under js/.
+           ============================================================ -->
+      <section class="section" id="panels">
+        <header class="section__header" data-reveal>
+          <h2 class="section__title">Game Modules</h2>
+          <p class="section__subtitle">
+            Placeholders for the systems that will power your cultivation —
+            no gameplay implemented yet.
+          </p>
+        </header>
+
+        <div class="panels">
+          <article class="panel" data-reveal style="--reveal-delay: 0.05s">
+            <span class="panel__icon" aria-hidden="true">🧘</span>
+            <div class="panel__body">
+              <h3 class="panel__title">Cultivation</h3>
+              <p class="panel__desc">Meditate to generate qi and deepen your foundation.</p>
+            </div>
+            <span class="panel__tag">Planned</span>
+          </article>
+
+          <article class="panel" data-reveal style="--reveal-delay: 0.1s">
+            <span class="panel__icon" aria-hidden="true">💎</span>
+            <div class="panel__body">
+              <h3 class="panel__title">Resources</h3>
+              <p class="panel__desc">Spirit stones, herbs, and materials for your journey.</p>
+            </div>
+            <span class="panel__tag">Planned</span>
+          </article>
+
+          <article class="panel" data-reveal style="--reveal-delay: 0.15s">
+            <span class="panel__icon" aria-hidden="true">⛰️</span>
+            <div class="panel__body">
+              <h3 class="panel__title">Realms</h3>
+              <p class="panel__desc">Break through bottlenecks and ascend to higher realms.</p>
+            </div>
+            <span class="panel__tag">Planned</span>
+          </article>
+
+          <article class="panel" data-reveal style="--reveal-delay: 0.2s">
+            <span class="panel__icon" aria-hidden="true">📜</span>
+            <div class="panel__body">
+              <h3 class="panel__title">Techniques</h3>
+              <p class="panel__desc">Unlock skills and passive bonuses as you grow.</p>
+            </div>
+            <span class="panel__tag">Planned</span>
+          </article>
+
+          <article class="panel" data-reveal style="--reveal-delay: 0.25s">
+            <span class="panel__icon" aria-hidden="true">🏆</span>
+            <div class="panel__body">
+              <h3 class="panel__title">Achievements</h3>
+              <p class="panel__desc">Track milestones and celebrate every breakthrough.</p>
+            </div>
+            <span class="panel__tag">Planned</span>
+          </article>
+
+          <article class="panel" data-reveal style="--reveal-delay: 0.3s">
+            <span class="panel__icon" aria-hidden="true">⚙️</span>
+            <div class="panel__body">
+              <h3 class="panel__title">Settings</h3>
+              <p class="panel__desc">Options, save management, and offline progression.</p>
+            </div>
+            <span class="panel__tag">Planned</span>
+          </article>
+        </div>
       </section>
 
       <!-- ============================================================
@@ -69,8 +159,10 @@
            Future system plug-in: swap for real game screens.
            ============================================================ -->
       <section class="section" id="about">
-        <h2 class="section__title">About</h2>
-        <p class="section__body">
+        <header class="section__header" data-reveal>
+          <h2 class="section__title">About</h2>
+        </header>
+        <p class="section__body" data-reveal>
           This scaffold is a production-ready static shell for an idle
           cultivation game. It runs anywhere — no build step, no server,
           ready for GitHub Pages.
@@ -78,9 +170,11 @@
       </section>
 
       <section class="section" id="roadmap">
-        <h2 class="section__title">Roadmap</h2>
-        <ul class="roadmap">
-          <li class="roadmap__item"><span class="roadmap__status roadmap__status--done">Done</span> Static scaffold &amp; landing page</li>
+        <header class="section__header" data-reveal>
+          <h2 class="section__title">Roadmap</h2>
+        </header>
+        <ul class="roadmap" data-reveal>
+          <li class="roadmap__item"><span class="roadmap__status roadmap__status--done">Done</span> Static scaffold, landing page &amp; panel placeholders</li>
           <li class="roadmap__item"><span class="roadmap__status roadmap__status--todo">Next</span> Core loop: cultivation &amp; resource generation</li>
           <li class="roadmap__item"><span class="roadmap__status roadmap__status--todo">Later</span> Realms, breakthroughs, and offline progress</li>
         </ul>

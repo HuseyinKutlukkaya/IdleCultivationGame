@@ -15,23 +15,27 @@
   --color-bg-raised: #1d2129;
 
   --color-text: #e6e6e6;
+  --color-text-bright: #f7f7f7;
   --color-text-muted: #8b93a1;
   --color-text-faint: #5c6472;
 
   --color-accent: #d9a441;
   --color-accent-hover: #e8b95c;
+  --color-accent-bright: #ffe3a3;
   --color-accent-soft: rgba(217, 164, 65, 0.14);
 
   --color-border: #2a2f38;
   --color-success: #4caf7d;
   --color-todo: #5c6472;
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: "Georgia", "Times New Roman", serif;
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
 
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 20px;
+
+  --shadow-panel: 0 8px 30px rgba(0, 0, 0, 0.4);
 
   --space-1: 0.5rem;
   --space-2: 1rem;
@@ -66,6 +70,7 @@ body {
     radial-gradient(900px 500px at 10% 10%, rgba(76, 175, 125, 0.05), transparent 55%),
     var(--color-bg);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 img {
@@ -80,6 +85,11 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* Anchored sections clear the sticky nav */
+[id] {
+  scroll-margin-top: 84px;
 }
 
 /* --------------------------------------------------------------------------
@@ -157,25 +167,110 @@ a:hover {
    5. Hero
    -------------------------------------------------------------------------- */
 .hero {
+  position: relative;
+  overflow: hidden;
   text-align: center;
   padding: var(--space-6) var(--space-2) var(--space-5);
 }
 
+/* Soft ambient backdrop behind the hero */
+.hero__aura {
+  position: absolute;
+  inset: -20% -10% -30% -10%;
+  z-index: -1;
+  background:
+    radial-gradient(60% 50% at 50% 40%, rgba(217, 164, 65, 0.1), transparent 70%),
+    radial-gradient(45% 40% at 20% 20%, rgba(76, 175, 125, 0.07), transparent 70%),
+    radial-gradient(45% 40% at 80% 15%, rgba(150, 130, 220, 0.07), transparent 70%);
+  animation: aura-drift 14s ease-in-out infinite alternate;
+}
+
+/* Floating qi orbs (decorative) */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(2px);
+  opacity: 0.5;
+}
+
+.orb--1 {
+  width: 90px;
+  height: 90px;
+  top: 18%;
+  left: 12%;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 227, 163, 0.5), rgba(217, 164, 65, 0.12) 70%);
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.orb--2 {
+  width: 60px;
+  height: 60px;
+  top: 60%;
+  right: 14%;
+  background: radial-gradient(circle at 35% 35%, rgba(76, 175, 125, 0.45), rgba(76, 175, 125, 0.1) 70%);
+  animation: float-slow 10s ease-in-out 1s infinite;
+}
+
+.orb--3 {
+  width: 40px;
+  height: 40px;
+  top: 30%;
+  right: 28%;
+  background: radial-gradient(circle at 35% 35%, rgba(150, 130, 220, 0.5), rgba(150, 130, 220, 0.1) 70%);
+  animation: float-slow 7s ease-in-out 0.5s infinite;
+}
+
 .hero__eyebrow {
-  margin: 0 0 var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
   color: var(--color-accent);
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-style: italic;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  animation: fade-up 0.6s ease both;
+}
+
+.hero__eyebrow-line {
+  width: 44px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-accent));
+}
+
+.hero__eyebrow-line:last-child {
+  background: linear-gradient(90deg, var(--color-accent), transparent);
 }
 
 .hero__title {
   margin: 0 0 var(--space-2);
-  font-size: clamp(2.2rem, 6vw, 3.5rem);
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.05;
   letter-spacing: 0.01em;
+  font-size: clamp(2.6rem, 8vw, 4.5rem);
+  animation: fade-up 0.7s 0.1s ease both;
+}
+
+.hero__title-main {
+  display: block;
+  background: linear-gradient(110deg, #f5e6c4, var(--color-accent-hover) 30%, var(--color-accent-bright) 50%, var(--color-accent-hover) 70%, #f5e6c4);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 8s linear infinite;
+}
+
+.hero__title-accent {
+  display: block;
+  color: var(--color-text-bright);
+  font-style: italic;
 }
 
 .hero__tagline {
@@ -183,6 +278,15 @@ a:hover {
   margin: 0 auto var(--space-4);
   color: var(--color-text-muted);
   font-size: clamp(1rem, 2vw, 1.15rem);
+  animation: fade-up 0.7s 0.2s ease both;
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  animation: fade-up 0.7s 0.3s ease both;
 }
 
 .hero__features {
@@ -195,6 +299,7 @@ a:hover {
   gap: var(--space-2) var(--space-3);
   color: var(--color-text-muted);
   font-size: 0.95rem;
+  animation: fade-up 0.7s 0.4s ease both;
 }
 
 /* --------------------------------------------------------------------------
@@ -209,7 +314,7 @@ a:hover {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.1s ease, background 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.1s ease, background 0.15s ease, opacity 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .btn:active:not(:disabled) {
@@ -220,14 +325,27 @@ a:hover {
   background: linear-gradient(180deg, var(--color-accent-hover), var(--color-accent));
   color: #1a1406;
   border-color: rgba(0, 0, 0, 0.2);
+  animation: pulse-glow 3.5s ease-in-out infinite;
 }
 
 .btn--primary:hover:not(:disabled) {
   background: linear-gradient(180deg, #f0c76e, var(--color-accent-hover));
 }
 
+.btn--ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+}
+
+.btn--ghost:hover {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+  text-decoration: none;
+}
+
 .btn:disabled {
-  opacity: 0.55;
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
@@ -235,13 +353,25 @@ a:hover {
    7. Generic sections
    -------------------------------------------------------------------------- */
 .section {
-  padding: var(--space-4) var(--space-2);
+  padding: var(--space-5) var(--space-2);
   border-top: 1px solid var(--color-border);
 }
 
+.section__header {
+  margin-bottom: var(--space-3);
+}
+
 .section__title {
-  margin: 0 0 var(--space-2);
-  font-size: 1.5rem;
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+}
+
+.section__subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  max-width: 40em;
 }
 
 .section__body {
@@ -250,7 +380,86 @@ a:hover {
 }
 
 /* --------------------------------------------------------------------------
-   8. Roadmap list
+   8. Game panel placeholders
+   Future system plug-in: these cards become live game panels; keep the
+   card layout and let the inner markup be replaced by real game UI.
+   -------------------------------------------------------------------------- */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Subtle sheen that sweeps across the card on hover */
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.04) 45%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+
+.panel:hover {
+  transform: translateY(-4px);
+  border-color: rgba(217, 164, 65, 0.45);
+  box-shadow: var(--shadow-panel), 0 0 0 1px rgba(217, 164, 65, 0.12);
+}
+
+.panel:hover::after {
+  transform: translateX(120%);
+}
+
+.panel__icon {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.panel__title {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text-bright);
+}
+
+.panel__desc {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.panel__tag {
+  align-self: flex-start;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border: 1px solid rgba(217, 164, 65, 0.25);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  margin-top: auto;
+}
+
+/* --------------------------------------------------------------------------
+   9. Roadmap list
    -------------------------------------------------------------------------- */
 .roadmap {
   list-style: none;
@@ -292,7 +501,21 @@ a:hover {
 }
 
 /* --------------------------------------------------------------------------
-   9. Status bar
+   10. Scroll-reveal (driven by js/ui.js, only when JS is enabled)
+   -------------------------------------------------------------------------- */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease var(--reveal-delay, 0s), transform 0.6s ease var(--reveal-delay, 0s);
+}
+
+.js [data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   11. Status bar
    -------------------------------------------------------------------------- */
 .status-bar {
   width: 100%;
@@ -304,7 +527,7 @@ a:hover {
 }
 
 /* --------------------------------------------------------------------------
-   10. Footer
+   12. Footer
    -------------------------------------------------------------------------- */
 .footer {
   border-top: 1px solid var(--color-border);
@@ -319,7 +542,56 @@ a:hover {
 }
 
 /* --------------------------------------------------------------------------
-   11. Responsive tweaks
+   13. Keyframes
+   -------------------------------------------------------------------------- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes aura-drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(40px);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 164, 65, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(217, 164, 65, 0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   14. Responsive tweaks
    -------------------------------------------------------------------------- */
 @media (max-width: 640px) {
   .nav {
@@ -334,6 +606,10 @@ a:hover {
 
   .hero {
     padding-top: var(--space-5);
+  }
+
+  .panels {
+    grid-template-columns: 1fr;
   }
 }
 
