@@ -42,7 +42,10 @@ export class GameLoop {
    * @param {object} [options] — constructor options (all optional).
    * @param {object} [options.eventBus] — pub/sub bus for loop events;
    *        defaults to the shared EventBus singleton (same pattern as
-   *        DataManager).
+   *        DataManager). The bus must provide subscribe, unsubscribe,
+   *        hasListeners and emit (see core/event-bus.js) — hasListeners
+   *        is used in the frame hot path to skip building payloads when
+   *        nobody is listening.
    * @param {number} [options.tickRateMs] — fixed simulation step interval
    *        in milliseconds (default 1000).
    * @param {number} [options.uiRefreshRateMs] — interval between
