@@ -646,7 +646,7 @@ a:hover {
 }
 
 /* --------------------------------------------------------------------------
-   10. Scroll-reveal (driven by js/ui.js, only when JS is enabled)
+   10. Scroll-reveal (driven by js/ui/reveal.js, only when JS is enabled)
    -------------------------------------------------------------------------- */
 .js [data-reveal] {
   opacity: 0;

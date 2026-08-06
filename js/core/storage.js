@@ -1,5 +1,5 @@
 /**
- * storage.js — save / load persistence (placeholder).
+ * core/storage.js — save / load persistence (placeholder).
  *
  * Uses localStorage so the game works on GitHub Pages with zero backend.
  * Future plug-in: add schema versioning, migration, export/import of save

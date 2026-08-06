@@ -7,13 +7,14 @@
  *   - Set the boot status in the status bar.
  *
  * Future system plug-in: import and start the game loop here once
- * gameplay systems are implemented (e.g. `import { Game } from './game.js'`).
+ * gameplay systems are implemented (e.g. `import { Game } from './core/game.js'`).
  */
 
-import { loadConfig } from './config.js';
-import { Game } from './game.js';
-import { Storage } from './storage.js';
-import { initUI } from './ui.js';
+import { loadConfig } from './core/config.js';
+import { Game } from './core/game.js';
+import { Storage } from './core/storage.js';
+import { initFooter } from './ui/footer.js';
+import { initScrollReveal } from './ui/reveal.js';
 
 /**
  * Small boot orchestrator.
@@ -30,7 +31,8 @@ async function bootstrap() {
   setStatus('Loading…');
 
   // Presentation-layer wiring (scroll reveal, footer year, etc.).
-  initUI();
+  initScrollReveal();
+  initFooter();
 
   try {
     // Load central game config (rates, starting values, tuning).

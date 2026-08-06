@@ -1,5 +1,5 @@
 /**
- * config.js — loads the central game config from data/game-config.json.
+ * core/config.js — loads the central game config from data/game-config.json.
  *
  * Keeps tuning numbers out of the code so designers/balancers can edit
  * values without touching JS. Loaded via fetch at bootstrap; the app is

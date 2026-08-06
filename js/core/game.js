@@ -1,5 +1,5 @@
 /**
- * game.js — core game object (placeholder).
+ * core/game.js — core game object (placeholder).
  *
  * This class is the central owner of game state and is the intended home
  * of the future simulation systems:
