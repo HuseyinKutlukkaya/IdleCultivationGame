@@ -11,6 +11,9 @@
  * Right now it only loads config/save data and exposes a tiny public API,
  * so the wiring points are obvious and ready for real implementation.
  */
+
+import { GameState } from './game-state.js';
+
 export class Game {
   /**
    * @param {object} config  — parsed contents of data/game-config.json
@@ -22,6 +25,8 @@ export class Game {
     // apply saved state, and start the ticker.
     this.config = config;
     this.save = save;
+    // Centralized state shared by all systems (see game-state.js).
+    this.state = GameState;
     this.isRunning = false;
   }
 
