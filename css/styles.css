@@ -660,6 +660,11 @@ a:hover {
   background: var(--color-success);
 }
 
+.roadmap__status--next {
+  color: #14100a;
+  background: var(--color-accent);
+}
+
 .roadmap__status--todo {
   color: var(--color-text-muted);
   background: var(--color-todo);

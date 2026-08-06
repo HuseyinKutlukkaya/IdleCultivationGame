@@ -206,6 +206,15 @@ reload works · offline calculation works · GitHub Pages compatible.
 200+ realms without noticeable slowdown. Avoid allocations, cache references,
 batch updates, render only changed elements, avoid repeated DOM queries.
 
+## Future Roadmap Page (planned)
+The landing-page roadmap section is currently static HTML that mirrors
+ROADMAP.md. Planned improvement: make it data-driven and give it its own page.
+
+- `data/roadmap.json` — single source of truth for phases/items rendered on the page.
+- Dedicated roadmap page (e.g. `roadmap.html`) listing full phase detail with statuses.
+- Renderer/system reads the JSON and renders the checklist — no hardcoded roadmap markup.
+- Do this as part of the Core Engine DataManager phase so it uses the same loader.
+
 ## Working Principle
 Build the engine once. Expand forever. Every feature: one feature, one
 responsibility, one commit, one review. Never implement five systems at once.
