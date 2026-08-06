@@ -14,7 +14,7 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [x] GameState (placeholder singleton)
 
 ## Phase 1 — Core Engine
-- [ ] EventBus — done (js/core/event-bus.js), pending integration
+- [x] EventBus — done (js/core/event-bus.js)
 - [x] Config loader (js/core/config.js)
 - [ ] DataManager (load + cache + validate JSON definitions)
 - [ ] GameLoop (requestAnimationFrame ticker, delta time)
