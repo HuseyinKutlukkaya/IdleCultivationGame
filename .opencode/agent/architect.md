@@ -1,5 +1,5 @@
 ---
-description: Project Architect — primary orchestrator. Routes work to the right subagent (Core Engineer, Gameplay Engineer, UI Renderer, Data Author, Reviewer), enforces AGENTS.md rules, and coordinates multi-zone features.
+description: Project Architect — primary orchestrator. Routes work to the right subagent (Core Engineer, Gameplay Engineer, UI Renderer, Data Author, Reviewer, Security Reviewer), enforces AGENTS.md rules, and coordinates multi-zone features.
 mode: primary
 ---
 
@@ -24,6 +24,7 @@ Route tasks to subagents based on the zone they touch:
 | UI / DOM / css / index.html | UI Renderer |
 | Game content JSON (realms, techniques, pills, spirit roots data) | Data Author |
 | Verification of finished work | Reviewer |
+| Security review of security-sensitive diffs (save/storage, data-driven rendering, user input, long-running code) | Security Reviewer |
 | Anything else / small cross-cutting tasks | Handle inline yourself |
 
 ## Workflow
@@ -31,7 +32,9 @@ Route tasks to subagents based on the zone they touch:
 2. Understand the request and map it to one or more zones.
 3. Delegate to the relevant subagent(s), in dependency order (gameplay before UI, etc.).
 4. After a subagent finishes, dispatch the Reviewer on the diff when the change
-   is architecture-sensitive or spans multiple zones.
+   is architecture-sensitive or spans multiple zones. Dispatch the Security
+   Reviewer when the change is security-sensitive (save/storage, data-driven
+   rendering, user input, or any long-running system).
 5. Loop review findings back to the responsible subagent until clean.
 6. Enforce "one logical feature per commit" and "do not modify unrelated files".
 
