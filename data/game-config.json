@@ -10,7 +10,12 @@
     "realm": 0,
     "breakthroughs": 0
   },
-  "tickRateMs": 1000,
+  "loop": {
+    "comment": "GameLoop tuning. tickRateMs is the fixed simulation step; uiRefreshRateMs throttles 'loop:uiRefresh' emissions; maxFrameDeltaMs clamps per-frame deltas so tab switches cannot cause huge time jumps.",
+    "tickRateMs": 1000,
+    "uiRefreshRateMs": 100,
+    "maxFrameDeltaMs": 250
+  },
   "offline": {
     "enabled": true,
     "maxOfflineMs": 28800000

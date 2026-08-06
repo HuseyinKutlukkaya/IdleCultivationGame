@@ -1,17 +1,19 @@
 /**
- * core/game.js — core game object (placeholder).
+ * core/game.js — core game object.
  *
- * This class is the central owner of game state and is the intended home
- * of the future simulation systems:
- *   - resource generation (cultivation / qi)
- *   - the idle game loop / ticker
+ * This class is the central owner of game state and the home of the
+ * simulation systems:
+ *   - the idle game loop / ticker (js/core/game-loop.js) — active
+ *   - resource generation (cultivation / qi) — next phase
  *   - realm progression & breakthroughs
  *   - offline progress calculation
  *
- * Right now it only loads config/save data and exposes a tiny public API,
- * so the wiring points are obvious and ready for real implementation.
+ * Right now it wires config/save/state together and drives the GameLoop,
+ * so the plug-in points are obvious and ready for the gameplay phases.
  */
 
+import { EventBus } from './event-bus.js';
+import { GameLoop } from './game-loop.js';
 import { GameState } from './game-state.js';
 
 export class Game {
@@ -22,31 +24,42 @@ export class Game {
    */
   constructor(config, save) {
     // Future plug-in: initialize resources (e.g. qi, spirit stones),
-    // apply saved state, and start the ticker.
+    // apply saved state, and attach gameplay systems.
     this.config = config;
     this.save = save;
     // Centralized state shared by all systems (see game-state.js).
     this.state = GameState;
     this.isRunning = false;
+
+    // Build the fixed-timestep loop from config.loop (data-driven tuning —
+    // never hardcode rates). Missing keys fall back to GameLoop defaults,
+    // so a partial config can never break the loop.
+    const loopConfig = (config && config.loop) || {};
+    this.loop = new GameLoop({
+      eventBus: EventBus,
+      tickRateMs: loopConfig.tickRateMs,
+      uiRefreshRateMs: loopConfig.uiRefreshRateMs,
+      maxFrameDeltaMs: loopConfig.maxFrameDeltaMs,
+    });
   }
 
   /**
-   * Start the simulation.
-   * Future plug-in: kick off requestAnimationFrame / setInterval ticker,
-   * attach listeners for gameplay actions.
+   * Start the simulation loop. Idempotent: no-op when already running.
    */
   start() {
+    if (this.isRunning) return;
+    this.loop.start();
     this.isRunning = true;
-    // TODO(gameplay): start the idle tick loop here.
   }
 
   /**
-   * Pause the simulation.
-   * Future plug-in: stop the ticker and persist state via Storage.
+   * Stop the simulation loop.
+   * Future plug-in: persist current state here (SaveManager is a separate
+   * roadmap item — persistence comes later).
    */
   stop() {
+    this.loop.stop();
     this.isRunning = false;
-    // TODO(gameplay): persist current state here.
   }
 
   /**

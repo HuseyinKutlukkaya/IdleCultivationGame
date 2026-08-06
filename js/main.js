@@ -4,10 +4,10 @@
  * Responsibilities:
  *   - Bootstrap the app once the DOM is ready.
  *   - Wire placeholder landing-page behaviors.
- *   - Set the boot status in the status bar.
+ *   - Start the game simulation loop and set the boot status in the status bar.
  *
- * Future system plug-in: import and start the game loop here once
- * gameplay systems are implemented (e.g. `import { Game } from './core/game.js'`).
+ * Future system plug-in: attach gameplay systems (meditation, qi, ...) here
+ * or via the EventBus as they are implemented.
  */
 
 import { loadConfig } from './core/config.js';
@@ -53,15 +53,17 @@ async function bootstrap() {
     const dataManager = new DataManager({ eventBus: EventBus });
     await dataManager.loadAll();
 
-    // Instantiate the (placeholder) core game object.
-    // Future plug-in: call game.start() once the game loop exists.
+    // Instantiate the core game object and start the simulation loop.
     const game = new Game(config, save);
+    game.start();
 
     // Expose the game instances for debugging.
     window.__game = game;
     window.__dataManager = dataManager;
 
-    setStatus(`Scaffold ready — ${dataManager.totalDefinitions()} definitions loaded.`);
+    setStatus(
+      `Scaffold ready — ${dataManager.totalDefinitions()} definitions loaded. Game loop running.`
+    );
   } catch (error) {
     console.error('Bootstrap failed:', error);
     setStatus('Failed to load. See console for details.');
