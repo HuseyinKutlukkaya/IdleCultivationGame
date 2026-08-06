@@ -16,7 +16,7 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 ## Phase 1 — Core Engine
 - [x] EventBus — done (js/core/event-bus.js)
 - [x] Config loader (js/core/config.js)
-- [ ] DataManager (load + cache + validate JSON definitions)
+- [x] DataManager (load + cache + validate JSON definitions) — done (js/core/data-manager.js)
 - [ ] GameLoop (requestAnimationFrame ticker, delta time)
 - [ ] SaveManager (save/load/autosave/export/import/migration)
 - [ ] Renderer (state → DOM, batch updates, no gameplay)

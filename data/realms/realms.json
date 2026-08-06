@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "PLACEHOLDER realm definitions created to exercise the DataManager pipeline. Real realm content and balancing are authored during the Cultivation phase (ROADMAP Phase 3)."
+  },
+  "definitions": [
+    {
+      "id": "mortal",
+      "name": "Mortal",
+      "description": "The starting realm of every new life. Placeholder definition.",
+      "tier": 0,
+      "placeholder": true
+    },
+    {
+      "id": "qi-gathering",
+      "name": "Qi Gathering",
+      "description": "First step on the path of cultivation. Placeholder definition.",
+      "tier": 1,
+      "placeholder": true
+    }
+  ]
+}

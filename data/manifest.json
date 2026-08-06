@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": 1,
+  "meta": {
+    "comment": "Registers every JSON definition collection loaded by the DataManager. Adding a new content type = drop JSON files under data/ and add one entry here. No code changes required."
+  },
+  "collections": [
+    {
+      "id": "realms",
+      "files": ["data/realms/realms.json"],
+      "validation": { "requiredFields": ["id", "name"], "uniqueField": "id" }
+    }
+  ]
+}

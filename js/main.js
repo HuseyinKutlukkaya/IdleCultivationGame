@@ -11,6 +11,8 @@
  */
 
 import { loadConfig } from './core/config.js';
+import { DataManager } from './core/data-manager.js';
+import { EventBus } from './core/event-bus.js';
 import { Game } from './core/game.js';
 import { Storage } from './core/storage.js';
 import { initFooter } from './ui/footer.js';
@@ -47,14 +49,19 @@ async function bootstrap() {
       setStatus('Save found — resuming…');
     }
 
+    // Load content definitions (realms, techniques, pills, ...) from data/.
+    const dataManager = new DataManager({ eventBus: EventBus });
+    await dataManager.loadAll();
+
     // Instantiate the (placeholder) core game object.
     // Future plug-in: call game.start() once the game loop exists.
     const game = new Game(config, save);
 
-    // Expose the game instance for debugging.
+    // Expose the game instances for debugging.
     window.__game = game;
+    window.__dataManager = dataManager;
 
-    setStatus('Scaffold ready — gameplay coming soon.');
+    setStatus(`Scaffold ready — ${dataManager.totalDefinitions()} definitions loaded.`);
   } catch (error) {
     console.error('Bootstrap failed:', error);
     setStatus('Failed to load. See console for details.');
