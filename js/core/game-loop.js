@@ -232,7 +232,9 @@ export class GameLoop {
     deltaMs = deltaMs < 0 ? 0 : Math.min(deltaMs, this._maxFrameDeltaMs);
 
     this._elapsedMs += deltaMs;
-    this._eventBus.emit('loop:frame', { deltaMs, elapsedMs: this._elapsedMs });
+    if (this._eventBus.hasListeners('loop:frame')) {
+      this._eventBus.emit('loop:frame', { deltaMs, elapsedMs: this._elapsedMs });
+    }
 
     // Fixed timestep: simulation code always sees deltaMs === tickRateMs.
     // Multiple updates may be drained in one frame to catch up after a
@@ -241,18 +243,22 @@ export class GameLoop {
     while (this._accumulator >= this._tickRateMs) {
       this._accumulator -= this._tickRateMs;
       this._ticks += 1;
-      this._eventBus.emit('loop:update', {
-        deltaMs: this._tickRateMs,
-        elapsedMs: this._elapsedMs,
-        tick: this._ticks,
-      });
+      if (this._eventBus.hasListeners('loop:update')) {
+        this._eventBus.emit('loop:update', {
+          deltaMs: this._tickRateMs,
+          elapsedMs: this._elapsedMs,
+          tick: this._ticks,
+        });
+      }
     }
 
     // Throttled UI-refresh pulse (at most one per frame).
     this._uiAccumulator += deltaMs;
     if (this._uiAccumulator >= this._uiRefreshRateMs) {
       this._uiAccumulator -= this._uiRefreshRateMs;
-      this._eventBus.emit('loop:uiRefresh', { elapsedMs: this._elapsedMs });
+      if (this._eventBus.hasListeners('loop:uiRefresh')) {
+        this._eventBus.emit('loop:uiRefresh', { elapsedMs: this._elapsedMs });
+      }
     }
 
     this._rafId = requestAnimationFrame(this._frame);

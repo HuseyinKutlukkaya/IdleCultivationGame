@@ -56,6 +56,19 @@ export const EventBus = {
   },
 
   /**
+   * Check whether an event has at least one subscribed callback. Lets
+   * hot-path callers (e.g. the game loop) skip building emit payloads
+   * when nobody is listening.
+   *
+   * @param {string} eventName — event to check.
+   * @returns {boolean} true when at least one callback is subscribed.
+   */
+  hasListeners(eventName) {
+    const callbacks = _listeners.get(eventName);
+    return Boolean(callbacks && callbacks.size > 0);
+  },
+
+  /**
    * Emit an event, invoking every subscribed callback with the payload.
    * A throwing callback does not prevent the remaining callbacks from
    * running; the error is logged and swallowed.
