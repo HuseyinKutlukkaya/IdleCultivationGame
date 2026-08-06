@@ -372,6 +372,132 @@ builds, unlock new origins, increase replayability, provide endless progression.
 - Save compatibility — old saves keep working whenever possible; every save
   stores engine version, content version, save version, migration version
 
+## Art Direction & UI
+
+### Overall Feel
+Dark fantasy xianxia with elegant minimalism. The UI should make the player
+feel like they are reading an immortal's cultivation journal rather than
+playing a flashy mobile game. Not anime, not cartoon, not pixel art, not
+realistic.
+
+### Visual Style
+Heavy inspiration from: Amazing Cultivation Simulator, Tale of Immortal,
+Path of Achra (minimal UI philosophy), cultivation novels, ancient Chinese
+paintings, ink wash (Shui-mo), Taoist manuscripts.
+
+Avoid: neon UI, mobile-game shiny buttons, oversaturated colors, anime
+character portraits everywhere.
+
+### General Design Philosophy
+Information density over giant buttons. Closer to an RPG management game than
+a mobile idle clicker. Clean, readable, timeless. The visuals should age well
+instead of chasing current mobile UI trends.
+
+### Color Palette
+- Background: `#101214`
+- Panels: `#181B1F`
+- Borders: `#2E343A`
+- Primary Text: `#E8E6E3`
+- Secondary Text: `#A5A7AA`
+- Success: `#5FAF5F`
+- Warning: `#C8A84E`
+- Danger: `#B24D4D`
+
+Element colors: Fire (deep crimson), Water (azure), Wood (emerald), Metal
+(silver), Earth (golden brown), Lightning (purple), Ice (pale blue), Space
+(dark indigo), Time (gold + white), Chaos (black + purple).
+
+### Typography
+No fantasy fonts. Clean fonts: Inter, Noto Sans, Source Sans. JetBrains Mono
+only for numbers. Headers slightly larger. Prioritize readability.
+
+### UI Theme
+Resembles an ancient cultivation manual — elegant, minimal, dark, organized,
+dense, readable. Never flashy.
+
+### Layout
+Dashboard-like: Realm, Resources and Character across the top; Cultivation
+Progress; then panels for Meditation, Techniques, Dao, Inventory, Artifacts,
+Pills, Sect, World, Activity Log; Bottom Bar. Initial implementation shows
+placeholder panels only — no gameplay logic, responsive layout, maintain
+existing visual style.
+
+### HUD Philosophy
+Information should always be visible. Players should not constantly switch
+screens. Major progression systems remain accessible.
+
+### Buttons
+Flat, rounded (~8px), hover glow, small animation. No glossy gradients, no
+mobile-game style buttons.
+
+### Icons
+Eventually every system receives its own icon (meditation, fire, lightning,
+technique, pill, artifact, sect, herb, world). Initially placeholders before
+proper SVG assets exist.
+
+### Character Presentation
+No full-screen anime portraits. Eventually: small illustrated portrait,
+equipment silhouette, cultivation aura, realm visual effects.
+
+### Realm Visual Effects
+Every breakthrough changes visuals: Qi Gathering (small blue aura), Foundation
+(golden particles), Core Formation (rotating golden core), Nascent Soul (tiny
+spirit behind character), Immortal (clouds, lightning, lotus bloom), Dao Lord
+(reality distortion).
+
+### Background Art Direction
+Slow cloud movement, fog, stars, leaves, snow, rain, spirit particles,
+day/night cycle, seasonal atmosphere. The world itself should feel alive.
+
+### Environment Art
+Landscape-focused: ancient mountains, floating islands, spirit rivers, pagodas,
+immortal palaces, cloud seas, massive ancient trees, ancient ruins, spirit
+beasts, moonlight, fog. Nature is more important than characters.
+
+### Character Art Direction
+Avoid anime waifus and large hero portraits. Prefer small portraits, stylized
+silhouettes, aura effects, equipment visuals.
+
+### Rarity Colors
+Common (gray), Uncommon (green), Rare (blue), Epic (purple), Legendary
+(orange), Immortal (gold), Celestial (white + gold), Divine (rainbow glow),
+Chaos (black + purple), Origin (white).
+
+### Animations
+Very subtle: progress bars, number counting, small particles, glow, pulse.
+Avoid excessive and flashy animations.
+
+### Audio Direction
+Calm: bamboo flute, guqin, wind, water, temple bells, thunder during
+tribulations, birds. No constant music loops; ambient atmosphere preferred
+over continuous soundtrack.
+
+### Asset Organization
+`assets/` holds images, sprites, audio, future SVG icons, illustrations,
+backgrounds. Planned categories: backgrounds, icons, sprites, illustrations,
+audio, future effects.
+
+### Cosmetics & Visual Rewards
+Achievements unlock titles, cosmetics, permanent bonuses. Future cosmetic
+unlocks through reincarnation; collection bonuses unlock over multiple
+reincarnations; legacy bonuses may include cosmetics.
+
+### Reincarnation Visual Progression
+Mortal: simple wooden frames, muted colors. Qi Gathering → Core Formation:
+stone and bronze accents, subtle glow. Nascent Soul: animated spiritual mist,
+lotus motifs. Immortal Realms: elegant jade, gold, celestial effects.
+Dao Lord+: cosmic backgrounds, reality distortion, animated constellations.
+The player should feel stronger through presentation, not only numerical
+progression.
+
+### Theme Defaults
+Configuration is intended to support theme defaults through configuration
+data rather than hardcoded values; configuration values live in JSON whenever
+practical.
+
+### Overall Visual Goal
+"Opening an ancient cultivation manual" — not "another idle clicker".
+
 ## Endgame
 Goals: multiple worlds, higher dimensions, ancient civilizations, world trees,
 infinite secret realms, heavenly wars, universe creation, custom sects,

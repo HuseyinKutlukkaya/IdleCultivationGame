@@ -19,7 +19,7 @@
 - Gameplay should not manipulate the DOM directly.
 
 ## Sources of Truth
-- DESIGN.md — game vision, core systems, universal rule (Grade/Quality/Compatibility).
+- DESIGN.md — game vision, core systems, universal rule (Grade/Quality/Compatibility), and Art Direction & UI (visual style, palette, layout).
 - ROADMAP.md — current milestone and phase checklist; read before starting work.
 - PLANS.md — long-term implementation plans; read alongside ROADMAP.md to know how to build what's next.
 
