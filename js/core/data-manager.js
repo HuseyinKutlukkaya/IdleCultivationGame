@@ -195,10 +195,12 @@ export class DataManager {
       ? this._manifest.collections.find((candidate) => candidate.id === collectionId)
       : undefined;
     if (!entry) {
+      // Deliberately no _status/_lastErrors write: the id is arbitrary and
+      // could come from a save file or user input, so persisting it would be
+      // an unbounded Map growth vector. Repeated calls stay cheap — no fetch,
+      // just the warn + error result below.
       const message = `Unknown collection "${collectionId}" — not listed in the manifest.`;
       console.warn(`DataManager: ${message}`);
-      this._status.set(collectionId, 'error');
-      this._lastErrors.set(collectionId, [message]);
       return { collectionId, count: 0, errors: [message] };
     }
 
