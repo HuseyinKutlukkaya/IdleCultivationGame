@@ -1,0 +1,352 @@
+/* ==========================================================================
+   Idle Cultivation Game — global styles
+   Dark theme, responsive layout, CSS custom properties for theming.
+
+   Future system plug-in: extend the :root theme tokens and add component
+   styles as gameplay UI panels are introduced.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Design tokens
+   -------------------------------------------------------------------------- */
+:root {
+  --color-bg: #0f1115;
+  --color-bg-elevated: #16191f;
+  --color-bg-raised: #1d2129;
+
+  --color-text: #e6e6e6;
+  --color-text-muted: #8b93a1;
+  --color-text-faint: #5c6472;
+
+  --color-accent: #d9a441;
+  --color-accent-hover: #e8b95c;
+  --color-accent-soft: rgba(217, 164, 65, 0.14);
+
+  --color-border: #2a2f38;
+  --color-success: #4caf7d;
+  --color-todo: #5c6472;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Georgia", "Times New Roman", serif;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2rem;
+  --space-5: 3rem;
+  --space-6: 4rem;
+
+  --max-width: 960px;
+}
+
+/* --------------------------------------------------------------------------
+   2. Reset / base
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  color: var(--color-text);
+  background:
+    radial-gradient(1200px 600px at 70% -10%, rgba(217, 164, 65, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 10% 10%, rgba(76, 175, 125, 0.05), transparent 55%),
+    var(--color-bg);
+  min-height: 100vh;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   3. Layout shell
+   -------------------------------------------------------------------------- */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-2);
+}
+
+/* --------------------------------------------------------------------------
+   4. Navigation
+   -------------------------------------------------------------------------- */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(13, 15, 19, 0.85);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.nav__brand:hover {
+  text-decoration: none;
+}
+
+.nav__logo {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.nav__links {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.nav__link {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.nav__link:hover {
+  color: var(--color-text);
+  background: var(--color-bg-elevated);
+  text-decoration: none;
+}
+
+/* --------------------------------------------------------------------------
+   5. Hero
+   -------------------------------------------------------------------------- */
+.hero {
+  text-align: center;
+  padding: var(--space-6) var(--space-2) var(--space-5);
+}
+
+.hero__eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--color-accent);
+  font-family: var(--font-serif);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.hero__title {
+  margin: 0 0 var(--space-2);
+  font-size: clamp(2.2rem, 6vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.hero__tagline {
+  max-width: 34em;
+  margin: 0 auto var(--space-4);
+  color: var(--color-text-muted);
+  font-size: clamp(1rem, 2vw, 1.15rem);
+}
+
+.hero__features {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-4) auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+/* --------------------------------------------------------------------------
+   6. Buttons
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-block;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1.5rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn--primary {
+  background: linear-gradient(180deg, var(--color-accent-hover), var(--color-accent));
+  color: #1a1406;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f0c76e, var(--color-accent-hover));
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   7. Generic sections
+   -------------------------------------------------------------------------- */
+.section {
+  padding: var(--space-4) var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.section__title {
+  margin: 0 0 var(--space-2);
+  font-size: 1.5rem;
+}
+
+.section__body {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   8. Roadmap list
+   -------------------------------------------------------------------------- */
+.roadmap {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.roadmap__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+}
+
+.roadmap__status {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.roadmap__status--done {
+  color: #0e1f16;
+  background: var(--color-success);
+}
+
+.roadmap__status--todo {
+  color: var(--color-text-muted);
+  background: var(--color-todo);
+}
+
+/* --------------------------------------------------------------------------
+   9. Status bar
+   -------------------------------------------------------------------------- */
+.status-bar {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--space-2) var(--space-3);
+  color: var(--color-text-faint);
+  font-size: 0.8rem;
+}
+
+/* --------------------------------------------------------------------------
+   10. Footer
+   -------------------------------------------------------------------------- */
+.footer {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-3);
+  text-align: center;
+  color: var(--color-text-faint);
+  font-size: 0.85rem;
+}
+
+.footer p {
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   11. Responsive tweaks
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .nav {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .nav__links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .hero {
+    padding-top: var(--space-5);
+  }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

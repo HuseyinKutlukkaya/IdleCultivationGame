@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "game": "Idle Cultivation Game",
+    "version": "0.1.0",
+    "comment": "Central tuning file. Edit numbers here instead of in JS. Future systems will read from this config."
+  },
+  "startingState": {
+    "qi": 0,
+    "realm": 0,
+    "breakthroughs": 0
+  },
+  "tickRateMs": 1000,
+  "offline": {
+    "enabled": true,
+    "maxOfflineMs": 28800000
+  },
+  "futureSystems": {
+    "comment": "Add per-system tuning blocks below as systems are implemented."
+  }
+}

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO / social metadata -->
+  <meta name="description" content="Idle Cultivation Game — an incremental cultivation idle game. Coming soon." />
+  <meta name="theme-color" content="#0f1115" />
+  <meta property="og:title" content="Idle Cultivation Game" />
+  <meta property="og:description" content="An incremental cultivation idle game. Coming soon." />
+  <meta property="og:type" content="website" />
+
+  <title>Idle Cultivation Game</title>
+
+  <!-- Favicon placeholder: replace with real art under assets/ -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>⛰️</text></svg>" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- ============================================================
+         NAV BAR
+         Future system plug-in: navigation / tabs for game panels.
+         ============================================================ -->
+    <header class="nav" id="app-nav">
+      <a class="nav__brand" href="#" aria-label="Idle Cultivation Game home">
+        <span class="nav__logo" aria-hidden="true">⛰️</span>
+        <span class="nav__title">Idle Cultivation</span>
+      </a>
+      <nav class="nav__links" aria-label="Primary">
+        <a class="nav__link" href="#about">About</a>
+        <a class="nav__link" href="#roadmap">Roadmap</a>
+        <a class="nav__link" href="#footer">Contact</a>
+      </nav>
+    </header>
+
+    <!-- ============================================================
+         MAIN LANDING CONTENT
+         Placeholder marketing/landing page shown before gameplay
+         exists. Future system plug-in: replace this section with the
+         in-game HUD / play area.
+         ============================================================ -->
+    <main class="main">
+      <section class="hero">
+        <p class="hero__eyebrow">An incremental cultivation idle game</p>
+        <h1 class="hero__title">Idle Cultivation Game</h1>
+        <p class="hero__tagline">
+          Hone your spirit, cycle your qi, and ascend realm by realm —
+          even while you are away.
+        </p>
+
+        <!-- Placeholder CTA. Future system plug-in: wire to game start
+             state once gameplay modules exist. -->
+        <button class="btn btn--primary" id="start-game-btn" disabled>
+          Coming Soon
+        </button>
+
+        <ul class="hero__features" aria-label="Planned features">
+          <li>🧘 Meditate to cultivate qi</li>
+          <li>📈 Passive progress while offline</li>
+          <li>⛰️ Ascend through realms</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================
+           PLACEHOLDER SECTIONS
+           Future system plug-in: swap for real game screens.
+           ============================================================ -->
+      <section class="section" id="about">
+        <h2 class="section__title">About</h2>
+        <p class="section__body">
+          This scaffold is a production-ready static shell for an idle
+          cultivation game. It runs anywhere — no build step, no server,
+          ready for GitHub Pages.
+        </p>
+      </section>
+
+      <section class="section" id="roadmap">
+        <h2 class="section__title">Roadmap</h2>
+        <ul class="roadmap">
+          <li class="roadmap__item"><span class="roadmap__status roadmap__status--done">Done</span> Static scaffold &amp; landing page</li>
+          <li class="roadmap__item"><span class="roadmap__status roadmap__status--todo">Next</span> Core loop: cultivation &amp; resource generation</li>
+          <li class="roadmap__item"><span class="roadmap__status roadmap__status--todo">Later</span> Realms, breakthroughs, and offline progress</li>
+        </ul>
+      </section>
+    </main>
+
+    <!-- Status line: shows that the JS bootstrap loaded. -->
+    <div class="status-bar" id="status-bar" role="status" aria-live="polite">
+      <span id="status-text">Loading…</span>
+    </div>
+
+    <!-- ============================================================
+         FOOTER
+         ============================================================ -->
+    <footer class="footer" id="footer">
+      <p>© <span id="year">2026</span> Idle Cultivation Game</p>
+    </footer>
+  </div>
+
+  <!-- ES6 module entry point. Future systems plug in here via imports. -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
