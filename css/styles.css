@@ -10,30 +10,44 @@
    1. Design tokens
    -------------------------------------------------------------------------- */
 :root {
-  --color-bg: #0f1115;
-  --color-bg-elevated: #16191f;
-  --color-bg-raised: #1d2129;
+  --color-bg: #101214;
+  --color-bg-elevated: #181b1f;
+  --color-bg-raised: #20242a;
 
-  --color-text: #e6e6e6;
-  --color-text-bright: #f7f7f7;
-  --color-text-muted: #8b93a1;
-  --color-text-faint: #5c6472;
+  --color-text: #e8e6e3;
+  --color-text-bright: #f7f6f4;
+  --color-text-muted: #a5a7aa;
+  --color-text-faint: #6a6e75;
 
-  --color-accent: #d9a441;
-  --color-accent-hover: #e8b95c;
-  --color-accent-bright: #ffe3a3;
-  --color-accent-soft: rgba(217, 164, 65, 0.14);
+  --color-accent: #c8a84e;
+  --color-accent-hover: #d9b960;
+  --color-accent-bright: #ecd692;
+  --color-accent-soft: rgba(200, 168, 78, 0.14);
 
-  --color-border: #2a2f38;
-  --color-success: #4caf7d;
-  --color-todo: #5c6472;
+  --color-border: #2e343a;
+  --color-success: #5faf5f;
+  --color-warning: #c8a84e;
+  --color-danger: #b24d4d;
+  --color-todo: #6a6e75;
 
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
+  --color-rarity-common: #a5a7aa;
+  --color-rarity-uncommon: #5faf5f;
+  --color-rarity-rare: #4d7fc8;
+  --color-rarity-epic: #8f4dc8;
+  --color-rarity-legendary: #d9843c;
+  --color-rarity-immortal: #c8a84e;
+  --color-rarity-celestial: #f7f6f4;
+  --color-rarity-divine: #e8b8d9;
+  --color-rarity-chaos: #3d2f5e;
+  --color-rarity-origin: #ffffff;
+
+  --font-sans: Inter, "Noto Sans", "Source Sans 3", ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: Inter, "Noto Sans", "Source Sans 3", ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, "Roboto Mono", monospace;
 
   --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 
   --shadow-panel: 0 8px 30px rgba(0, 0, 0, 0.4);
 
@@ -66,8 +80,8 @@ body {
   line-height: 1.6;
   color: var(--color-text);
   background:
-    radial-gradient(1200px 600px at 70% -10%, rgba(217, 164, 65, 0.08), transparent 60%),
-    radial-gradient(900px 500px at 10% 10%, rgba(76, 175, 125, 0.05), transparent 55%),
+    radial-gradient(1200px 600px at 70% -10%, rgba(200, 168, 78, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 10% 10%, rgba(95, 175, 95, 0.05), transparent 55%),
     var(--color-bg);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -119,7 +133,7 @@ a:hover {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
-  background: rgba(13, 15, 19, 0.85);
+  background: rgba(16, 18, 20, 0.85);
   backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
@@ -179,8 +193,8 @@ a:hover {
   inset: -20% -10% -30% -10%;
   z-index: -1;
   background:
-    radial-gradient(60% 50% at 50% 40%, rgba(217, 164, 65, 0.1), transparent 70%),
-    radial-gradient(45% 40% at 20% 20%, rgba(76, 175, 125, 0.07), transparent 70%),
+    radial-gradient(60% 50% at 50% 40%, rgba(200, 168, 78, 0.1), transparent 70%),
+    radial-gradient(45% 40% at 20% 20%, rgba(95, 175, 95, 0.07), transparent 70%),
     radial-gradient(45% 40% at 80% 15%, rgba(150, 130, 220, 0.07), transparent 70%);
   animation: aura-drift 14s ease-in-out infinite alternate;
 }
@@ -200,7 +214,7 @@ a:hover {
   height: 90px;
   top: 18%;
   left: 12%;
-  background: radial-gradient(circle at 35% 35%, rgba(255, 227, 163, 0.5), rgba(217, 164, 65, 0.12) 70%);
+  background: radial-gradient(circle at 35% 35%, rgba(236, 214, 146, 0.5), rgba(200, 168, 78, 0.12) 70%);
   animation: float-slow 8s ease-in-out infinite;
 }
 
@@ -209,7 +223,7 @@ a:hover {
   height: 60px;
   top: 60%;
   right: 14%;
-  background: radial-gradient(circle at 35% 35%, rgba(76, 175, 125, 0.45), rgba(76, 175, 125, 0.1) 70%);
+  background: radial-gradient(circle at 35% 35%, rgba(95, 175, 95, 0.45), rgba(95, 175, 95, 0.1) 70%);
   animation: float-slow 10s ease-in-out 1s infinite;
 }
 
@@ -259,7 +273,7 @@ a:hover {
 
 .hero__title-main {
   display: block;
-  background: linear-gradient(110deg, #f5e6c4, var(--color-accent-hover) 30%, var(--color-accent-bright) 50%, var(--color-accent-hover) 70%, #f5e6c4);
+  background: linear-gradient(110deg, #ecd692, var(--color-accent-hover) 30%, var(--color-accent-bright) 50%, var(--color-accent-hover) 70%, #ecd692);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -314,7 +328,7 @@ a:hover {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.1s ease, background 0.15s ease, opacity 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: transform 0.1s ease, background 0.15s ease, opacity 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn:active:not(:disabled) {
@@ -322,14 +336,15 @@ a:hover {
 }
 
 .btn--primary {
-  background: linear-gradient(180deg, var(--color-accent-hover), var(--color-accent));
-  color: #1a1406;
-  border-color: rgba(0, 0, 0, 0.2);
-  animation: pulse-glow 3.5s ease-in-out infinite;
+  background: var(--color-accent);
+  color: #14100a;
+  border-color: var(--color-accent);
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #f0c76e, var(--color-accent-hover));
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  box-shadow: 0 0 14px rgba(200, 168, 78, 0.35);
 }
 
 .btn--ghost {
@@ -341,6 +356,7 @@ a:hover {
 .btn--ghost:hover {
   color: var(--color-text);
   border-color: var(--color-accent);
+  box-shadow: 0 0 10px rgba(200, 168, 78, 0.15);
   text-decoration: none;
 }
 
@@ -412,6 +428,7 @@ a:hover {
 .resource__value {
   color: var(--color-text-bright);
   font-weight: 600;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -496,6 +513,7 @@ a:hover {
 
 .stat__value {
   color: var(--color-text);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -531,6 +549,7 @@ a:hover {
 
 .upgrade__cost {
   color: var(--color-text-muted);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -553,6 +572,7 @@ a:hover {
 
 .log__time {
   color: var(--color-text-faint);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
@@ -595,7 +615,7 @@ a:hover {
 
 .switch--on {
   background: var(--color-accent-soft);
-  border-color: rgba(217, 164, 65, 0.45);
+  border-color: rgba(200, 168, 78, 0.45);
 }
 
 .switch--on::after {
@@ -644,7 +664,6 @@ a:hover {
   color: var(--color-text-muted);
   background: var(--color-todo);
 }
-
 /* --------------------------------------------------------------------------
    10. Scroll-reveal (driven by js/ui/reveal.js, only when JS is enabled)
    -------------------------------------------------------------------------- */
@@ -722,16 +741,6 @@ a:hover {
 @keyframes shimmer {
   to {
     background-position: 200% center;
-  }
-}
-
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(217, 164, 65, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 0 12px rgba(217, 164, 65, 0);
   }
 }
 
