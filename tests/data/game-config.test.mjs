@@ -37,6 +37,15 @@ test('offline block declares offline progress with a sane shape', () => {
   assert.ok(offline.producers.length > 0, 'at least one producer must be declared');
 });
 
+test('meditation block declares the qi-per-second rate with a sane shape', () => {
+  const meditation = config.meditation;
+  assert.ok(meditation, 'config.meditation block must exist');
+  assert.ok(
+    Number.isFinite(meditation.baseQiPerSecond) && meditation.baseQiPerSecond >= 0,
+    'meditation.baseQiPerSecond must be a non-negative finite number'
+  );
+});
+
 test('every producer carries a non-empty id, path and ratePath', () => {
   for (const producer of config.offline.producers) {
     assert.equal(typeof producer.id, 'string', `producer missing id (${JSON.stringify(producer)})`);

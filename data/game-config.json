@@ -35,6 +35,10 @@
       }
     ]
   },
+  "meditation": {
+    "comment": "MeditationSystem tuning (Phase 2 — First Gameplay). baseQiPerSecond is the qi produced per second of active meditation before future multipliers (spirit root, realm, technique, ...). Placeholder balancing.",
+    "baseQiPerSecond": 2
+  },
   "futureSystems": {
     "comment": "Add per-system tuning blocks below as systems are implemented."
   }

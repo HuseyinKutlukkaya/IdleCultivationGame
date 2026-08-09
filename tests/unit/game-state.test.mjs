@@ -24,6 +24,12 @@ test('has the exact default placeholder shape', () => {
       lastSeenAt: 0,
     },
 
+    meditation: {
+      active: true,
+      mode: 'basic',
+      startedAt: 0,
+    },
+
     player: {
       name: 'Unnamed Cultivator',
       title: '',
@@ -94,10 +100,11 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the eleven top-level state slices', () => {
+test('exposes exactly the twelve top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'cultivation',
     'inventory',
+    'meditation',
     'meta',
     'player',
     'resources',
@@ -127,6 +134,12 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.world.time, 0);
   assert.equal(GameState.meta.lastSeenAt, 0);
   assert.equal(GameState.statistics.playtimeMs, 0);
+
+  // The meditation slice starts as a fresh active 'basic' session (the
+  // MeditationSystem syncs the per-second rate from this flag).
+  assert.equal(GameState.meditation.active, true);
+  assert.equal(GameState.meditation.mode, 'basic');
+  assert.equal(GameState.meditation.startedAt, 0);
 });
 
 test('default settings favour offline progress and stay silent by default', () => {

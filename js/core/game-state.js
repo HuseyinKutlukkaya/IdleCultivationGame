@@ -16,6 +16,7 @@
  * @typedef {Object} GameState
  * @property {Object} version — schema & game version info
  * @property {Object} meta — runtime bookkeeping (offline-progress last-seen timestamp)
+ * @property {Object} meditation — meditation session (active flag, mode, startedAt)
  * @property {Object} player — character identity and attributes
  * @property {Object} cultivation — cultivation progress and qi
  * @property {Object} resources — currency and material counts
@@ -45,6 +46,16 @@ function createGameState() {
       // every save and read on boot to measure time spent away. 0 = never
       // played before (a fresh game gets no offline progress).
       lastSeenAt: 0,
+    },
+
+    meditation: {
+      // Owned by the MeditationSystem (js/systems/meditation.js). active means
+      // the cultivator is currently meditating → produces qi every tick; mode
+      // is a placeholder key (future: focused, deep, guided, automatic);
+      // startedAt is the epoch ms the current session began (0 = no session).
+      active: true,
+      mode: 'basic',
+      startedAt: 0,
     },
 
     player: {

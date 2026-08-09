@@ -21,9 +21,11 @@ import { test, before, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventBus } from '../../js/core/event-bus.js';
 import { Game } from '../../js/core/game.js';
+import { GameState } from '../../js/core/game-state.js';
 import { DataManager } from '../../js/core/data-manager.js';
 import { SaveManager } from '../../js/managers/save-manager.js';
 import { SAVE_KEY } from '../../js/core/storage.js';
+import { MeditationSystem } from '../../js/systems/meditation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { createFakeElement } from '../helpers/fake-dom.mjs';
 import { createRevealTarget } from '../helpers/intersection-observer-stub.mjs';
@@ -53,6 +55,9 @@ const DATA_FILES = {
           capPath: 'cultivation.qiMax',
         },
       ],
+    },
+    meditation: {
+      baseQiPerSecond: 2,
     },
   },
   'data/manifest.json': {
@@ -271,6 +276,10 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.ok(globalThis.window.__dataManager instanceof DataManager);
   assert.ok(globalThis.window.__saveManager instanceof SaveManager);
   assert.ok(globalThis.window.__renderer instanceof Renderer);
+  assert.ok(globalThis.window.__meditation instanceof MeditationSystem);
+  // The fresh state is active, so the MeditationSystem constructor synced
+  // the per-second rate immediately (no save present to override it).
+  assert.equal(GameState.cultivation.qiPerSecond, 2);
   // Config + manifest + every registered collection were fetched in order.
   assert.deepEqual(fetchCalls, [
     'data/game-config.json',
@@ -349,4 +358,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.deepEqual(fetchCalls, ['data/game-config.json']);
   assert.equal(globalThis.window.__game, undefined);
   assert.equal(globalThis.window.__saveManager, undefined);
+  assert.equal(globalThis.window.__meditation, undefined);
 });

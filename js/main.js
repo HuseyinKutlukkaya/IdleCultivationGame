@@ -17,6 +17,7 @@ import { Game } from './core/game.js';
 import { OfflineProgress } from './core/offline-progress.js';
 import { Storage } from './core/storage.js';
 import { SaveManager } from './managers/save-manager.js';
+import { MeditationSystem } from './systems/meditation.js';
 import { Renderer } from './ui/renderer.js';
 import { initFooter } from './ui/footer.js';
 import { initScrollReveal } from './ui/reveal.js';
@@ -101,6 +102,18 @@ async function bootstrap() {
       renderer.refresh();
     }
 
+    // Meditation: first Phase-2 gameplay system — produces Qi every tick
+    // while the cultivator is meditating. Constructed AFTER the save restore
+    // and offline-progress apply (so it starts from the restored active flag
+    // and the away-gains are already in state) and BEFORE the game loop
+    // starts (so the very first tick finds it subscribed). It reads its
+    // per-second rate from config.meditation (data-driven, placeholder
+    // balancing) and owns the meditation slice of state.
+    const meditation = new MeditationSystem({
+      config,
+      eventBus: EventBus,
+    });
+
     // Start the simulation loop, then begin autosave.
     game.start();
     saveManager.start();
@@ -114,6 +127,7 @@ async function bootstrap() {
     window.__saveManager = saveManager;
     window.__renderer = renderer;
     window.__offlineProgress = offlineProgress;
+    window.__meditation = meditation;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)
