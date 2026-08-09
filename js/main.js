@@ -16,6 +16,7 @@ import { EventBus } from './core/event-bus.js';
 import { Game } from './core/game.js';
 import { Storage } from './core/storage.js';
 import { SaveManager } from './managers/save-manager.js';
+import { Renderer } from './ui/renderer.js';
 import { initFooter } from './ui/footer.js';
 import { initScrollReveal } from './ui/reveal.js';
 
@@ -64,6 +65,13 @@ async function bootstrap() {
       autosaveIntervalMs: (config.save && config.save.autosaveIntervalMs) || 0,
       saveOnUnload: config.save ? config.save.saveOnUnload !== false : true,
     });
+
+    // Renderer: scan and cache DOM bindings, subscribe to refresh events,
+    // and render the current state (per the startup sequence: renderer
+    // initializes → initial render → save loads → loop starts).
+    const renderer = new Renderer();
+    renderer.init();
+
     const restored = saveManager.load();
 
     // Start the simulation loop, then begin autosave.
@@ -77,6 +85,7 @@ async function bootstrap() {
     window.__game = game;
     window.__dataManager = dataManager;
     window.__saveManager = saveManager;
+    window.__renderer = renderer;
 
     setStatus(
       `Scaffold ready — ${dataManager.totalDefinitions()} definitions loaded. Game loop running.` +

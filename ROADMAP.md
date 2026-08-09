@@ -19,7 +19,7 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [x] DataManager (load + cache + validate JSON definitions) — done (js/core/data-manager.js)
 - [x] GameLoop (requestAnimationFrame ticker, delta time) — done (js/core/game-loop.js)
 - [x] SaveManager (save/load/autosave/export/import/migration) — done (js/managers/save-manager.js)
-- [ ] Renderer (state → DOM, batch updates, no gameplay)
+- [x] Renderer (state → DOM, batch updates, no gameplay) — done (js/ui/renderer.js)
 - [ ] Offline progress (last timestamp, elapsed calc, caps, summary)
 
 ## Phase 2 — First Gameplay

@@ -85,10 +85,11 @@
     <main class="main">
       <!-- ============================================================
            GAME LAYOUT (PLACEHOLDER)
-           Static shell of the in-game screens. All values are
-           placeholders — no gameplay implemented yet. Future system
-           plug-in: each .game-panel is backed by its own module under
-           js/, replacing static markup with live, data-bound UI.
+           Static shell of the in-game screens. Values are rendered
+           declaratively via data-bind attributes by js/ui/renderer.js —
+           no gameplay implemented yet. Future system plug-in: each
+           .game-panel is backed by its own module under js/ as gameplay
+           systems arrive; this markup stays the no-JS placeholder.
            ============================================================ -->
       <section class="section" id="game">
         <header class="section__header" data-reveal>
@@ -104,22 +105,22 @@
             <span class="resource" role="listitem">
               <span class="resource__icon" aria-hidden="true">✨</span>
               <span class="resource__label">Qi</span>
-              <span class="resource__value">0</span>
+              <span class="resource__value" data-bind="cultivation.qi">0</span>
             </span>
             <span class="resource" role="listitem">
               <span class="resource__icon" aria-hidden="true">💎</span>
               <span class="resource__label">Spirit Stones</span>
-              <span class="resource__value">0</span>
+              <span class="resource__value" data-bind="resources.spiritStones">0</span>
             </span>
             <span class="resource" role="listitem">
               <span class="resource__icon" aria-hidden="true">🌿</span>
               <span class="resource__label">Herbs</span>
-              <span class="resource__value">0</span>
+              <span class="resource__value" data-bind="resources.herbs">0</span>
             </span>
             <span class="resource" role="listitem">
               <span class="resource__icon" aria-hidden="true">⛰️</span>
               <span class="resource__label">Realm</span>
-              <span class="resource__value">Mortal</span>
+              <span class="resource__value" data-bind="cultivation.realm">Mortal</span>
             </span>
           </div>
 
@@ -132,21 +133,21 @@
                 <span class="game-panel__tag">Placeholder</span>
               </header>
               <div class="game-panel__body">
-                <p class="realm-name">Mortal Realm</p>
+                <p class="realm-name" data-bind="cultivation.realm" data-bind-format="{0} Realm">Mortal Realm</p>
                 <div class="stat">
                   <span class="stat__label">Realm progress</span>
-                  <span class="stat__value">0 / 1,000</span>
+                  <span class="stat__value" data-bind="cultivation.realmProgress|cultivation.realmProgressMax" data-bind-format="{0} / {1}">0 / 1,000</span>
                 </div>
-                <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="1000" aria-label="Realm progress">
+                <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="1000" aria-label="Realm progress" data-bind="cultivation.realmProgress" data-bind-max="cultivation.realmProgressMax" data-bind-mode="progress">
                   <span class="progress__fill" style="width: 0%"></span>
                 </div>
                 <div class="stat">
                   <span class="stat__label">Breakthrough cost</span>
-                  <span class="stat__value">—</span>
+                  <span class="stat__value" data-bind="cultivation.breakthroughCost">—</span>
                 </div>
                 <div class="stat">
                   <span class="stat__label">Next realm</span>
-                  <span class="stat__value">Qi Condensation</span>
+                  <span class="stat__value" data-bind="cultivation.nextRealm">Qi Condensation</span>
                 </div>
               </div>
             </article>
@@ -161,18 +162,18 @@
               <div class="game-panel__body">
                 <div class="stat">
                   <span class="stat__label">Qi</span>
-                  <span class="stat__value">0 / 100</span>
+                  <span class="stat__value" data-bind="cultivation.qi|cultivation.qiMax" data-bind-format="{0} / {1}">0 / 100</span>
                 </div>
-                <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Qi">
+                <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Qi" data-bind="cultivation.qi" data-bind-max="cultivation.qiMax" data-bind-mode="progress">
                   <span class="progress__fill" style="width: 0%"></span>
                 </div>
                 <div class="stat">
                   <span class="stat__label">Qi per second</span>
-                  <span class="stat__value">0.0</span>
+                  <span class="stat__value" data-bind="cultivation.qiPerSecond" data-bind-decimals="1">0.0</span>
                 </div>
                 <div class="stat">
                   <span class="stat__label">Meditations completed</span>
-                  <span class="stat__value">0</span>
+                  <span class="stat__value" data-bind="statistics.meditationsCompleted">0</span>
                 </div>
               </div>
             </article>
@@ -185,10 +186,10 @@
                 <span class="game-panel__tag">Placeholder</span>
               </header>
               <div class="game-panel__body">
-                <div class="stat"><span class="stat__label">Spirit Stones</span><span class="stat__value">0</span></div>
-                <div class="stat"><span class="stat__label">Herbs</span><span class="stat__value">0</span></div>
-                <div class="stat"><span class="stat__label">Qi Condensation Pills</span><span class="stat__value">0</span></div>
-                <div class="stat"><span class="stat__label">Jade</span><span class="stat__value">0</span></div>
+                <div class="stat"><span class="stat__label">Spirit Stones</span><span class="stat__value" data-bind="resources.spiritStones">0</span></div>
+                <div class="stat"><span class="stat__label">Herbs</span><span class="stat__value" data-bind="resources.herbs">0</span></div>
+                <div class="stat"><span class="stat__label">Qi Condensation Pills</span><span class="stat__value" data-bind="resources.qiCondensationPills">0</span></div>
+                <div class="stat"><span class="stat__label">Jade</span><span class="stat__value" data-bind="resources.jade">0</span></div>
               </div>
             </article>
 
@@ -228,9 +229,9 @@
                 <span class="game-panel__tag">Placeholder</span>
               </header>
               <div class="game-panel__body">
-                <div class="stat"><span class="stat__label">Qi Condensation Pill</span><span class="stat__value">× 0</span></div>
-                <div class="stat"><span class="stat__label">Spirit Herb</span><span class="stat__value">× 0</span></div>
-                <div class="stat"><span class="stat__label">Empty slots</span><span class="stat__value">20</span></div>
+                <div class="stat"><span class="stat__label">Qi Condensation Pill</span><span class="stat__value" data-bind="resources.qiCondensationPills" data-bind-format="× {0}">× 0</span></div>
+                <div class="stat"><span class="stat__label">Spirit Herb</span><span class="stat__value" data-bind="resources.herbs" data-bind-format="× {0}">× 0</span></div>
+                <div class="stat"><span class="stat__label">Empty slots</span><span class="stat__value" data-bind="inventory.slots.used" data-bind-max="inventory.slots.total" data-bind-mode="remaining">20</span></div>
               </div>
             </article>
 
@@ -244,15 +245,15 @@
               <div class="game-panel__body">
                 <div class="setting">
                   <span class="setting__label">Offline progress</span>
-                  <span class="switch switch--on" aria-hidden="true"></span>
+                  <span class="switch switch--on" aria-hidden="true" data-bind="settings.offlineProgress" data-bind-mode="switch"></span>
                 </div>
                 <div class="setting">
                   <span class="setting__label">Sound</span>
-                  <span class="switch" aria-hidden="true"></span>
+                  <span class="switch" aria-hidden="true" data-bind="settings.sound" data-bind-mode="switch"></span>
                 </div>
                 <div class="setting">
                   <span class="setting__label">Notifications</span>
-                  <span class="switch" aria-hidden="true"></span>
+                  <span class="switch" aria-hidden="true" data-bind="settings.notifications" data-bind-mode="switch"></span>
                 </div>
                 <div class="setting">
                   <span class="setting__label">Save management</span>
