@@ -3,7 +3,7 @@
 The project's automated test suite. It runs with **Node's built-in test runner**
 (`node:test`) — zero dependencies, no build step, never shipped to GitHub Pages.
 The suite grows with the game: every feature ships its tests, and the full suite
-is run at the end of every feature cycle. Current coverage: **115 tests** across
+is run at the end of every feature cycle. Current coverage: **118 tests** across
 every existing `js/` module (see the Coverage map below).
 
 ## How to run
@@ -49,6 +49,7 @@ feature touching a system knows exactly which tests to run and update.
 | Footer (`js/ui/footer.js`) | `tests/dom/footer.test.mjs` | done |
 | Scroll reveal (`js/ui/reveal.js`) | `tests/dom/reveal.test.mjs` | done |
 | Offline progress (`js/core/offline-progress.js`) | `tests/unit/offline-progress.test.mjs` | done |
+| Game config (`data/game-config.json`) | `tests/data/game-config.test.mjs` | done |
 | Meditation, Qi | `tests/unit/meditation.test.mjs`, `tests/unit/qi.test.mjs` | pending |
 | Resources, Inventory, Notifications, Settings | `tests/unit/*` | pending |
 | Realms, Breakthroughs, Tribulations | `tests/unit/realms.test.mjs`, `tests/unit/breakthroughs.test.mjs` | pending |
