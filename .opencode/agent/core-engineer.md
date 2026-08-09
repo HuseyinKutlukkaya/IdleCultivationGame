@@ -33,6 +33,9 @@ You may also touch `js/main.js` for bootstrap wiring.
   `import.meta.url`-based. Never write machine-specific absolute paths (drive
   letters, user homes, OS temp dirs, repo-folder-as-absolute-location) into
   any file. `tests/unit/path-portability.test.mjs` enforces this on every run.
+  Use `js/utils/paths.js` (`projectRoot()` / `resolveFromRoot()`) whenever a
+  dynamic default base path is needed (config, content, fixtures,
+  import/export) — the ESM equivalent of .NET's Application.StartupPath.
 - One logical feature per commit; do not modify unrelated files.
 - Well documented with JSDoc.
 

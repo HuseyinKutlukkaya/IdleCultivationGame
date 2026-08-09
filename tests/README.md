@@ -3,7 +3,7 @@
 The project's automated test suite. It runs with **Node's built-in test runner**
 (`node:test`) — zero dependencies, no build step, never shipped to GitHub Pages.
 The suite grows with the game: every feature ships its tests, and the full suite
-is run at the end of every feature cycle. Current coverage: **120 tests** across
+is run at the end of every feature cycle. Current coverage: **125 tests** across
 every existing `js/` module (see the Coverage map below).
 
 ## How to run
@@ -44,6 +44,7 @@ feature touching a system knows exactly which tests to run and update.
 | Game (`js/core/game.js`) | `tests/unit/game.test.mjs` | done |
 | Storage (`js/core/storage.js`) | `tests/unit/storage.test.mjs` | done |
 | deepMerge (`js/utils/deep-merge.js`) | `tests/unit/deep-merge.test.mjs` | done |
+| Project paths (`js/utils/paths.js`) | `tests/unit/paths.test.mjs` | done |
 | SaveManager (`js/managers/save-manager.js`) | `tests/unit/save-manager.test.mjs` + `tests/fixtures/saves/` | done |
 | Bootstrap (`js/main.js`) | `tests/integration/bootstrap.test.mjs` | done |
 | Renderer (`js/ui/renderer.js`) | `tests/dom/renderer.test.mjs` | done |

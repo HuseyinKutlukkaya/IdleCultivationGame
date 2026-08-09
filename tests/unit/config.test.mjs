@@ -28,9 +28,12 @@ test('returns the parsed config when the fetch succeeds', async (t) => {
   const result = await loadConfig();
 
   assert.deepEqual(result, config);
-  // The loader requests exactly the central tuning file.
+  // The loader requests exactly the central tuning file, resolved against
+  // the project root as an absolute URL.
   assert.equal(fetchMock.mock.callCount(), 1);
-  assert.equal(fetchMock.mock.calls[0].arguments[0], 'data/game-config.json');
+  const requested = fetchMock.mock.calls[0].arguments[0];
+  assert.ok(requested instanceof URL, 'fetch should receive a URL object');
+  assert.ok(requested.href.endsWith('/data/game-config.json'), requested.href);
 });
 
 test('returns null and logs when the response is not ok (fail-soft)', async (t) => {

@@ -40,6 +40,10 @@
 - All module imports and data reads must be relative (`./`, `../`) or based
   on `import.meta.url`. See `tests/unit/path-portability.test.mjs` for the
   automated guard that enforces this on every suite run.
+- For "the project directory" as a default base path (config, content,
+  fixtures, future file import/export), use `js/utils/paths.js`
+  (`projectRoot()` / `resolveFromRoot()`) — the ESM equivalent of .NET's
+  `AppDomain.CurrentDomain.BaseDirectory` / `Application.StartupPath`.
 
 ## Testing
 - Every feature ships with tests in `tests/`, mirroring the module zones

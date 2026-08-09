@@ -166,24 +166,42 @@ function installWindow(initialStore = new Map()) {
 }
 
 /**
+ * Normalize a fetch argument to the relative data-file key used by
+ * DATA_FILES. config.js resolves the config URL against the project root
+ * (an absolute URL/URL object), while DataManager fetches relative strings —
+ * both end with the relative key, so matching by suffix keeps the mock and
+ * the recorded call list stable.
+ *
+ * @param {string|URL} url — the fetch argument.
+ * @returns {string} the matching DATA_FILES key (or the raw string).
+ */
+function normalizeDataUrl(url) {
+  const text = String(url);
+  const known = Object.keys(DATA_FILES).find((key) => text.endsWith(key));
+  return known || text;
+}
+
+/**
  * Install the stubbed global fetch serving the canned data files.
  *
  * @param {Object<string, 'reject'|true>} [overrides] — URL → failure mode:
  *        'reject' throws, true returns a non-ok response.
- * @returns {Array<string>} the URLs the bootstrap requested.
+ * @returns {Array<string>} the normalized data-file keys the bootstrap
+ *          requested, in order.
  */
 function makeFetch(overrides = {}) {
   const calls = [];
   globalThis.fetch = async (url) => {
-    calls.push(url);
-    const failure = overrides[url];
+    const key = normalizeDataUrl(url);
+    calls.push(key);
+    const failure = overrides[key];
     if (failure === 'reject') {
-      throw new Error(`network down for ${url}`);
+      throw new Error(`network down for ${key}`);
     }
     if (failure) {
       return { ok: false, status: 500, json: async () => ({}) };
     }
-    const body = DATA_FILES[url];
+    const body = DATA_FILES[key];
     if (body === undefined) {
       return { ok: false, status: 404, json: async () => ({}) };
     }
