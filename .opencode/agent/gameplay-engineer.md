@@ -24,6 +24,10 @@ You own everything under `js/systems/` and `js/managers/`:
 - NO DOM access. UI renders state only; you never touch the DOM.
 - Content comes from `data/` JSON — never hardcode techniques, realms, pills, spirit roots, etc.
 - Follow the universal rule: important content supports Grade, Quality and Compatibility.
+- Portable paths: module imports and data reads are relative (`./`, `../`) or
+  `import.meta.url`-based. Never write machine-specific absolute paths (drive
+  letters, user homes, OS temp dirs, repo-folder-as-absolute-location) into
+  any file. `tests/unit/path-portability.test.mjs` enforces this on every run.
 - One logical feature per commit; do not modify unrelated files.
 - Well documented with JSDoc.
 

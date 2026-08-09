@@ -29,6 +29,18 @@
 - Do not modify unrelated files.
 - One logical feature per commit.
 
+## Portable Paths (Hard Rule)
+- Never write machine-specific absolute paths into any committed file — code,
+  data, tests, docs, or config. Anything before the repo folder name in a
+  path is machine-specific and forbidden.
+- Forbidden patterns: drive letters (`C:\`, `C:/`, any `X:`), user homes
+  (`C:\Users\...`, `/Users/...`, `/home/...`), OS temp/app-data dirs
+  (`AppData`, `\Temp\`), and any path that includes the repo folder as an
+  absolute location (e.g. `.../Projects/IdleCultivationGame/...`).
+- All module imports and data reads must be relative (`./`, `../`) or based
+  on `import.meta.url`. See `tests/unit/path-portability.test.mjs` for the
+  automated guard that enforces this on every suite run.
+
 ## Testing
 - Every feature ships with tests in `tests/`, mirroring the module zones
   (`tests/unit/`, `tests/dom/`, `tests/data/`, `tests/integration/`,

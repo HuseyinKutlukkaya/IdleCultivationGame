@@ -29,6 +29,10 @@ You may also touch `js/main.js` for bootstrap wiring.
 - Framework-free, GitHub Pages compatible, ES modules.
 - Communicate with other zones only through EventBus.
 - Content stays in data/ — never hardcode gameplay content.
+- Portable paths: module imports and data reads are relative (`./`, `../`) or
+  `import.meta.url`-based. Never write machine-specific absolute paths (drive
+  letters, user homes, OS temp dirs, repo-folder-as-absolute-location) into
+  any file. `tests/unit/path-portability.test.mjs` enforces this on every run.
 - One logical feature per commit; do not modify unrelated files.
 - Well documented with JSDoc.
 

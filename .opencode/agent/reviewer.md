@@ -18,6 +18,12 @@ you only read, analyze, and report findings back to the orchestrator.
 - UI renders state only; no gameplay logic or state mutation in the DOM layer.
 - Framework-free and GitHub Pages compatible.
 - One logical feature per commit; no unrelated file modifications.
+- Portable paths: no machine-specific absolute paths in any committed file —
+  drive letters (`C:\`), user homes (`C:\Users\...`, `/Users/...`, `/home/...`),
+  OS temp/app-data dirs, or any path that uses the repo folder as an absolute
+  location (`.../IdleCultivationGame/...`). All imports/reads relative or
+  `import.meta.url`-based. Enforced automatically by
+  `tests/unit/path-portability.test.mjs`.
 - Tests: the feature ships with tests in tests/ (same commit); when a changed
   module already had tests, they were updated to the new contract; no test was
   deleted to force the suite green. (The Architect runs `node --test

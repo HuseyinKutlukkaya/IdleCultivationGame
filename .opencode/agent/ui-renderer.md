@@ -22,6 +22,10 @@ You own everything under `js/ui/`, `css/`, and `index.html`.
 - No gameplay logic in the UI. Keep presentation thin.
 - Gameplay systems in `js/systems/` and `js/managers/` are off-limits.
 - Framework-free, GitHub Pages compatible.
+- Portable paths: script/css references and data reads are relative (`./`, `../`)
+  or `import.meta.url`-based. Never write machine-specific absolute paths (drive
+  letters, user homes, OS temp dirs, repo-folder-as-absolute-location) into any
+  file. `tests/unit/path-portability.test.mjs` enforces this on every run.
 - One logical feature per commit; do not modify unrelated files.
 - Well documented with JSDoc.
 

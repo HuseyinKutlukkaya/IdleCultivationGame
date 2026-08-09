@@ -23,6 +23,10 @@ You own everything under `data/`:
 - Mirror the style of `data/game-config.json` (schema, meta, keys).
 - Never invent lore unless requested; use placeholders where appropriate.
 - Do not modify JS, CSS, or HTML — content data only.
+- Portable paths: never store machine-specific absolute paths (drive letters,
+  user homes, OS temp dirs, repo-folder-as-absolute-location) in data JSON —
+  nothing referencing a developer's machine belongs in content files.
+  `tests/unit/path-portability.test.mjs` enforces this on every run.
 - One logical feature per commit; do not modify unrelated files.
 
 ## Testing

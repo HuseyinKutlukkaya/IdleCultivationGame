@@ -3,7 +3,7 @@
 The project's automated test suite. It runs with **Node's built-in test runner**
 (`node:test`) — zero dependencies, no build step, never shipped to GitHub Pages.
 The suite grows with the game: every feature ships its tests, and the full suite
-is run at the end of every feature cycle. Current coverage: **118 tests** across
+is run at the end of every feature cycle. Current coverage: **120 tests** across
 every existing `js/` module (see the Coverage map below).
 
 ## How to run
@@ -27,6 +27,7 @@ node --test "tests/**/*.test.mjs"
 | `tests/perf/` | scalability smoke checks (1,000+ definitions) | Core Engineer |
 | `tests/fixtures/` | canned data: legacy saves, exports, event streams | Core Engineer |
 | `tests/helpers/` | shared test doubles (fake DOM, raf stub, intersection-observer stub; more to come) | shared |
+| `tests/unit/path-portability.test.mjs` | repo hygiene guard: no machine-specific absolute paths in committed code/data/tests | Architect |
 
 The **Coverage map** below tracks which system maps to which test file so a
 feature touching a system knows exactly which tests to run and update.
@@ -50,6 +51,7 @@ feature touching a system knows exactly which tests to run and update.
 | Scroll reveal (`js/ui/reveal.js`) | `tests/dom/reveal.test.mjs` | done |
 | Offline progress (`js/core/offline-progress.js`) | `tests/unit/offline-progress.test.mjs` | done |
 | Game config (`data/game-config.json`) | `tests/data/game-config.test.mjs` | done |
+| Path portability (repo hygiene) | `tests/unit/path-portability.test.mjs` | done |
 | Meditation, Qi | `tests/unit/meditation.test.mjs`, `tests/unit/qi.test.mjs` | pending |
 | Resources, Inventory, Notifications, Settings | `tests/unit/*` | pending |
 | Realms, Breakthroughs, Tribulations | `tests/unit/realms.test.mjs`, `tests/unit/breakthroughs.test.mjs` | pending |
@@ -75,6 +77,11 @@ feature touching a system knows exactly which tests to run and update.
 5. Tests import the **real modules** and use Node's built-in `node:test` +
    `node:assert/strict`. DOM tests use the fake DOM in `tests/helpers/` (no
    jsdom, no frameworks).
+6. **Portable paths only.** Module imports and data reads are relative (`./`,
+   `../`) or `import.meta.url`-based. Never write machine-specific absolute
+   paths (drive letters, user homes, OS temp dirs, repo-folder-as-absolute-
+   location) into any file — the suite fails on them via
+   `tests/unit/path-portability.test.mjs`.
 
 ## Writing a new test
 

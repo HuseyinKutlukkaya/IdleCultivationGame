@@ -25,9 +25,16 @@ that runs for days without closing (idle game).
 
 ### 2. Personal / machine data (PII)
 - Real names, personal emails, phone numbers, physical or IP addresses.
-- Absolute machine paths that leak developer identity (`C:\Users\...`,
-  `/Users/...`, `/home/...`).
+- Absolute machine paths that leak developer identity — drive letters
+  (`C:\`, `C:/`), user homes (`C:\Users\...`, `/Users/...`, `/home/...`),
+  OS temp/app-data dirs (`AppData`, `\Temp\`), or any path that uses the repo
+  folder as an absolute location (`.../Projects/IdleCultivationGame/...`).
 - Usernames, local paths, or machine identifiers in comments, docs, or JSON.
+- Remember: anything before the repo folder name in a path is machine-specific
+  and forbidden. All imports and data reads must be relative (`./`, `../`) or
+  `import.meta.url`-based. The suite enforces this via
+  `tests/unit/path-portability.test.mjs` — but verify the diff too, including
+  tests/fixtures and data JSON.
 
 ### 3. Memory leaks / long-running app hygiene (the game never closes)
 - EventBus subscriptions without a matching unsubscribe on stop/destroy.
