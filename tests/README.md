@@ -24,6 +24,13 @@ node --test "tests/**/*.test.mjs"
 > test-runner regression (nodejs/node#64555) and fails; use the glob form above
 > until that is fixed. `node --test` (no arguments, auto-discovery) also works.
 
+Coverage gate (same suite, Node's built-in coverage, fails below the committed
+93% line baseline — see `tests/coverage-gate.mjs`):
+
+```bash
+npm run test:coverage
+```
+
 Real-browser E2E smoke tests (Playwright, dev-only — uses the installed Chrome,
 no browser download):
 
@@ -132,6 +139,16 @@ feature touching a system knows exactly which tests to run and update.
   the node:test glob never executes them. `package.json` is dev-only and is
   never deployed; on machines without Chrome, run
   `npx playwright install chromium` and switch `channel` to `'chromium'`.
+- **2026-08-10 — Coverage gate + Feature Gate checklist (user-approved).**
+  Two things the user had been finding "by accident" — untested code paths and
+  machine-dependent behavior — became standing gates: `npm run test:coverage`
+  fails if total line coverage drops below 93% (`tests/coverage-gate.mjs`,
+  Node's built-in coverage, zero dependencies), and AGENTS.md gained a
+  "Feature Gate" checklist every feature must clear (tests, coverage, E2E when
+  applicable, automation audit, machine-independence audit, fresh-clone
+  smoke, security review). Adopted together with the **incident → guard
+  loop**: any bug/gap found by accident becomes an automated guard + checklist
+  item + this dated note, so it can never be discovered twice.
 
 ## Writing a new test
 

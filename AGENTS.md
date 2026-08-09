@@ -60,6 +60,11 @@
   `tests/helpers/`).
 - The suite runs with Node's built-in runner — `node --test "tests/**/*.test.mjs"`
   (never ships; GitHub Pages unaffected). See `tests/README.md`.
+- Coverage is gated: `npm run test:coverage` runs the suite with Node's built-in
+  coverage and fails when total line coverage drops below **93%** (the committed
+  baseline in `tests/coverage-gate.mjs`). New code without tests lowers the
+  number and turns the gate red — untested paths surface automatically, not by
+  accident.
 - Real-browser E2E smoke tests run via Playwright — `npm run test:e2e`
   (dev-only, uses the installed Chrome; specs live in `tests/e2e/` and use
   `*.spec.mjs` so the node:test glob never executes them). Every feature that
@@ -79,6 +84,35 @@
   tests to the new contract in that same commit.
 - A failing test is never deleted to make the suite pass — either the change is
   intentional (update the test) or it is a bug (fix the code).
+- **Incident → guard loop.** Whenever a bug or gap is found by accident —
+  manually, in review, or by the user — it becomes a guard: an automated check
+  where possible (a test, a gate, a rule), a Feature Gate checklist item, and a
+  dated note in `tests/README.md`. The same mistake must never be discoverable
+  twice.
 - The full suite must be green before a feature is reported done. The Architect
-  runs it at the end of every feature cycle and loops failures back to the
-  responsible agent.
+  runs the Feature Gate at the end of every feature cycle and loops failures
+  back to the responsible agent.
+
+## Feature Gate (required before reporting any feature done)
+
+Every feature clears ALL of these before it is reported done. The Architect
+runs the gate at the end of every feature cycle; anything failing loops back to
+the responsible agent.
+
+1. **Logic tests green** — `npm test` (node:test suite).
+2. **Coverage gate green** — `npm run test:coverage`; total line coverage must
+   not drop below the committed 93% baseline.
+3. **Browser smoke green** — `npm run test:e2e` when the feature touches the
+   bootstrap (`js/main.js`), the renderer, or the save path.
+4. **Automation audit** — nothing was verified by hand that could have been
+   automated. Anything done manually during development ships as a test in the
+   same commit.
+5. **Machine-independence audit** — nothing depends on this machine: no
+   machine-specific absolute paths (the portability guard enforces), no
+   locale-sensitive assertions (Intl-formatted text), no browser/OS
+   assumptions outside the documented dev-only tooling.
+6. **Fresh-clone smoke** — when the feature touches paths, save format, config
+   loading or tooling, the change must also pass from a clean clone: clone the
+   repo into a temp dir, `npm ci`, and run the gate there.
+7. **Security review** — save/storage, data-driven rendering, user input, or
+   long-running systems get the Security Reviewer before done.
