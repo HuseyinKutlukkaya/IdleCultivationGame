@@ -2,3 +2,7 @@
 node_modules/
 dist/
 .vscode/settings.json
+
+# Playwright E2E artifacts (dev-only)
+playwright-report/
+test-results/

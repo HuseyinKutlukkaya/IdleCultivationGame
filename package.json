@@ -1,0 +1,14 @@
+{
+  "name": "idle-cultivation-game",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Idle Cultivation Game — dev-only test tooling. The shipped game is static, framework-free and dependency-free; this package is never deployed.",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}

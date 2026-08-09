@@ -28,6 +28,12 @@
 - Use placeholders where appropriate.
 - Do not modify unrelated files.
 - One logical feature per commit.
+- Whenever a clearly good option appears — new tooling, dependencies,
+  architecture, process, content, or anything that would drastically improve
+  the project (testing-related or not) — surface it to the user and ask
+  before adopting it. Never adopt major changes silently, even when they are
+  obvious improvements. The user has confirmed dependencies are acceptable
+  when they provide a major improvement; the ask-first rule still applies.
 
 ## Portable Paths (Hard Rule)
 - Never write machine-specific absolute paths into any committed file — code,
@@ -46,11 +52,26 @@
   `AppDomain.CurrentDomain.BaseDirectory` / `Application.StartupPath`.
 
 ## Testing
+- Testing is mandatory for every feature: no feature is complete without its
+  tests, and test writing is never skipped or deferred.
 - Every feature ships with tests in `tests/`, mirroring the module zones
   (`tests/unit/`, `tests/dom/`, `tests/data/`, `tests/integration/`,
-  `tests/perf/`, `tests/fixtures/`; shared doubles in `tests/helpers/`).
+  `tests/e2e/`, `tests/perf/`, `tests/fixtures/`; shared doubles in
+  `tests/helpers/`).
 - The suite runs with Node's built-in runner — `node --test "tests/**/*.test.mjs"`
-  (zero dependencies, never ships, GitHub Pages unaffected). See `tests/README.md`.
+  (never ships; GitHub Pages unaffected). See `tests/README.md`.
+- Real-browser E2E smoke tests run via Playwright — `npm run test:e2e`
+  (dev-only, uses the installed Chrome; specs live in `tests/e2e/` and use
+  `*.spec.mjs` so the node:test glob never executes them). Run them whenever a
+  feature touches the bootstrap, renderer or save paths.
+- The SHIPPED game stays zero-runtime-dependency, framework-free and static
+  (GitHub Pages compatible). The zero-dependency stance applies to what ships,
+  not to how tests run: dev-only test tooling (e.g. a real-browser E2E runner)
+  is permitted when it materially improves coverage.
+- New testing tooling that significantly changes how the suite runs must be
+  proposed to the user before adoption (see "Testing decisions" in
+  `tests/README.md`) — do not add major tooling silently, even when it is a
+  clear improvement.
 - The agent that builds a feature also writes/updates its tests, in the same
   commit. Changing a module's behavior requires updating that module's existing
   tests to the new contract in that same commit.
