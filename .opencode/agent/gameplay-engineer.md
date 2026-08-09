@@ -14,6 +14,9 @@ You own everything under `js/systems/` and `js/managers/`:
 - Implement gameplay systems that read from and mutate the shared GameState.
 - Emit and subscribe to EventBus events so systems stay decoupled.
 - Keep gameplay logic independent of UI and data structures.
+- Write and maintain the unit tests for every gameplay system you build,
+  under `tests/unit/` (one test file per system, e.g.
+  `tests/unit/qi.test.mjs`).
 
 ## Rules
 - Read/write the shared GameState instance from `js/core/game-state.js` — never create parallel state.
@@ -23,3 +26,12 @@ You own everything under `js/systems/` and `js/managers/`:
 - Follow the universal rule: important content supports Grade, Quality and Compatibility.
 - One logical feature per commit; do not modify unrelated files.
 - Well documented with JSDoc.
+
+## Testing
+- Every feature ships with its tests, in the same commit. Changing a module's
+  behavior means updating that module's existing tests to the new contract in
+  that same commit.
+- Run `node --test "tests/**/*.test.mjs"` after your change and leave the
+  suite green before reporting done. Never delete a failing test to force
+  green — either the change is intentional (update the test) or it is a bug
+  (fix the code).

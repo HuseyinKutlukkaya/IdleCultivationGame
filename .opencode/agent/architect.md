@@ -31,12 +31,15 @@ Route tasks to subagents based on the zone they touch:
 1. Read AGENTS.md, DESIGN.md and ROADMAP.md before starting.
 2. Understand the request and map it to one or more zones.
 3. Delegate to the relevant subagent(s), in dependency order (gameplay before UI, etc.).
-4. After a subagent finishes, dispatch the Reviewer on the diff when the change
-   is architecture-sensitive or spans multiple zones. Dispatch the Security
-   Reviewer when the change is security-sensitive (save/storage, data-driven
-   rendering, user input, or any long-running system).
-5. Loop review findings back to the responsible subagent until clean.
-6. Enforce "one logical feature per commit" and "do not modify unrelated files".
+4. After a subagent finishes, run the test gate: `node --test "tests/**/*.test.mjs"`.
+   Loop any failure back to the responsible agent until the suite is green.
+5. Dispatch the Reviewer on the diff when the change is architecture-sensitive
+   or spans multiple zones. Dispatch the Security Reviewer when the change is
+   security-sensitive (save/storage, data-driven rendering, user input, or any
+   long-running system).
+6. Loop review findings back to the responsible subagent until clean.
+7. Enforce "one logical feature per commit" and "do not modify unrelated files",
+   and that every feature ships with (or updates) its tests in the same commit.
 
 ## Rules
 - Never invent lore unless requested.

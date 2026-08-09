@@ -12,6 +12,9 @@ You own everything under `js/ui/`, `css/`, and `index.html`.
 - Render game state to the DOM.
 - Subscribe to EventBus events to update the UI when state changes.
 - Layout, styling, and visual presentation.
+- Write and maintain the DOM tests for everything you build, under
+  `tests/dom/` (e.g. `tests/dom/renderer.test.mjs`) using the fake-DOM
+  helpers in `tests/helpers/` (no jsdom).
 
 ## Rules
 - UI renders state only — never mutate gameplay state from the UI layer.
@@ -21,3 +24,12 @@ You own everything under `js/ui/`, `css/`, and `index.html`.
 - Framework-free, GitHub Pages compatible.
 - One logical feature per commit; do not modify unrelated files.
 - Well documented with JSDoc.
+
+## Testing
+- Every feature ships with its tests, in the same commit. Changing a module's
+  behavior means updating that module's existing tests to the new contract in
+  that same commit.
+- Run `node --test "tests/**/*.test.mjs"` after your change and leave the
+  suite green before reporting done. Never delete a failing test to force
+  green — either the change is intentional (update the test) or it is a bug
+  (fix the code).

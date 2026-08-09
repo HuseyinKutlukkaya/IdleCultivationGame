@@ -18,6 +18,10 @@ you only read, analyze, and report findings back to the orchestrator.
 - UI renders state only; no gameplay logic or state mutation in the DOM layer.
 - Framework-free and GitHub Pages compatible.
 - One logical feature per commit; no unrelated file modifications.
+- Tests: the feature ships with tests in tests/ (same commit); when a changed
+  module already had tests, they were updated to the new contract; no test was
+  deleted to force the suite green. (The Architect runs `node --test
+  "tests/**/*.test.mjs"` — you verify the discipline, not the run.)
 
 ## Output format
 Return findings as a numbered list. For each: file path, line range, issue,

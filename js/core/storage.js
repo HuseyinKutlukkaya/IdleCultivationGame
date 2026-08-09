@@ -8,7 +8,7 @@
  * generic persistence layer. Future plug-in: cross-tab sync.
  */
 
-const SAVE_KEY = 'idle-cultivation-game:save';
+export const SAVE_KEY = 'idle-cultivation-game:save';
 
 /** true while the previous save failed (logs once, then stays quiet). */
 let _saveFailed = false;

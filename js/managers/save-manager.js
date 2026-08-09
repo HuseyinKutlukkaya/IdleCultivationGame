@@ -40,7 +40,7 @@ import { EventBus } from '../core/event-bus.js';
 import { Storage } from '../core/storage.js';
 
 /** Envelope schema identifier; distinguishes game saves from arbitrary JSON. */
-const SAVE_SCHEMA = 'idle-cultivation-game/save';
+export const SAVE_SCHEMA = 'idle-cultivation-game/save';
 /** Current save envelope schema version. Bump only when the envelope shape changes. */
 const SAVE_VERSION = 1;
 /** Current migration code version. Bump whenever a migration is added or changed. */
