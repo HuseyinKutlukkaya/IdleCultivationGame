@@ -142,3 +142,38 @@ feature touching a system knows exactly which tests to run and update.
 4. Keep it deterministic and synchronous where possible; use the fake-DOM/raf
    helpers for anything DOM-touching.
 5. Run the full suite and make sure everything is still green.
+
+## Writing a new E2E test (Playwright, real browser)
+
+Real-browser scenarios live in `tests/e2e/` and run via `npm run test:e2e`.
+They are NOT node:test files — different runner, different rules:
+
+1. **Name it `<scenario>.spec.mjs`** — the `.spec.mjs` suffix is what keeps it
+   out of the `node --test "tests/**/*.test.mjs"` glob (which matches only
+   `.test.mjs` files). Never name an E2E spec with `.test.mjs`.
+2. **Import from Playwright**, not from the repo:
+   `import { test, expect } from '@playwright/test';` — the browser loads the
+   game, so there are no relative `../../js/...` imports here.
+3. **Assert on state, not formatted text.** Use the exposed debug globals —
+   `window.__game.state`, `window.__saveManager`, `window.__meditation`,
+   `window.__offlineProgress` — via `page.evaluate(...)`. Formatted DOM text
+   goes through `Intl` and is locale-dependent (e.g. `2.0` vs `2,0`); raw
+   state values are stable. Spot-check the DOM only with locale-safe matchers.
+4. **Wait for the async world.** The bootstrap and game loop are asynchronous —
+   never assume the page is settled right after `page.goto('/')`. Use
+   `await expect(page.locator(...)).toContainText(...)`, `expect.poll(...)`,
+   or `page.waitForFunction(...)`.
+5. **Always `page.goto('/')` against the static server.** The config starts
+   `tests/e2e/static-server.mjs` automatically; never open `file://` URLs
+   (module scripts and `fetch()` are blocked over `file://` in Chrome).
+6. **When do I write one?** Every feature that touches the bootstrap
+   (`js/main.js`), the renderer, or the save path ships (or extends) a spec in
+   `tests/e2e/` in the same commit — pure logic features rely on node:test
+   only.
+7. **Keep them small and deterministic.** A spec is a smoke test of a real
+   user-visible flow (boot, live numbers, save round-trip), not a logic
+   re-run of unit tests. If a spec starts needing timing hacks or long
+   `waitForTimeout`, the assertion is probably in the wrong layer.
+8. **Run and watch:** `npm run test:e2e` (headless, installed Chrome);
+   `npx playwright test --headed` to watch it in a visible browser; failed
+   runs leave a trace under `test-results/`.

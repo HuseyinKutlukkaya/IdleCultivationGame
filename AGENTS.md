@@ -62,8 +62,10 @@
   (never ships; GitHub Pages unaffected). See `tests/README.md`.
 - Real-browser E2E smoke tests run via Playwright — `npm run test:e2e`
   (dev-only, uses the installed Chrome; specs live in `tests/e2e/` and use
-  `*.spec.mjs` so the node:test glob never executes them). Run them whenever a
-  feature touches the bootstrap, renderer or save paths.
+  `*.spec.mjs` so the node:test glob never executes them). Every feature that
+  touches the bootstrap, renderer or save paths ships (or extends) its E2E
+  spec in the same commit; how-to in `tests/README.md` ("Writing a new E2E
+  test").
 - The SHIPPED game stays zero-runtime-dependency, framework-free and static
   (GitHub Pages compatible). The zero-dependency stance applies to what ships,
   not to how tests run: dev-only test tooling (e.g. a real-browser E2E runner)
