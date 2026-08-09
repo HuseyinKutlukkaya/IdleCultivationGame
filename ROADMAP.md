@@ -20,7 +20,7 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [x] GameLoop (requestAnimationFrame ticker, delta time) — done (js/core/game-loop.js)
 - [x] SaveManager (save/load/autosave/export/import/migration) — done (js/managers/save-manager.js)
 - [x] Renderer (state → DOM, batch updates, no gameplay) — done (js/ui/renderer.js)
-- [ ] Offline progress (last timestamp, elapsed calc, caps, summary)
+- [x] Offline progress (last timestamp, elapsed calc, caps, summary) — done (js/core/offline-progress.js)
 
 ## Phase 2 — First Gameplay
 - [ ] Meditation (first gameplay system, produces Qi)

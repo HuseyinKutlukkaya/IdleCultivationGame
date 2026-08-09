@@ -23,6 +23,7 @@ import { EventBus } from '../../js/core/event-bus.js';
 import { Game } from '../../js/core/game.js';
 import { DataManager } from '../../js/core/data-manager.js';
 import { SaveManager } from '../../js/managers/save-manager.js';
+import { SAVE_KEY } from '../../js/core/storage.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { createFakeElement } from '../helpers/fake-dom.mjs';
 import { createRevealTarget } from '../helpers/intersection-observer-stub.mjs';
@@ -31,12 +32,28 @@ import { installRafStub, uninstallRafStub } from '../helpers/raf-stub.mjs';
 /** The bootstrap function main.js registers for DOMContentLoaded. */
 let domContentLoaded = null;
 
+/** One hour in milliseconds (used to seed an away-from-game gap). */
+const HOUR_MS = 3600000;
+
 /** Canned data files served by the stubbed fetch, keyed by URL. */
 const DATA_FILES = {
   'data/game-config.json': {
     meta: { game: 'Idle Cultivation Game', version: '0.1.0' },
     loop: { tickRateMs: 1000, uiRefreshRateMs: 100, maxFrameDeltaMs: 250 },
     save: { autosaveIntervalMs: 30000, saveOnUnload: true },
+    offline: {
+      enabled: true,
+      maxOfflineMs: 8 * HOUR_MS,
+      producers: [
+        {
+          id: 'qi',
+          label: 'Qi',
+          path: 'cultivation.qi',
+          ratePath: 'cultivation.qiPerSecond',
+          capPath: 'cultivation.qiMax',
+        },
+      ],
+    },
   },
   'data/manifest.json': {
     version: 1,
@@ -108,14 +125,18 @@ function installDocument({ statusElement }) {
 }
 
 /**
- * Install the fake window: localStorage (Map-backed), autosave listeners and
- * interval recorders for SaveManager.start(), plus the debug-global surface
- * bootstrap writes __game/__dataManager/__saveManager/__renderer onto.
+ * Install the fake window: localStorage (Map-backed, optionally pre-seeded),
+ * autosave listeners and interval recorders for SaveManager.start(), plus the
+ * debug-global surface bootstrap writes __game/__dataManager/__saveManager/
+ * __renderer/__offlineProgress onto.
  *
- * @returns {{ intervals: Array<{handle: number, ms: number}> }} recorders.
+ * @param {Map<string, string>} [initialStore] — pre-seeded localStorage
+ *        contents (e.g. a saved game written before the boot).
+ * @returns {{ listeners: Array, intervals: Array<{handle: number, ms: number}> }}
+ *          the recorded listeners and intervals.
  */
-function installWindow() {
-  const store = new Map();
+function installWindow(initialStore = new Map()) {
+  const store = initialStore;
   const listeners = [];
   const intervals = [];
   globalThis.window = {
@@ -243,6 +264,51 @@ test('successful bootstrap wires the app globals and reports the definition coun
     intervals.map((interval) => interval.ms),
     [30000]
   );
+});
+
+test('bootstrap applies offline progress from a restored save and reports the gains', async (t) => {
+  const statusElement = createFakeElement();
+  installDocument({ statusElement });
+
+  // Seed a save written ~2h ago: the qi producer in the canned config runs
+  // at 2 qi/s against a 100,000 cap, so the boot must add ~14,400 qi and
+  // report the gains in the status bar.
+  const awayMs = 2 * HOUR_MS;
+  const lastSeenAt = Date.now() - awayMs;
+  const store = new Map([
+    [
+      SAVE_KEY,
+      JSON.stringify({
+        schema: 'idle-cultivation-game/save',
+        saveVersion: 1,
+        engineVersion: '0.1.0',
+        contentVersion: 1,
+        migrationVersion: 1,
+        savedAt: lastSeenAt,
+        state: {
+          meta: { lastSeenAt },
+          cultivation: { qi: 0, qiMax: 100000, qiPerSecond: 2 },
+        },
+      }),
+    ],
+  ]);
+  installWindow(store);
+  makeFetch();
+  const errorMock = t.mock.method(console, 'error', () => {});
+
+  await domContentLoaded();
+
+  assert.equal(errorMock.mock.callCount(), 0);
+  // The boot runs against the real clock, so the exact amount tolerates a
+  // few seconds of boot latency: "2h" and +14400..+14409 qi at a 2/s rate.
+  assert.match(
+    statusElement.textContent,
+    /Save restored\. Offline gains: 2h \(Qi: \+1440\d\)/,
+    `unexpected status text: ${statusElement.textContent}`
+  );
+  // The offline system is exposed for debugging and ran enabled.
+  assert.ok(globalThis.window.__offlineProgress.isEnabled);
+  assert.equal(globalThis.window.__offlineProgress.producers.length, 1);
 });
 
 test('config-load failure sets the error status and logs to the console', async (t) => {

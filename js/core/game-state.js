@@ -15,6 +15,7 @@
  *
  * @typedef {Object} GameState
  * @property {Object} version — schema & game version info
+ * @property {Object} meta — runtime bookkeeping (offline-progress last-seen timestamp)
  * @property {Object} player — character identity and attributes
  * @property {Object} cultivation — cultivation progress and qi
  * @property {Object} resources — currency and material counts
@@ -36,6 +37,14 @@ function createGameState() {
     version: {
       schema: 1,
       game: '0.1.0',
+    },
+
+    meta: {
+      // Wall-clock (epoch ms) of the end of the last active session. Owned by
+      // the OfflineProgress system (js/core/offline-progress.js): stamped on
+      // every save and read on boot to measure time spent away. 0 = never
+      // played before (a fresh game gets no offline progress).
+      lastSeenAt: 0,
     },
 
     player: {

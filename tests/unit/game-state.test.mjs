@@ -20,6 +20,10 @@ test('has the exact default placeholder shape', () => {
       game: '0.1.0',
     },
 
+    meta: {
+      lastSeenAt: 0,
+    },
+
     player: {
       name: 'Unnamed Cultivator',
       title: '',
@@ -90,10 +94,11 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the ten top-level state slices', () => {
+test('exposes exactly the eleven top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'cultivation',
     'inventory',
+    'meta',
     'player',
     'resources',
     'sect',
@@ -120,6 +125,7 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.inventory.slots.used, 0);
   assert.equal(GameState.sect.contributions, 0);
   assert.equal(GameState.world.time, 0);
+  assert.equal(GameState.meta.lastSeenAt, 0);
   assert.equal(GameState.statistics.playtimeMs, 0);
 });
 

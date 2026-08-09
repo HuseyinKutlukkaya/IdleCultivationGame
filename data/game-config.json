@@ -22,8 +22,18 @@
     "saveOnUnload": true
   },
   "offline": {
+    "comment": "OfflineProgress tuning. maxOfflineMs caps how much away-time is simulated per session (0 disables gains). producers declares every resource that accrues while away: path = state path gains are added to, ratePath = state path of the per-second rate, capPath = optional state path of the resource cap. Add a producer whenever a new per-second resource system lands (herbs, sect income, ...) — no code changes required.",
     "enabled": true,
-    "maxOfflineMs": 28800000
+    "maxOfflineMs": 28800000,
+    "producers": [
+      {
+        "id": "qi",
+        "label": "Qi",
+        "path": "cultivation.qi",
+        "ratePath": "cultivation.qiPerSecond",
+        "capPath": "cultivation.qiMax"
+      }
+    ]
   },
   "futureSystems": {
     "comment": "Add per-system tuning blocks below as systems are implemented."

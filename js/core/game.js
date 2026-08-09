@@ -6,7 +6,8 @@
  *   - the idle game loop / ticker (js/core/game-loop.js) — active
  *   - resource generation (cultivation / qi) — next phase
  *   - realm progression & breakthroughs
- *   - offline progress calculation
+ *   - offline progress calculation (js/core/offline-progress.js) — done;
+ *     stamped on save and applied by the bootstrap before the loop starts
  *
  * Right now it wires config/state together, drives the GameLoop and exposes
  * serialize()/restore() for the SaveManager (js/managers/save-manager.js),
