@@ -194,17 +194,18 @@
             </article>
 
             <!-- Upgrades -->
-            <article class="game-panel">
+            <article class="game-panel" data-upgrades-panel>
               <header class="game-panel__head">
                 <span class="game-panel__icon" aria-hidden="true">📜</span>
                 <h3 class="game-panel__title">Upgrades</h3>
                 <span class="game-panel__tag">Placeholder</span>
               </header>
-              <div class="game-panel__body">
-                <div class="upgrade"><span class="upgrade__name">Foundation Breathing</span><span class="upgrade__cost">10 💎</span></div>
-                <div class="upgrade"><span class="upgrade__name">Qi Gathering</span><span class="upgrade__cost">25 💎</span></div>
-                <div class="upgrade"><span class="upgrade__name">Meridian Cleansing</span><span class="upgrade__cost">50 💎</span></div>
-                <div class="upgrade"><span class="upgrade__name">Spirit Root Enhancement</span><span class="upgrade__cost">100 💎</span></div>
+              <div class="game-panel__body game-panel__body--upgrades">
+                <!-- Upgrade rows are populated by js/ui/upgrades-panel.js from
+                     the data/upgrades/upgrades.json catalog at init time, and
+                     re-rendered after every successful purchase. They are
+                     intentionally NOT hardcoded here — the catalog is the
+                     data-driven source of truth. -->
               </div>
             </article>
 

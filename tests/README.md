@@ -4,7 +4,7 @@ The project's automated test suite. It runs with **Node's built-in test runner**
 (`node:test`) — no build step, never shipped to GitHub Pages. The suite grows
 with the game: testing is mandatory for every feature (never skipped or
 deferred), and the full suite is run at the end of every feature cycle. Current
-coverage: **352 tests** across every existing `js/` module (see `Coverage map`
+coverage: **397 tests** across every existing `js/` module (see `Coverage map`
 below).
 
 The **shipped game stays zero-runtime-dependency, framework-free and static**
@@ -98,6 +98,9 @@ feature touching a system knows exactly which tests to run and update.
 | Notation (`js/ui/notation.js`) | `tests/unit/notation.test.mjs` | done |
 | Inventory | `tests/unit/inventory.test.mjs` | done |
 | Item content (`data/items/items.json`) | `tests/data/items.test.mjs` | done |
+| Upgrade content (`data/upgrades/upgrades.json`) | `tests/data/upgrades.test.mjs` | done |
+| Upgrade system | `tests/unit/upgrades.test.mjs` | done |
+| Upgrades panel (DOM) | `tests/unit/upgrades-panel.test.mjs` | done |
 | Notifications (queue) | `tests/unit/notification-manager.test.mjs` + `tests/dom/activity-log.test.mjs` | done |
 | Activity Log (DOM) | `tests/dom/activity-log.test.mjs` | done |
 | Settings panel | `tests/unit/settings-panel.test.mjs` | done |

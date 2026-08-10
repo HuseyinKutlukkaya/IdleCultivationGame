@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "PHASE 2 starter upgrade catalog (ROADMAP Upgrades (basic purchasable boosts)). Each upgrade is data-driven: a player spends resources to buy levels, and each level contributes an effect. Category='qiRateAdd' upgrades write their aggregate into cultivation.qiSources.upgrades, which QiSystem reads through config.qi.sources — no code change to QiSystem was needed. Cost formula: cost(N+1) = floor(baseCost * costGrowth^N), so baseCost is the level-1 price and costGrowth controls the per-level curve. maxLevel is null for unlimited; an integer caps the upgrade. Adding/removing an upgrade requires only editing this file plus a matching costResource id in config.resources.items (validation rejects drift between the two)."
+  },
+  "definitions": [
+    {
+      "id": "foundation-breathing",
+      "name": "Foundation Breathing",
+      "description": "+1 qi/s per level. A simple breath technique that strengthens the foundation of your cultivation.",
+      "category": "qiRateAdd",
+      "costResource": "spiritStones",
+      "baseCost": 10,
+      "costGrowth": 1.5,
+      "effectPerLevel": 1,
+      "maxLevel": null
+    },
+    {
+      "id": "qi-gathering",
+      "name": "Qi Gathering",
+      "description": "+5 qi/s per level. Refines the technique of gathering ambient qi into your dantian.",
+      "category": "qiRateAdd",
+      "costResource": "spiritStones",
+      "baseCost": 25,
+      "costGrowth": 1.5,
+      "effectPerLevel": 5,
+      "maxLevel": null
+    },
+    {
+      "id": "meridian-cleansing",
+      "name": "Meridian Cleansing",
+      "description": "+50 qi/s per level. Slowly purges the meridians of blockages that hinder qi flow.",
+      "category": "qiRateAdd",
+      "costResource": "spiritStones",
+      "baseCost": 50,
+      "costGrowth": 1.5,
+      "effectPerLevel": 50,
+      "maxLevel": null
+    },
+    {
+      "id": "spirit-root-enhancement",
+      "name": "Spirit Root Enhancement",
+      "description": "+500 qi/s per level. A measured ritual that sharpens the cultivator's spiritual roots.",
+      "category": "qiRateAdd",
+      "costResource": "spiritStones",
+      "baseCost": 100,
+      "costGrowth": 1.5,
+      "effectPerLevel": 500,
+      "maxLevel": null
+    }
+  ]
+}

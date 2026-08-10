@@ -14,6 +14,14 @@
       "id": "items",
       "files": ["data/items/items.json"],
       "validation": { "requiredFields": ["id", "name", "stackSize"], "uniqueField": "id" }
+    },
+    {
+      "id": "upgrades",
+      "files": ["data/upgrades/upgrades.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "category", "costResource", "baseCost", "costGrowth", "effectPerLevel"],
+        "uniqueField": "id"
+      }
     }
   ]
 }

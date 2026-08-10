@@ -12,8 +12,10 @@
  *   6. the Settings panel initializer is wired — the three boolean
  *      switches toggle state on click, the notation style <select>
  *      changes the formatter via NotationFormatter.setStyle(), and the
- *      Reset save button replaces the state with a fresh slice.
- *      (Upgrades ships in a separate commit and brings its own e2e.)
+ *      Reset save button replaces the state with a fresh slice;
+ *   7. the upgrades system renders data-driven rows in the Upgrades
+ *      panel, a click on the cheapest upgrade deducts spirit stones,
+ *      bumps the level, and lets the qi aggregate grow.
  *
  * These run against the dependency-free static server (static-server.mjs),
  * never inside the node:test suite — the `.spec.mjs` suffix keeps them out of
@@ -344,7 +346,89 @@ test('Settings panel initializer: toggles flip state, notation select changes th
   expect(errors).toEqual([]);
 });
 
-// (Upgrades ships in a separate commit and brings its own e2e smoke.
-// The endowment commit keeps the master's-parting gift and notification
-// behavior without binding __upgrades, so the related assertions live in
-// the Upgrades commit instead.)
+test('upgrades system renders data-driven rows, buying one levels it up and grows qi', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  // UpgradeSystem is exposed after bootstrap; the catalog is the data-
+  // driven one from data/upgrades/upgrades.json (four entries).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__upgrades)))
+    .toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__upgrades.list().length))
+    .toBe(4);
+
+  // The Upgrades panel renders a row per upgrade. Each row carries
+  // data-upgrade-id (delegation anchor) — verify against the canonical
+  // ids.
+  await expect(page.locator('[data-upgrade-id="foundation-breathing"]')).toHaveCount(1);
+  await expect(page.locator('[data-upgrade-id="qi-gathering"]')).toHaveCount(1);
+  await expect(page.locator('[data-upgrade-id="meridian-cleansing"]')).toHaveCount(1);
+  await expect(page.locator('[data-upgrade-id="spirit-root-enhancement"]')).toHaveCount(1);
+
+  // Pre-state: every upgrade is at level 0, the qi aggregate slot is 0.
+  expect(
+    await page.evaluate(() => window.__upgrades.level('foundation-breathing'))
+  ).toBe(0);
+  expect(
+    await stateValue(page, 'cultivation.qiSources.upgrades')
+  ).toBe(0);
+
+  // The fresh boot already carries the master's parting gift (50 stones).
+  // The cheapest upgrade costs 10, level-1; subsequent costs grow
+  // geometrically (10, 15, 22, 33, 49, …). Keep clicking until the
+  // wallet can no longer cover the next cost — that's the first point
+  // where the row goes disabled in the DOM.
+  const stonesBefore = await page.evaluate(() =>
+    window.__resources.get('spiritStones')
+  );
+
+  // Click through levels until either canPurchase() returns false or we
+  // hit a safety cap (the geometric curve means we hit "unaffordable"
+  // well before 12 clicks even from the gift baseline).
+  let clickCount = 0;
+  while (clickCount < 12) {
+    const canBuy = await page.evaluate(() =>
+      window.__upgrades.canPurchase('foundation-breathing')
+    );
+    if (!canBuy) break;
+    const beforeLevel = await page.evaluate(() =>
+      window.__upgrades.level('foundation-breathing')
+    );
+    await page.locator('[data-upgrade-id="foundation-breathing"]').click();
+    await expect
+      .poll(() => page.evaluate(() => window.__upgrades.level('foundation-breathing')))
+      .toBe(beforeLevel + 1);
+    clickCount += 1;
+  }
+
+  // After draining, the wallet cannot cover the next cost — the row is
+  // rendered with the disabled attribute (the upgrades-panel re-renders
+  // on every resource:changed emission so the DOM follows the wallet).
+  expect(clickCount).toBeGreaterThan(0);
+  const foundationDisabled = await page
+    .locator('[data-upgrade-id="foundation-breathing"]')
+    .getAttribute('disabled');
+  expect(foundationDisabled).toBe('true');
+
+  // The qi aggregate grew by level × effectPerLevel (1) on every click.
+  const finalLevel = await page.evaluate(() =>
+    window.__upgrades.level('foundation-breathing')
+  );
+  const finalQi = await page.evaluate(
+    () => window.__game.state.cultivation.qiSources.upgrades
+  );
+  expect(finalQi).toBe(finalLevel);
+  // The wallet drained (≤ starting balance - sum of geometric costs covered).
+  const finalStones = await page.evaluate(() =>
+    window.__resources.get('spiritStones')
+  );
+  expect(finalStones).toBeLessThanOrEqual(stonesBefore);
+  // The original 50-stone gift is now partially spent on upgrades.
+  expect(stonesBefore).toBe(50);
+
+  expect(errors).toEqual([]);
+});

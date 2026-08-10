@@ -22,12 +22,14 @@ import { MeditationSystem } from './systems/meditation.js';
 import { QiSystem } from './systems/qi.js';
 import { ResourceSystem } from './systems/resources.js';
 import { InventorySystem } from './systems/inventory.js';
+import { UpgradeSystem } from './systems/upgrades.js';
 import { NotationFormatter } from './ui/notation.js';
 import { Renderer } from './ui/renderer.js';
 import { initActivityLog } from './ui/activity-log.js';
 import { initFooter } from './ui/footer.js';
 import { initScrollReveal } from './ui/reveal.js';
 import { initSettingsPanel } from './ui/settings-panel.js';
+import { initUpgradesPanel } from './ui/upgrades-panel.js';
 
 /**
  * Small boot orchestrator.
@@ -185,6 +187,32 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Upgrades: single owner of the purchasable boosts. Reads the catalog
+    // from dataManager.getAll('upgrades') (data/upgrades/upgrades.json via
+    // data/manifest.json — id, name, description, category, costResource,
+    // baseCost, costGrowth, effectPerLevel, optional maxLevel) and writes
+    // state.upgrades.purchased[id] on every level bought, plus the aggregate
+    // cultivation.qiSources.upgrades slot the QiSystem reads through
+    // config.qi.sources. Cost deduction is delegated to ResourceSystem.spend
+    // (the wallet — no system writes state.resources directly). Constructed
+    // AFTER save restore + offline apply so a restored purchased map flows
+    // straight into the seed, and AFTER ResourceSystem + DataManager so the
+    // catalog is available and the wallet accepts the spend. It has no
+    // loop subscription — upgrades arrive by calling purchase() (UI click or
+    // future automation), and the aggregate flows into qi on the next tick.
+    const upgrades = new UpgradeSystem({
+      config,
+      eventBus: EventBus,
+      state: game.state,
+      dataManager,
+      resourceSystem: resources,
+    });
+    initUpgradesPanel({
+      eventBus: EventBus,
+      upgrades,
+      notation,
+    });
+
     // NotificationManager: the queue-based notification service. Tuning
     // (queue cap, type whitelist) comes from config.notifications and is
     // already validated by tests/data/game-config.test.mjs — never hardcode.
@@ -237,6 +265,7 @@ async function bootstrap() {
     window.__notation = notation;
     window.__notifications = notifications;
     window.__settingsPanel = settingsPanel;
+    window.__upgrades = upgrades;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)

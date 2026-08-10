@@ -377,13 +377,24 @@ test('successful bootstrap wires the app globals and reports the definition coun
   globalThis.window.__inventory.remove('spirit-herb', 5);
   assert.equal(GameState.inventory.slots.used, 0);
   assert.deepEqual(GameState.inventory.items, []);
-  // The Upgrades system lands in a follow-up commit (the data-driven
-  // purchases + UpgradesPanel wiring). Until then __upgrades is undefined.
-  assert.equal(globalThis.window.__upgrades, undefined);
-  // The master's parting gift seeds a fresh game with 50 spirit stones — the
-  // endowment lands BEFORE the Upgrades system ships so the wallet is already
-  // populated when upgrades go live in the next commit.
+  // The Upgrades system is wired: the catalog comes from the loaded
+  // 'upgrades' collection (size 1 in this canned fixture), every upgrade
+  // starts at level 0, and the qi aggregate slot lands at 0 until a level
+  // is bought. The master's-parting-gift endowment covers the cheapest
+  // upgrade on first boot, so the very first purchase succeeds.
+  assert.ok(globalThis.window.__upgrades instanceof UpgradeSystem);
+  assert.equal(globalThis.window.__upgrades.list().length, 1);
+  assert.equal(globalThis.window.__upgrades.level('foundation-breathing'), 0);
+  assert.equal(globalThis.window.__upgrades.cost('foundation-breathing'), 10);
+  assert.equal(GameState.cultivation.qiSources.upgrades, 0);
   assert.equal(globalThis.window.__resources.get('spiritStones'), 50);
+  assert.equal(
+    globalThis.window.__upgrades.purchase('foundation-breathing'),
+    true
+  );
+  assert.equal(globalThis.window.__upgrades.level('foundation-breathing'), 1);
+  assert.equal(globalThis.window.__resources.get('spiritStones'), 40);
+  assert.equal(GameState.cultivation.qiSources.upgrades, 1);
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
