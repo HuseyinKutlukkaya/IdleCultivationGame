@@ -48,7 +48,9 @@
  * Number formatting uses Intl.NumberFormat with the browser default locale;
  * one formatter is cached per decimals value so the hot path never allocates.
  * Numbers render with thousands separators ("1,000") and the configured
- * fraction digits ("0" → "0.0" at decimals 1).
+ * fraction digits ("0" → "0.0" at decimals 1). When a NotationFormatter was
+ * injected via options.notation, all numeric formatting delegates to it
+ * instead (abbreviated styles such as "1.5K" — see ui/notation.js).
  *
  * Event contract (subscribed in init, released in destroy):
  *   loop:uiRefresh -> requestRefresh()  (periodic, throttled by the GameLoop)
@@ -91,6 +93,10 @@ export class Renderer {
    *        subscribe and unsubscribe (see core/event-bus.js).
    * @param {Document|Element} [options.root] — scan scope for [data-bind]
    *        elements; defaults to the whole document.
+   * @param {NotationFormatter|null} [options.notation] — optional notation
+   *        formatter (js/ui/notation.js); when set, all numeric formatting
+   *        delegates to it (abbreviated styles like "1.5K" instead of
+   *        "1,500"). Absent/null keeps the legacy Intl.NumberFormat path.
    */
   constructor(options = {}) {
     /** @type {object} game state object the renderer reads from. */
@@ -99,6 +105,12 @@ export class Renderer {
     this._eventBus = options.eventBus || EventBus;
     /** @type {Document|Element} scan scope for [data-bind] nodes. */
     this._root = options.root || document;
+    /**
+     * Optional notation formatter injected via options.notation. When set,
+     * _formatNumber delegates to it; null keeps the cached Intl path.
+     * @type {NotationFormatter|null}
+     */
+    this._notation = options.notation || null;
 
     /**
      * Cached bindings: one entry per [data-bind] node inside the root,
@@ -475,12 +487,17 @@ export class Renderer {
   /**
    * Format a number with thousands separators and the configured fraction
    * digits, using a per-decimals cached formatter (browser default locale).
+   * When a notation formatter was injected (options.notation), all numeric
+   * formatting delegates to it instead (e.g. "1.5K" for 1500).
    *
    * @param {number} value — number to format.
    * @param {number} decimals — decimal places (formatter cache key).
    * @returns {string} formatted number.
    */
   _formatNumber(value, decimals) {
+    if (this._notation) {
+      return this._notation.format(value, decimals);
+    }
     let formatter = this._formatters.get(decimals);
     if (!formatter) {
       formatter = new Intl.NumberFormat(undefined, {

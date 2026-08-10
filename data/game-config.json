@@ -46,6 +46,28 @@
       { "id": "meditation", "label": "Meditation", "ratePath": "cultivation.qiSources.meditation" }
     ]
   },
+  "resources": {
+    "comment": "ResourceSystem tuning (Phase 2 — First Gameplay). items declares every wallet resource the system manages: id maps to state.resources.<id>, label is the display name, capPath is an optional dot path into state of that resource's cap (absent = uncapped). Add a resource by adding one entry here plus a matching key in GameState.resources — no code changes required.",
+    "items": [
+      { "id": "spiritStones", "label": "Spirit Stones" },
+      { "id": "herbs", "label": "Herbs" },
+      { "id": "jade", "label": "Jade" },
+      { "id": "qiCondensationPills", "label": "Qi Condensation Pills" }
+    ]
+  },
+  "notation": {
+    "defaultStyle": "standard",
+    "styles": {
+      "standard": {
+        "threshold": 1000,
+        "suffixes": ["K", "M", "B", "T", "Qa", "Qi"]
+      },
+      "scientific": {
+        "threshold": 1000000,
+        "suffixes": []
+      }
+    }
+  },
   "futureSystems": {
     "comment": "Add per-system tuning blocks below as systems are implemented."
   }

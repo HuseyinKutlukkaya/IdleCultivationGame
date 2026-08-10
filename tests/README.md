@@ -4,7 +4,7 @@ The project's automated test suite. It runs with **Node's built-in test runner**
 (`node:test`) — no build step, never shipped to GitHub Pages. The suite grows
 with the game: testing is mandatory for every feature (never skipped or
 deferred), and the full suite is run at the end of every feature cycle. Current
-coverage: **142 tests** across every existing `js/` module (see the Coverage map
+coverage: **252 tests** across every existing `js/` module (see the Coverage map
 below).
 
 The **shipped game stays zero-runtime-dependency, framework-free and static**
@@ -81,8 +81,12 @@ feature touching a system knows exactly which tests to run and update.
 | Path portability (repo hygiene) | `tests/unit/path-portability.test.mjs` | done |
 | Meditation | `tests/unit/meditation.test.mjs` | done |
 | Bootstrap + renderer + save (real browser) | `tests/e2e/game.spec.mjs` | done |
-| Qi | `tests/unit/qi.test.mjs` | pending |
-| Resources, Inventory, Notifications, Settings | `tests/unit/*` | pending |
+| Qi | `tests/unit/qi.test.mjs` | done |
+| Resources | `tests/unit/resources.test.mjs` | done |
+| Notation (`js/ui/notation.js`) | `tests/unit/notation.test.mjs` | done |
+| Inventory | `tests/unit/inventory.test.mjs` | done |
+| Item content (`data/items/items.json`) | `tests/data/items.test.mjs` | done |
+| Notifications, Settings | `tests/unit/*` | pending |
 | Realms, Breakthroughs, Tribulations | `tests/unit/realms.test.mjs`, `tests/unit/breakthroughs.test.mjs` | pending |
 | Spirit roots, Meridians, Physiques, Bloodlines | `tests/unit/character-gen.test.mjs` | pending |
 | Pills, Alchemy, Artifacts, Crafting | `tests/unit/items.test.mjs` | pending |
@@ -173,9 +177,10 @@ They are NOT node:test files — different runner, different rules:
    game, so there are no relative `../../js/...` imports here.
 3. **Assert on state, not formatted text.** Use the exposed debug globals —
    `window.__game.state`, `window.__saveManager`, `window.__meditation`,
-   `window.__offlineProgress` — via `page.evaluate(...)`. Formatted DOM text
-   goes through `Intl` and is locale-dependent (e.g. `2.0` vs `2,0`); raw
-   state values are stable. Spot-check the DOM only with locale-safe matchers.
+   `window.__qi`, `window.__notation`, `window.__offlineProgress` — via
+   `page.evaluate(...)`. Formatted DOM text goes through `Intl` and is
+   locale-dependent (e.g. `2.0` vs `2,0`); raw state values are stable.
+   Spot-check the DOM only with locale-safe matchers.
 4. **Wait for the async world.** The bootstrap and game loop are asynchronous —
    never assume the page is settled right after `page.goto('/')`. Use
    `await expect(page.locator(...)).toContainText(...)`, `expect.poll(...)`,

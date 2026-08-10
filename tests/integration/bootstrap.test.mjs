@@ -27,6 +27,9 @@ import { SaveManager } from '../../js/managers/save-manager.js';
 import { SAVE_KEY } from '../../js/core/storage.js';
 import { MeditationSystem } from '../../js/systems/meditation.js';
 import { QiSystem } from '../../js/systems/qi.js';
+import { ResourceSystem } from '../../js/systems/resources.js';
+import { InventorySystem } from '../../js/systems/inventory.js';
+import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { createFakeElement } from '../helpers/fake-dom.mjs';
 import { createRevealTarget } from '../helpers/intersection-observer-stub.mjs';
@@ -65,6 +68,21 @@ const DATA_FILES = {
       sources: [
         { id: 'meditation', label: 'Meditation', ratePath: 'cultivation.qiSources.meditation' },
       ],
+    },
+    resources: {
+      items: [
+        { id: 'spiritStones', label: 'Spirit Stones' },
+        { id: 'herbs', label: 'Herbs' },
+        { id: 'jade', label: 'Jade' },
+        { id: 'qiCondensationPills', label: 'Qi Condensation Pills' },
+      ],
+    },
+    notation: {
+      defaultStyle: 'standard',
+      styles: {
+        standard: { threshold: 1000, suffixes: ['K', 'M', 'B', 'T'] },
+        scientific: { threshold: 1000000, suffixes: [] },
+      },
     },
   },
   'data/manifest.json': {
@@ -285,6 +303,27 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.ok(globalThis.window.__renderer instanceof Renderer);
   assert.ok(globalThis.window.__meditation instanceof MeditationSystem);
   assert.ok(globalThis.window.__qi instanceof QiSystem);
+  assert.ok(globalThis.window.__resources instanceof ResourceSystem);
+  // The resource wallet is wired from config.resources: all four resources
+  // are managed and their balances start at the fresh-state zeros.
+  assert.equal(globalThis.window.__resources.resources.length, 4);
+  assert.equal(globalThis.window.__resources.get('spiritStones'), 0);
+  // The inventory system is wired with the DataManager: the canonical fresh
+  // inventory slice is active (20 slots, empty). The canned content has no
+  // 'items' collection registered, so add() of any id fails soft — 0 added,
+  // no write — proving the definition lookup never hardcodes metadata.
+  assert.ok(globalThis.window.__inventory instanceof InventorySystem);
+  assert.equal(globalThis.window.__inventory.totalSlots, 20);
+  assert.equal(globalThis.window.__inventory.usedSlots, 0);
+  assert.equal(globalThis.window.__inventory.add('spirit-herb', 5), 0);
+  assert.equal(GameState.inventory.slots.used, 0);
+  assert.deepEqual(GameState.inventory.items, []);
+  // The number notation formatter is wired from config.notation: the renderer
+  // delegates numeric formatting to it, so large values abbreviate ("1.5K"
+  // instead of "1,500") with the config's default standard style active.
+  assert.ok(globalThis.window.__notation instanceof NotationFormatter);
+  assert.equal(globalThis.window.__notation.style, 'standard');
+  assert.equal(globalThis.window.__notation.format(1500, 0), '1.5K');
   // The fresh state is active, so the MeditationSystem constructor wrote its
   // contribution slot immediately and the QiSystem constructor aggregated it
   // into the canonical per-second rate (no save present to override it).
@@ -371,4 +410,7 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__saveManager, undefined);
   assert.equal(globalThis.window.__meditation, undefined);
   assert.equal(globalThis.window.__qi, undefined);
+  assert.equal(globalThis.window.__resources, undefined);
+  assert.equal(globalThis.window.__inventory, undefined);
+  assert.equal(globalThis.window.__notation, undefined);
 });

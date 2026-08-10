@@ -10,14 +10,14 @@ DESIGN.md; the phase checklist lives in ROADMAP.md.
 
 1. Foundation — done (repo, git, landing page, initial UI, docs, modular arch, GameState)
 2. Core Engine — EventBus, DataManager, GameLoop, SaveManager, Renderer, Offline Progress
-3. First Gameplay — Meditation, Qi, Resources, Inventory, Notifications, Settings, Autosave
-4. Cultivation — Realms, Breakthroughs, Tribulations, Spirit Roots, Meridians, Physiques, Bloodlines
-5. Items — Pills, Artifacts, Herbs, Spirit Stones, Alchemy, Crafting
-6. World — Regions, Cities, NPCs, Sects, Events, Exploration, Secret Realms
+3. First Gameplay — Meditation, Qi, Resources, Upgrades, Inventory, Notifications, Settings, Autosave, Number Notation, Statistics
+4. Cultivation — Realms, Breakthroughs, Tribulations, Spirit Roots, Meridians, Physiques, Dantian, Bloodlines, Soul, Destiny & Luck
+5. Items — Pills, Artifacts, Herbs, Spirit Stones, Alchemy, Crafting, Research
+6. World — Regions, Cities, NPCs, Sects, Events, Quests, Reputation, Auction House, Daily Rewards, Exploration, Secret Realms
 7. Automation — Auto Meditation, Auto Pills, Auto Alchemy, Sect Workers, Offline Automation
-8. Reincarnation — Legacy, Origins, Permanent Unlocks, Collections, Achievements
+8. Reincarnation — Legacy, Origins, Permanent Unlocks, Collections, Achievements, Challenges
 9. Late Game — Dao, Immortal Worlds, Higher Realms, Ancient Civilizations
-10. Polish — Animations, Audio, Particles, Accessibility, Localization, Performance
+10. Polish — Animations, Audio, Particles, Accessibility, Localization, Performance, Game Speed Controls
 11. Release Candidate — Balancing, Bug Fixes, Optimization, Large Content Pass
 
 ## Engine Architecture
@@ -120,6 +120,22 @@ DOM updates, caches element references, supports partial refresh.
 All tuning lives in JSON (tick rate, autosave interval, offline limit, starting
 resources, theme defaults). Never hide tuning values in code.
 
+### Number notation (done — js/ui/notation.js)
+Large-number display is data-driven, never hardcoded. The config.notation block
+({ defaultStyle, styles }) defines named styles — a threshold plus a suffix
+list — and the NotationFormatter (js/ui/notation.js) applies the effective
+style (the configured default, or the player's settings.notationStyle override)
+to every numeric binding through the Renderer's _formatNumber delegation
+("1.5K" instead of "1,500", falling back to scientific past the last suffix).
+Adding a style is a data-only change (e.g. Chinese 万/亿 or Korean Hangul
+variants). Future: a settings UI to pick the style; more styles.
+
+**Decision (user-confirmed, 2026-08-10):** general English style ("1.5K",
+"1.23M") is the shipped default; the Settings panel (Phase 2) exposes a
+notation style picker so players can switch styles (scientific, and future
+Chinese / Korean variants) — each style stays a data-only addition to
+config.notation.styles.
+
 ### Notification system
 Queue-based. Types: info, success, warning, error, achievement. Future:
 animations, icons, history, filters.
@@ -215,6 +231,19 @@ ROADMAP.md. Planned improvement: make it data-driven and give it its own page.
 - Dedicated roadmap page (e.g. `roadmap.html`) listing full phase detail with statuses.
 - Renderer/system reads the JSON and renders the checklist — no hardcoded roadmap markup.
 - Do this as part of the Core Engine DataManager phase so it uses the same loader.
+
+## Deferred & Optional (parked, not forgotten)
+Documented decisions on mechanics that are deliberately NOT in the roadmap yet,
+so the reasoning survives:
+- **Cloud saves / cross-device sync** — needs an online backend. SaveManager
+  already abstracts storage (localStorage today), so a cloud transport can slot
+  in later without engine changes.
+- **Mod support** — DESIGN.md names it as a future direction; the JSON-driven
+  content pipeline (DataManager + data/) is the seam mods would plug into.
+  Revisit once the content pipeline is battle-tested.
+- **Active "golden click" layer** — deliberately rejected: DESIGN.md's
+  philosophy is a passive cultivation idle, not a clicker. Revisit only if the
+  design intent changes.
 
 ## Working Principle
 Build the engine once. Expand forever. Every feature: one feature, one

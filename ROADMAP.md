@@ -25,11 +25,14 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 ## Phase 2 — First Gameplay
 - [x] Meditation (first gameplay system, produces Qi) — done (js/systems/meditation.js)
 - [x] Qi (gathering, max, per-second) — done (js/systems/qi.js)
-- [ ] Resources (spirit stones, herbs)
-- [ ] Inventory (basic)
+- [x] Resources (spirit stones, herbs) — done (js/systems/resources.js)
+- [x] Inventory (basic) — done (js/systems/inventory.js)
 - [ ] Notifications (queue-based)
-- [ ] Settings
+- [ ] Settings (incl. notation style picker — general English suffix default with selectable styles)
 - [x] Autosave (interval + on unload) — done in SaveManager (js/managers/save-manager.js)
+- [x] Number notation (abbreviated/scientific display, data-driven styles) — done (js/ui/notation.js)
+- [ ] Upgrades (basic purchasable boosts — spend resources for passive gains)
+- [ ] Statistics (lifetime counters: playtime, qi generated, breakthroughs, meditations)
 
 ## Phase 3 — Cultivation
 - [ ] Realms (JSON-driven)
@@ -38,8 +41,12 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [ ] Spirit Roots
 - [ ] Meridians
 - [ ] Physiques
+- [ ] Dantian (qi storage capacity, density, purity — DESIGN.md character system)
 - [ ] Bloodlines
+- [ ] Soul (stability, purity, willpower, comprehension — DESIGN.md character system)
 - [ ] Talents / Comprehension
+- [ ] Destiny & Luck (hidden luck, calamities vs. fortunate encounters — DESIGN.md character systems)
+- [ ] Milestones (threshold rewards: first X qi, first breakthrough, ...)
 
 ## Phase 4 — Items
 - [ ] Inventory (full: filter/sort/search)
@@ -49,6 +56,8 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [ ] Spirit Stones (grades)
 - [ ] Crafting
 - [ ] Alchemy
+- [ ] Research (permanent upgrade tree — spend resources on lasting multipliers)
+- [ ] Buy amounts (×1, ×10, ×100, Max for purchases)
 
 ## Phase 5 — World
 - [ ] Regions
@@ -56,6 +65,10 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [ ] NPCs
 - [ ] Sects
 - [ ] Events (data-driven)
+- [ ] Quests (story / daily / sect / NPC — data-driven, see DESIGN.md)
+- [ ] Reputation (with sects, cities, kingdoms, NPCs, merchants — DESIGN.md)
+- [ ] Auction House (buy / sell / bid — DESIGN.md)
+- [ ] Daily rewards (login bonuses — retention)
 - [ ] Exploration
 - [ ] Secret Realms
 
@@ -73,6 +86,7 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [ ] Permanent Unlocks
 - [ ] Collections
 - [ ] Achievements
+- [ ] Challenges (special-rule runs with permanent rewards — classic prestige-adjacent mechanic)
 
 ## Phase 8 — Late Game
 - [ ] Dao
@@ -88,9 +102,11 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [ ] Accessibility
 - [ ] Localization (lang/en.json, tr.json, zh.json, ja.json)
 - [ ] Performance
+- [ ] Game speed controls (pause, ×1/×2/×4 — GameLoop future in PLANS.md)
 
 ## Phase 10 — Release Candidate
 - [ ] Balancing
 - [ ] Bug Fixes
 - [ ] Optimization
 - [ ] Large Content Pass
+- [ ] Growth curves & soft caps (data-driven tuning to keep numbers readable)

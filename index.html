@@ -229,9 +229,9 @@
                 <span class="game-panel__tag">Placeholder</span>
               </header>
               <div class="game-panel__body">
-                <div class="stat"><span class="stat__label">Qi Condensation Pill</span><span class="stat__value" data-bind="resources.qiCondensationPills" data-bind-format="× {0}">× 0</span></div>
-                <div class="stat"><span class="stat__label">Spirit Herb</span><span class="stat__value" data-bind="resources.herbs" data-bind-format="× {0}">× 0</span></div>
+                <div class="stat"><span class="stat__label">Stacks held</span><span class="stat__value" data-bind="inventory.items.length">0</span></div>
                 <div class="stat"><span class="stat__label">Empty slots</span><span class="stat__value" data-bind="inventory.slots.used" data-bind-max="inventory.slots.total" data-bind-mode="remaining">20</span></div>
+                <p class="setting__hint">Item list rendering (filter/sort/search) arrives with the full inventory.</p>
               </div>
             </article>
 

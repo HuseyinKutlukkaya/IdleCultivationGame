@@ -9,6 +9,11 @@
       "id": "realms",
       "files": ["data/realms/realms.json"],
       "validation": { "requiredFields": ["id", "name"], "uniqueField": "id" }
+    },
+    {
+      "id": "items",
+      "files": ["data/items/items.json"],
+      "validation": { "requiredFields": ["id", "name", "stackSize"], "uniqueField": "id" }
     }
   ]
 }

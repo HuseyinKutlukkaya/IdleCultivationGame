@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "PLACEHOLDER starter item catalog created to exercise the InventorySystem (ROADMAP Phase 2 — Inventory (basic)). Every item follows the data-driven contract from DESIGN.md 'Items & Economy': id, name, description, grade, quality, value, tags, stackSize, icon and optional category. Grade uses the 11-tier scale (Mortal..Chaos) and quality the 7-tier scale (Broken..Legendary). Real item content and balancing are authored during the Items & Economy phase. Icon assets are not authored yet, so the icon field is an empty-string placeholder."
+  },
+  "definitions": [
+    {
+      "id": "qi-condensation-pill",
+      "name": "Qi Condensation Pill",
+      "description": "A common pill that condenses wandering qi. (placeholder)",
+      "category": "pill",
+      "grade": "Mortal",
+      "quality": "Normal",
+      "value": 10,
+      "stackSize": 99,
+      "tags": ["pill", "cultivation"],
+      "icon": ""
+    },
+    {
+      "id": "spirit-herb",
+      "name": "Spirit Herb",
+      "description": "A common herb that carries condensed spiritual energy. (placeholder)",
+      "category": "herb",
+      "grade": "Mortal",
+      "quality": "Normal",
+      "value": 5,
+      "stackSize": 99,
+      "tags": ["herb", "alchemy", "material"],
+      "icon": ""
+    },
+    {
+      "id": "spirit-grass",
+      "name": "Spirit Grass",
+      "description": "A patch of spirit grass used in simple alchemy recipes. (placeholder)",
+      "category": "herb",
+      "grade": "Mortal",
+      "quality": "Normal",
+      "value": 3,
+      "stackSize": 99,
+      "tags": ["herb", "alchemy"],
+      "icon": ""
+    },
+    {
+      "id": "iron-ore",
+      "name": "Iron Ore",
+      "description": "A lump of unrefined iron ore. (placeholder)",
+      "category": "material",
+      "grade": "Mortal",
+      "quality": "Normal",
+      "value": 4,
+      "stackSize": 99,
+      "tags": ["ore", "material", "crafting"],
+      "icon": ""
+    },
+    {
+      "id": "mortal-sword",
+      "name": "Mortal Sword",
+      "description": "A plain sword forged for mortal use. (placeholder)",
+      "category": "artifact",
+      "grade": "Mortal",
+      "quality": "Normal",
+      "value": 50,
+      "stackSize": 1,
+      "tags": ["artifact", "weapon", "equipment"],
+      "icon": ""
+    },
+    {
+      "id": "jade-slip",
+      "name": "Jade Slip",
+      "description": "A jade slip engraved with an incomplete inscription. (placeholder)",
+      "category": "quest-item",
+      "grade": "Common",
+      "quality": "Fine",
+      "value": 20,
+      "stackSize": 10,
+      "tags": ["material", "quest"],
+      "icon": ""
+    }
+  ]
+}

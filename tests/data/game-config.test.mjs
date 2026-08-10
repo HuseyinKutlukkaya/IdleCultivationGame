@@ -5,9 +5,12 @@
  * block must be well-formed, and every producer's dot path (path, ratePath,
  * capPath) must resolve against the real GameState default shape — so a typo
  * in a producer path fails here instead of silently yielding zero gains at
- * runtime. The file is read relative to this module (import.meta.url), never
- * via an absolute path, so the test is portable: it works identically no
- * matter which machine or directory the repo is checked out into.
+ * runtime. The notation block must declare a default style that names one of
+ * its own styles, and every style must carry a positive numeric threshold and
+ * a suffixes array of strings. The file is read relative to this module
+ * (import.meta.url), never via an absolute path, so the test is portable: it
+ * works identically no matter which machine or directory the repo is checked
+ * out into.
  *
  * Run: the full suite as documented in tests/README.md (`node --test` with
  * the quoted glob form, not the bare-directory form).
@@ -110,6 +113,87 @@ test('every producer path resolves against the real GameState shape', () => {
         _resolves(GameState, dotPath),
         `producer "${producer.id}" ${field} "${dotPath}" does not resolve in GameState`
       );
+    }
+  }
+});
+
+test('resources block declares wallet resources with a sane shape', () => {
+  const resources = config.resources;
+  assert.ok(resources, 'config.resources block must exist');
+  assert.ok(Array.isArray(resources.items), 'resources.items must be an array');
+  assert.ok(resources.items.length > 0, 'at least one resource must be declared');
+});
+
+test('every resource item carries a non-empty id and label with unique ids', () => {
+  const ids = new Set();
+  for (const item of config.resources.items) {
+    assert.equal(typeof item.id, 'string', `resource item missing id (${JSON.stringify(item)})`);
+    assert.ok(item.id !== '', 'resource item id must not be empty');
+    assert.equal(typeof item.label, 'string', `resource "${item.id}" missing label`);
+    assert.ok(item.label !== '', `resource "${item.id}" label must not be empty`);
+    assert.ok(!ids.has(item.id), `resource ids must be unique (duplicate "${item.id}")`);
+    ids.add(item.id);
+  }
+});
+
+test('every resource item capPath is optional but non-empty when present', () => {
+  for (const item of config.resources.items) {
+    if (item.capPath !== undefined) {
+      assert.equal(typeof item.capPath, 'string', `resource "${item.id}" capPath must be a string`);
+      assert.ok(item.capPath !== '', `resource "${item.id}" capPath must not be empty`);
+    }
+  }
+});
+
+test('every resource id is a key of GameState.resources', () => {
+  for (const item of config.resources.items) {
+    assert.ok(
+      item.id in GameState.resources,
+      `resource "${item.id}" has no matching key in GameState.resources`
+    );
+  }
+});
+
+test('every resource capPath resolves against the real GameState shape', () => {
+  for (const item of config.resources.items) {
+    if (item.capPath !== undefined) {
+      assert.ok(
+        _resolves(GameState, item.capPath),
+        `resource "${item.id}" capPath "${item.capPath}" does not resolve in GameState`
+      );
+    }
+  }
+});
+
+test('notation block declares a default style that is one of its own styles', () => {
+  const notation = config.notation;
+  assert.ok(notation, 'config.notation block must exist');
+  assert.equal(typeof notation.defaultStyle, 'string');
+  assert.ok(notation.defaultStyle !== '', 'notation.defaultStyle must not be empty');
+  assert.ok(
+    notation.styles && typeof notation.styles === 'object' && !Array.isArray(notation.styles),
+    'notation.styles must be an object'
+  );
+  assert.ok(
+    Object.keys(notation.styles).length > 0,
+    'notation.styles must not be empty'
+  );
+  assert.ok(
+    notation.defaultStyle in notation.styles,
+    `notation.defaultStyle "${notation.defaultStyle}" must be a key of notation.styles`
+  );
+});
+
+test('every notation style has a positive numeric threshold and string suffixes', () => {
+  for (const [name, style] of Object.entries(config.notation.styles)) {
+    assert.equal(typeof style.threshold, 'number', `style "${name}" missing threshold`);
+    assert.ok(
+      Number.isFinite(style.threshold) && style.threshold > 0,
+      `style "${name}" threshold must be a finite number greater than 0`
+    );
+    assert.ok(Array.isArray(style.suffixes), `style "${name}" suffixes must be an array`);
+    for (const suffix of style.suffixes) {
+      assert.equal(typeof suffix, 'string', `style "${name}" suffix must be a string`);
     }
   }
 });

@@ -25,6 +25,10 @@
  * @property {Object} sect — sect membership
  * @property {Object} world — world position and progression
  * @property {Object} settings — user preferences
+ * @property {boolean} settings.offlineProgress — keep generating resources while away
+ * @property {boolean} settings.sound — play audio effects
+ * @property {boolean} settings.notifications — surface browser/UI notifications
+ * @property {?string} settings.notationStyle — null = the data-driven default style (see config.notation); a string = a style id from config.notation.styles (overrides the default)
  * @property {Object} statistics — lifetime counters
  */
 
@@ -124,6 +128,9 @@ function createGameState() {
       offlineProgress: true,
       sound: false,
       notifications: false,
+      // null = use the data-driven default style (see config.notation);
+      // a string = a style id from config.notation.styles (overrides the default).
+      notationStyle: null,
     },
 
     statistics: {

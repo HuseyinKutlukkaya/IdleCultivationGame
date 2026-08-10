@@ -19,6 +19,9 @@ import { Storage } from './core/storage.js';
 import { SaveManager } from './managers/save-manager.js';
 import { MeditationSystem } from './systems/meditation.js';
 import { QiSystem } from './systems/qi.js';
+import { ResourceSystem } from './systems/resources.js';
+import { InventorySystem } from './systems/inventory.js';
+import { NotationFormatter } from './ui/notation.js';
 import { Renderer } from './ui/renderer.js';
 import { initFooter } from './ui/footer.js';
 import { initScrollReveal } from './ui/reveal.js';
@@ -85,8 +88,14 @@ async function bootstrap() {
 
     // Renderer: scan and cache DOM bindings, subscribe to refresh events,
     // and render the current state (per the startup sequence: renderer
-    // initializes → initial render → save loads → loop starts).
-    const renderer = new Renderer();
+    // initializes → initial render → save loads → loop starts). The number
+    // notation formatter reads config.notation (data-driven styles) and the
+    // restored settings.notationStyle override (if any) and is injected so
+    // every numeric binding formats through it ("1.5K" instead of "1,500").
+    const notation = new NotationFormatter({
+      config: config.notation || {},
+    });
+    const renderer = new Renderer({ notation });
     renderer.init();
 
     const restored = saveManager.load();
@@ -126,6 +135,33 @@ async function bootstrap() {
       eventBus: EventBus,
     });
 
+    // Resources: single owner of the wallet resources (spirit stones, herbs,
+    // jade, qi-condensation pills). Constructed AFTER the save restore and
+    // offline apply so it starts from the restored balances. It reads its
+    // managed resources from config.resources (data-driven, placeholder
+    // balancing) and exposes the wallet primitives (get/canAfford/add/spend)
+    // that future producers and consumers call; it has no loop subscription —
+    // per-second resource production arrives with the first resource producer.
+    const resources = new ResourceSystem({
+      config,
+      eventBus: EventBus,
+    });
+
+    // Inventory: single owner of the carried item stacks (state.inventory.
+    // items — each stack is { id, count } and occupies one slot) and the slot
+    // accounting (slots.used = number of distinct stacks). Constructed AFTER
+    // the save restore and offline apply so it starts from the restored
+    // stacks, and AFTER the DataManager load so item definitions resolve via
+    // dataManager.get('items', id) (stackSize etc. — never hardcoded). It has
+    // no loop subscription — items arrive by calling add() and leave by
+    // calling remove(); the full Phase-4 inventory (filter/sort/search) reads
+    // the same stacks.
+    const inventory = new InventorySystem({
+      config,
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Start the simulation loop, then begin autosave.
     game.start();
     saveManager.start();
@@ -141,6 +177,9 @@ async function bootstrap() {
     window.__offlineProgress = offlineProgress;
     window.__meditation = meditation;
     window.__qi = qi;
+    window.__resources = resources;
+    window.__inventory = inventory;
+    window.__notation = notation;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)

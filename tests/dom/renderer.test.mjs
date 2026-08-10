@@ -21,6 +21,7 @@ import assert from 'node:assert/strict';
 import { Renderer } from '../../js/ui/renderer.js';
 import { EventBus } from '../../js/core/event-bus.js';
 import { GameState } from '../../js/core/game-state.js';
+import { NotationFormatter } from '../../js/ui/notation.js';
 import { createFakeElement, createFakeRoot } from '../helpers/fake-dom.mjs';
 import { installRafStub, uninstallRafStub } from '../helpers/raf-stub.mjs';
 
@@ -197,6 +198,35 @@ test('partial refresh updates only the changed binding', () => {
   assert.equal(realm.textContent, 'Mortal Realm');
 });
 
+test('inventory stacks-held binding renders the real stack count', () => {
+  const stacksHeld = createFakeElement({
+    'data-bind': 'inventory.items.length',
+  });
+  const state = makeState();
+
+  renderer = new Renderer({
+    state,
+    root: createFakeRoot([stacksHeld]),
+  });
+  renderer.init();
+
+  // Empty items array renders zero stacks.
+  assert.equal(stacksHeld.textContent, '0');
+
+  // Two distinct stacks render as "2" (array length, not item count).
+  state.inventory.items = [
+    { id: 'spirit-herb', count: 5 },
+    { id: 'iron-ore', count: 3 },
+  ];
+  renderer.refresh();
+  assert.equal(stacksHeld.textContent, '2');
+
+  // Stacking onto an existing stack does not open a new slot.
+  state.inventory.items[0].count = 9;
+  renderer.refresh();
+  assert.equal(stacksHeld.textContent, '2');
+});
+
 test('requestRefresh coalesces multiple calls into one flush', () => {
   const qi = createFakeElement({ 'data-bind': 'cultivation.qi' });
   const state = makeState();
@@ -312,4 +342,81 @@ test('destroy unsubscribes every refresh event', () => {
 
   assert.equal(EventBus.hasListeners('loop:uiRefresh'), false);
   assert.equal(EventBus.hasListeners('game:restored'), false);
+});
+
+test('an injected notation formatter shortens numbers through the binding DSL', () => {
+  const spiritStones = createFakeElement({
+    'data-bind': 'resources.spiritStones',
+    'data-bind-decimals': '0',
+  });
+  const state = makeState();
+  state.resources.spiritStones = 1500;
+
+  renderer = new Renderer({
+    state,
+    root: createFakeRoot([spiritStones]),
+    notation: new NotationFormatter({
+      config: {
+        defaultStyle: 'standard',
+        styles: {
+          standard: { threshold: 1000, suffixes: ['K', 'M'] },
+        },
+      },
+    }),
+  });
+  renderer.init();
+
+  // The abbreviated path is locale-independent: "1.50" → trimmed "1.5" + "K".
+  assert.equal(spiritStones.textContent, '1.5K');
+});
+
+test('without notation the legacy Intl formatting is unchanged', () => {
+  const qiPerSecond = createFakeElement({
+    'data-bind': 'cultivation.qiPerSecond',
+    'data-bind-decimals': '2',
+  });
+  const state = makeState();
+  state.cultivation.qiPerSecond = 999.5;
+
+  renderer = new Renderer({
+    state,
+    root: createFakeRoot([qiPerSecond]),
+  });
+  renderer.init();
+
+  // Locale-safe: below the grouping threshold only the decimal separator
+  // varies between locales ("999.50" vs "999,50").
+  assert.match(qiPerSecond.textContent, /^999[.,]50$/);
+});
+
+test('_formatNumber delegates to the notation formatter when injected', () => {
+  const notation = new NotationFormatter({
+    config: {
+      defaultStyle: 'standard',
+      styles: {
+        standard: { threshold: 1000, suffixes: ['K', 'M'] },
+      },
+    },
+  });
+
+  renderer = new Renderer({
+    state: makeState(),
+    root: createFakeRoot([]),
+    notation,
+  });
+
+  assert.equal(renderer._formatNumber(1500, 0), '1.5K');
+});
+
+test('_formatNumber keeps the Intl path when no notation is injected', () => {
+  renderer = new Renderer({ state: makeState(), root: createFakeRoot([]) });
+
+  // Compare against the same Intl.NumberFormat the renderer would build, so
+  // the assertion stays locale-independent.
+  const expected = new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(1500);
+
+  assert.equal(renderer._formatNumber(1500, 0), expected);
 });

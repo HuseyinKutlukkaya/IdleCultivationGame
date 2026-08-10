@@ -4,7 +4,9 @@
  * Covers the bootstrap paths that need a real browser and a real clock:
  *   1. the page boots cleanly (no console/page errors) and the loop is running;
  *   2. meditation is active by default and Qi climbs in state and in the DOM;
- *   3. a save round-trips: save → reload → state restored.
+ *   3. a save round-trips: save → reload → state restored;
+ *   4. the inventory system is wired and add()/remove() round-trip item
+ *      stacks against the real data-driven item catalog.
  *
  * These run against the dependency-free static server (static-server.mjs),
  * never inside the node:test suite — the `.spec.mjs` suffix keeps them out of
@@ -42,6 +44,26 @@ test('page boots cleanly and the game loop is running', async ({ page }) => {
   // implies all boot-time console output already happened.
   await expect(page.locator('#status-text')).toContainText('Game loop running');
   await expect(page.locator('#status-text')).toContainText('Scaffold ready');
+
+  // The resource wallet is wired from config.resources (all four declared
+  // resources) and the spirit-stones binding renders its fresh zero balance.
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__resources)))
+    .toBe(true);
+  expect(await stateValue(page, 'resources.spiritStones')).toBe(0);
+  await expect(page.locator('[data-bind="resources.spiritStones"]').first()).toBeVisible();
+
+  // The number notation formatter is wired from config.notation and defaults
+  // to the config's standard style; an explicit setStyle writes the player
+  // preference into state.settings (assert state, not formatted text — see
+  // tests/README.md E2E rules).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__notation)))
+    .toBe(true);
+  expect(await page.evaluate(() => window.__notation.style)).toBe('standard');
+  expect(await page.evaluate(() => window.__notation.setStyle('scientific'))).toBe(true);
+  expect(await stateValue(page, 'settings.notationStyle')).toBe('scientific');
+
   expect(errors).toEqual([]);
 });
 
@@ -91,4 +113,50 @@ test('a save round-trips: state persists across a reload', async ({ page }) => {
   await expect(page.locator('#status-text')).toContainText('Save restored.');
   const qiAfter = await stateValue(page, 'cultivation.qi');
   expect(qiAfter).toBeGreaterThanOrEqual(qiBefore);
+});
+
+test('inventory is wired and add()/remove() round-trip real item stacks', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  // InventorySystem is exposed after bootstrap.
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__inventory)))
+    .toBe(true);
+
+  // The canonical fresh inventory slice is active (20 slots, empty).
+  expect(await stateValue(page, 'inventory.slots.total')).toBe(20);
+  expect(await stateValue(page, 'inventory.slots.used')).toBe(0);
+
+  // add() of a real catalog item (data/items/items.json, stackSize 99)
+  // creates a stack and syncs slots.used (assert state, not formatted text).
+  const added = await page.evaluate(() => window.__inventory.add('spirit-herb', 5));
+  expect(added).toBe(5);
+  expect(await stateValue(page, 'inventory.slots.used')).toBe(1);
+  expect(await page.evaluate(() => window.__inventory.count('spirit-herb'))).toBe(5);
+  expect(await page.evaluate(() => window.__inventory.has('spirit-herb', 5))).toBe(true);
+
+  // Stacking onto the existing stack opens no new slot.
+  expect(await page.evaluate(() => window.__inventory.add('spirit-herb', 4))).toBe(4);
+  expect(await stateValue(page, 'inventory.slots.used')).toBe(1);
+  expect(await page.evaluate(() => window.__inventory.count('spirit-herb'))).toBe(9);
+
+  // remove() drains the stack and reports the remaining total.
+  expect(await page.evaluate(() => window.__inventory.remove('spirit-herb', 3))).toBe(3);
+  expect(await page.evaluate(() => window.__inventory.count('spirit-herb'))).toBe(6);
+  expect(await stateValue(page, 'inventory.slots.used')).toBe(1);
+  expect(await page.evaluate(() => window.__inventory.remainingSlots)).toBe(19);
+
+  // The raw state carries exactly the surviving stack.
+  expect(await page.evaluate(() => window.__game.state.inventory.items)).toEqual([
+    { id: 'spirit-herb', count: 6 },
+  ]);
+
+  // The Inventory panel's stacks-held binding reflects the real stack count
+  // after a UI refresh (integer text, locale-safe — no Intl formatting).
+  const stacksHeld = page.locator('[data-bind="inventory.items.length"]').first();
+  await expect(stacksHeld).toBeVisible();
+  await expect(stacksHeld).toHaveText('1');
+
+  expect(errors).toEqual([]);
 });

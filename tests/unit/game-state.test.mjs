@@ -90,6 +90,7 @@ test('has the exact default placeholder shape', () => {
       offlineProgress: true,
       sound: false,
       notifications: false,
+      notationStyle: null,
     },
 
     statistics: {
@@ -147,4 +148,5 @@ test('default settings favour offline progress and stay silent by default', () =
   assert.equal(GameState.settings.offlineProgress, true);
   assert.equal(GameState.settings.sound, false);
   assert.equal(GameState.settings.notifications, false);
+  assert.equal(GameState.settings.notationStyle, null);
 });
