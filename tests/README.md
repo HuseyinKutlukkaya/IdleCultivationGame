@@ -4,7 +4,7 @@ The project's automated test suite. It runs with **Node's built-in test runner**
 (`node:test`) — no build step, never shipped to GitHub Pages. The suite grows
 with the game: testing is mandatory for every feature (never skipped or
 deferred), and the full suite is run at the end of every feature cycle. Current
-coverage: **252 tests** across every existing `js/` module (see the Coverage map
+coverage: **264 tests** across every existing `js/` module (see the Coverage map
 below).
 
 The **shipped game stays zero-runtime-dependency, framework-free and static**
@@ -23,6 +23,16 @@ node --test "tests/**/*.test.mjs"
 > Note: `node --test tests/` (a bare directory argument) hits a known Node v21+
 > test-runner regression (nodejs/node#64555) and fails; use the glob form above
 > until that is fixed. `node --test` (no arguments, auto-discovery) also works.
+
+**Compact output.** `npm test` runs the suite through a custom reporter
+(`tests/reporters/compact.mjs`) so a successful run prints ~4 lines instead of
+one line per test — this keeps agent/human context small (a token-cost
+optimization, since the suite itself is fast). Failures print full details plus
+a hint; for the verbose spec output run:
+
+```bash
+node --test --test-reporter=spec "tests/**/*.test.mjs"
+```
 
 Coverage gate (same suite, Node's built-in coverage, fails below the committed
 93% line baseline — see `tests/coverage-gate.mjs`):
@@ -52,6 +62,7 @@ npm run test:e2e        # or: npx playwright test
 | `tests/e2e/` | real-browser smoke tests (Playwright, dev-only): boot, live Qi, save round-trip | shared |
 | `tests/perf/` | scalability smoke checks (1,000+ definitions) | Core Engineer |
 | `tests/fixtures/` | canned data: legacy saves, exports, event streams | Core Engineer |
+| `tests/reporters/` | custom node:test reporters (compact output; dev-only) | Architect |
 | `tests/helpers/` | shared test doubles (fake DOM, raf stub, intersection-observer stub; more to come) | shared |
 | `tests/unit/path-portability.test.mjs` | repo hygiene guard: no machine-specific absolute paths in committed code/data/tests | Architect |
 

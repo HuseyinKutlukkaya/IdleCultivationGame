@@ -19,7 +19,12 @@ const MIN_LINE = Number(process.argv[2] ?? 93);
 
 const result = spawnSync(
   process.execPath,
-  ['--experimental-test-coverage', '--test', 'tests/**/*.test.mjs'],
+  [
+    '--experimental-test-coverage',
+    '--test',
+    '--test-reporter=./tests/reporters/compact.mjs',
+    'tests/**/*.test.mjs',
+  ],
   { encoding: 'utf8' }
 );
 
@@ -27,7 +32,7 @@ const result = spawnSync(
 process.stdout.write(result.stdout);
 process.stderr.write(result.stderr);
 
-// The spec reporter prints a summary row like:  ℹ all files | 94.54 | ...
+// The compact reporter prints a summary row like:  all files | 96.66 | ...
 const match = (result.stdout + result.stderr).match(/all files\s*\|\s*([\d.]+)/);
 if (!match) {
   console.error('coverage-gate: could not find the "all files" coverage summary.');
