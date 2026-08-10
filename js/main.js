@@ -27,6 +27,7 @@ import { Renderer } from './ui/renderer.js';
 import { initActivityLog } from './ui/activity-log.js';
 import { initFooter } from './ui/footer.js';
 import { initScrollReveal } from './ui/reveal.js';
+import { initSettingsPanel } from './ui/settings-panel.js';
 
 /**
  * Small boot orchestrator.
@@ -99,6 +100,26 @@ async function bootstrap() {
     });
     const renderer = new Renderer({ notation });
     renderer.init();
+
+    // Settings panel: wires the three boolean switches (offlineProgress,
+    // sound, notifications), the notation-style <select> and the
+    // destructive Reset save button inside the Settings game panel. The
+    // renderer is read-only state→DOM and does NOT touch interactions, so
+    // this dedicated initializer owns every click/change event. It's
+    // constructed AFTER the renderer init() (so the panel is in the DOM
+    // and the renderer's initial flush has already painted the switch
+    // states from the restored/fresh settings) and AFTER the notation
+    // formatter is built (so applyNotationStyle can delegate to
+    // notation.setStyle, which owns the whitelist). The handle exposes
+    // apply* methods for tests and stays intact for the lifetime of the
+    // page; its destroy() is the future shutdown hook.
+    const settingsPanel = initSettingsPanel({
+      eventBus: EventBus,
+      state: game.state,
+      notation,
+      saveManager,
+      config,
+    });
 
     const restored = saveManager.load();
 
@@ -201,6 +222,7 @@ async function bootstrap() {
     window.__inventory = inventory;
     window.__notation = notation;
     window.__notifications = notifications;
+    window.__settingsPanel = settingsPanel;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)

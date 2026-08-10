@@ -147,3 +147,11 @@ function createGameState() {
  * Every gameplay and UI module should read/write this same object.
  */
 export const GameState = createGameState();
+
+/**
+ * Public constructor for a fresh game state slice. Exported so feature code
+ * (e.g. the Settings panel's destructive reset, future save importers) can
+ * build a clean slate without re-implementing the placeholder shape. The
+ * GameState singleton above is the canonical shared instance.
+ */
+export { createGameState };

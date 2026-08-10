@@ -236,7 +236,7 @@
             </article>
 
             <!-- Settings -->
-            <article class="game-panel">
+            <article class="game-panel" data-settings-panel>
               <header class="game-panel__head">
                 <span class="game-panel__icon" aria-hidden="true">⚙️</span>
                 <h3 class="game-panel__title">Settings</h3>
@@ -245,19 +245,25 @@
               <div class="game-panel__body">
                 <div class="setting">
                   <span class="setting__label">Offline progress</span>
-                  <span class="switch switch--on" aria-hidden="true" data-bind="settings.offlineProgress" data-bind-mode="switch"></span>
+                  <button class="switch switch--on" type="button" role="switch" aria-checked="true" aria-label="Toggle Offline progress" data-bind="settings.offlineProgress" data-bind-mode="switch" data-settings-toggle="offlineProgress"></button>
                 </div>
                 <div class="setting">
                   <span class="setting__label">Sound</span>
-                  <span class="switch" aria-hidden="true" data-bind="settings.sound" data-bind-mode="switch"></span>
+                  <button class="switch" type="button" role="switch" aria-checked="false" aria-label="Toggle Sound" data-bind="settings.sound" data-bind-mode="switch" data-settings-toggle="sound"></button>
                 </div>
                 <div class="setting">
                   <span class="setting__label">Notifications</span>
-                  <span class="switch" aria-hidden="true" data-bind="settings.notifications" data-bind-mode="switch"></span>
+                  <button class="switch" type="button" role="switch" aria-checked="false" aria-label="Toggle Notifications" data-bind="settings.notifications" data-bind-mode="switch" data-settings-toggle="notifications"></button>
+                </div>
+                <div class="setting">
+                  <label class="setting__label" for="settings-notation-style">Notation style</label>
+                  <select class="setting__control setting__select" id="settings-notation-style" data-settings-select="notationStyle">
+                    <!-- <option>s populated by JS from config.notation.styles -->
+                  </select>
                 </div>
                 <div class="setting">
                   <span class="setting__label">Save management</span>
-                  <span class="setting__hint">Reset</span>
+                  <button class="btn btn--ghost setting__button" type="button" data-settings-reset>Reset save</button>
                 </div>
               </div>
             </article>

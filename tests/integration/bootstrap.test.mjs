@@ -32,6 +32,7 @@ import { ResourceSystem } from '../../js/systems/resources.js';
 import { InventorySystem } from '../../js/systems/inventory.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
+import { initActivityLog } from '../../js/ui/activity-log.js';
 import { createFakeElement } from '../helpers/fake-dom.mjs';
 import { createRevealTarget } from '../helpers/intersection-observer-stub.mjs';
 import { installRafStub, uninstallRafStub } from '../helpers/raf-stub.mjs';
@@ -337,6 +338,18 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'achievement',
   ]);
   assert.equal(globalThis.window.__notifications.size(), 0);
+  // The Settings panel handle is wired: in this fake DOM the panel is
+  // absent (installDocument only provides #status-text + #year), so
+  // initSettingsPanel's defensive guard returns the no-op shape (each
+  // apply* returns false; destroy() is a no-op). The handle still exists
+  // for the developer console. The real-browser e2e covers the panel +
+  // every apply* path against a live DOM.
+  const handle = globalThis.window.__settingsPanel;
+  assert.ok(handle && typeof handle.destroy === 'function');
+  assert.equal(handle.applyToggle('offlineProgress'), false);
+  assert.equal(handle.applyNotationStyle('standard'), false);
+  assert.equal(handle.applyReset(), false);
+  assert.doesNotThrow(() => handle.destroy());
   // The number notation formatter is wired from config.notation: the renderer
   // delegates numeric formatting to it, so large values abbreviate ("1.5K"
   // instead of "1,500") with the config's default standard style active.

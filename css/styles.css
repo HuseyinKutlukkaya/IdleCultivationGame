@@ -639,6 +639,36 @@ a:hover {
   background: var(--color-accent);
 }
 
+/* Button-as-switch reset: native <button> defaults (font, padding, border)
+   would leak into the .switch geometry above. Keep this rule tiny — colors,
+   dimensions and the ::after knob are owned by .switch + .switch--on. */
+button.switch {
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* Notation-style <select> in the Settings panel — anchored to the design
+   tokens so the dropdown matches the dark theme without overriding the
+   native <option> rendering. */
+.setting__select {
+  background: var(--color-bg-raised);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 4px 8px;
+  font: inherit;
+  min-width: 140px;
+  cursor: pointer;
+}
+
+/* The destructive "Reset save" button inside the Settings panel — reuses
+   .btn--ghost when present and only adds the panel-specific sizing tokens. */
+.setting__button {
+  padding: 4px 12px;
+}
+
 /* --------------------------------------------------------------------------
    9. Roadmap list
    -------------------------------------------------------------------------- */

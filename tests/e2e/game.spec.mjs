@@ -8,7 +8,11 @@
  *   4. the inventory system is wired and add()/remove() round-trip item
  *      stacks against the real data-driven item catalog;
  *   5. the notification manager is wired and add()/clear() mutate the
- *      queue; the activity log re-renders the entries.
+ *      queue; the activity log re-renders the entries;
+ *   6. the Settings panel initializer is wired — the three boolean
+ *      switches toggle state on click, the notation style <select>
+ *      changes the formatter via NotationFormatter.setStyle(), and the
+ *      Reset save button replaces the state with a fresh slice.
  *
  * These run against the dependency-free static server (static-server.mjs),
  * never inside the node:test suite — the `.spec.mjs` suffix keeps them out of
@@ -224,6 +228,117 @@ test('notifications manager is wired and add()/clear() re-render the activity lo
   expect(await page.evaluate(() => window.__notifications.size())).toBe(2);
   await page.evaluate(() => window.__notifications.clear());
   expect(await page.evaluate(() => window.__notifications.size())).toBe(0);
+
+  expect(errors).toEqual([]);
+});
+
+test('Settings panel initializer: toggles flip state, notation select changes the formatter, reset wipes state', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  // SettingsPanel handle is exposed after bootstrap.
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__settingsPanel)))
+    .toBe(true);
+  // The <select> is populated from config.notation.styles — the two shipped
+  // styles are present.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.querySelectorAll('[data-settings-select="notationStyle"] option').length
+      )
+    )
+    .toBe(2);
+
+  // Fresh-state defaults: offlineProgress=true (switch--on + aria-checked=true),
+  // sound + notifications are false, notationStyle=null (formatter uses its
+  // configured default — 'standard').
+  expect(await stateValue(page, 'settings.offlineProgress')).toBe(true);
+  expect(await stateValue(page, 'settings.sound')).toBe(false);
+  expect(await stateValue(page, 'settings.notationStyle')).toBe(null);
+  expect(
+    await page.evaluate(() => window.__notation.style)
+  ).toBe('standard');
+
+  // Click Offline progress → flips to false (assert state first, then DOM:
+  // the renderer's switch--on class and the initializer's aria-checked both
+  // follow state, so checking the attribute indirectly proves both layers
+  // ran. assert state, not formatted text — see tests/README.md E2E rules).
+  await page.locator('[data-settings-toggle="offlineProgress"]').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.offlineProgress))
+    .toBe(false);
+  expect(
+    await page
+      .locator('[data-settings-toggle="offlineProgress"]')
+      .getAttribute('aria-checked')
+  ).toBe('false');
+
+  // Click again → flips back to true.
+  await page.locator('[data-settings-toggle="offlineProgress"]').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.offlineProgress))
+    .toBe(true);
+
+  // Click Sound → false → true (the Sound switch starts off, so this is a
+  // single round-trip — exercising both the off→on and on→off paths).
+  await page.locator('[data-settings-toggle="sound"]').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.sound))
+    .toBe(true);
+  await page.locator('[data-settings-toggle="sound"]').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.sound))
+    .toBe(false);
+
+  // The Notifications switch starts off — click it once to confirm it
+  // observes the same path (an unknown key would be silently ignored by
+  // applyToggle).
+  await page.locator('[data-settings-toggle="notifications"]').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.notifications))
+    .toBe(true);
+
+  // Change the notation <select> → the formatter's effective style follows
+  // (assert state, not formatted text — see tests/README.md E2E rules).
+  await page
+    .locator('[data-settings-select="notationStyle"]')
+    .selectOption('scientific');
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.notationStyle))
+    .toBe('scientific');
+  await expect
+    .poll(() => page.evaluate(() => window.__notation.style))
+    .toBe('scientific');
+
+  // Switch back via the <select>; the setter clears notationStyle back to a
+  // known id and the formatter follows.
+  await page
+    .locator('[data-settings-select="notationStyle"]')
+    .selectOption('standard');
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.notationStyle))
+    .toBe('standard');
+
+  // Reset save: the destruct button replaces state with the canonical fresh
+  // slice — settings.notationStyle goes to null and every toggle defaults
+  // to its fresh-state value.
+  await page.locator('[data-settings-reset]').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.notationStyle))
+    .toBe(null);
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.offlineProgress))
+    .toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.settings.notifications))
+    .toBe(false);
+  // The formatter drops its override when notationStyle is null.
+  await expect
+    .poll(() => page.evaluate(() => window.__notation.style))
+    .toBe('standard');
 
   expect(errors).toEqual([]);
 });
