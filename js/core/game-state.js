@@ -83,16 +83,23 @@ function createGameState() {
       qiPerSecond: 0,
       // Per-source qi rate contribution slots. Each qi source owns its slot:
       // the MeditationSystem writes cultivation.qiSources.meditation (its
-      // effective rate while active, 0 while inactive); the QiSystem
-      // (js/systems/qi.js) aggregates them every tick via
+      // effective rate while active, 0 while inactive); the UpgradeSystem
+      // (js/systems/upgrades.js) writes cultivation.qiSources.upgrades
+      // (the aggregate of every qiRateAdd upgrade's effectPerLevel × level).
+      // The QiSystem (js/systems/qi.js) aggregates them every tick via
       // config.qi.sources[].ratePath. More slots appear as more qi-producing
       // systems land.
-      qiSources: { meditation: 0 },
+      qiSources: { meditation: 0, upgrades: 0 },
       breakthroughs: 0,
     },
 
     resources: {
-      spiritStones: 0,
+      // The master's parting gift — the canonical xianxia origin endowment for
+      // a wandering cultivator who hasn't yet joined a sect. This is the
+      // ONLY spirit-stone source in Phase 2; sect stipends / mission pay /
+      // mining royalties land in Phase 5+ (Sects) per ROADMAP. Loaded at
+      // fresh state, narratively framed as a one-shot gift on first boot.
+      spiritStones: 50,
       herbs: 0,
       jade: 0,
       qiCondensationPills: 0,
@@ -104,6 +111,15 @@ function createGameState() {
         used: 0,
       },
       items: [],
+    },
+
+    upgrades: {
+      // Per-upgrade level (number of times bought, 0 = unpurchased).
+      // Owned by the UpgradeSystem (js/systems/upgrades.js); it is the only
+      // writer. Each purchase increments the matching id and the system
+      // recomputes cultivation.qiSources.upgrades from the catalog's
+      // effectPerLevel × level for every qiRateAdd upgrade.
+      purchased: {},
     },
 
     techniques: {

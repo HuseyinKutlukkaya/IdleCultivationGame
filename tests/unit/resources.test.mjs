@@ -57,12 +57,36 @@ function makeConfig(overrides = {}) {
 /**
  * Build a ResourceSystem instance with a fresh state clone (unless overridden).
  *
+ * Tests below pin wallet mechanics at a 0-stones baseline so the assertion
+ * surface stays predictable — the master's parting gift (50 stones, see
+ * js/core/game-state.js) is a production-only concern. The fixture zeroes
+ * spiritStones when the slice still carries the canonical 50-gift (i.e.
+ * either a fresh clone OR an explicit `state` that nobody touched); a
+ * non-canonical spiritStones (a test that explicitly set spiritStones to
+ * 42, or set state.resources to null / array / a primitive) is left
+ * untouched so the test's own setup survives. This way the default fixture
+ * is the empty-wallet baseline, and tests that want different baselines
+ * stay self-describing.
+ *
  * @param {object} [config] — config to inject (defaults to makeConfig()).
  * @param {object} [state] — state to inject (defaults to a GameState clone).
  * @returns {ResourceSystem} the system instance.
  */
-function makeSystem(config = makeConfig(), state = structuredClone(GameState)) {
-  return new ResourceSystem({ config, state, eventBus: EventBus });
+function makeSystem(config = makeConfig(), state) {
+  const effective = state === undefined ? structuredClone(GameState) : state;
+  // Test fixture: zero the canonical gift so wallet-math assertions operate
+  // at the empty-wallet baseline. A slice that already carries a different
+  // value (set by a test, or repaired from a malformed shape) is left
+  // alone — the test's intent or the repair path stays observable.
+  if (
+    effective.resources
+    && typeof effective.resources === 'object'
+    && !Array.isArray(effective.resources)
+    && effective.resources.spiritStones === 50
+  ) {
+    effective.resources.spiritStones = 0;
+  }
+  return new ResourceSystem({ config, state: effective, eventBus: EventBus });
 }
 
 test('a missing config.resources block is silent and manages nothing', (t) => {
@@ -174,18 +198,24 @@ test('a malformed restored resources slice is repaired on construction', () => {
   const system = makeSystem(makeConfig(), state); // must not throw
 
   // Repaired to the canonical fresh resources slice (see core/game-state.js).
+  // The master's parting gift lives at 50 stones on every repair — a
+  // hostile save that nulls state.resources gets the canonical origin
+  // endowment back, not a bare-zero restart (defense-in-depth: the
+  // restore-trust path is lore-consistent).
   assert.deepEqual(state.resources, {
-    spiritStones: 0,
+    spiritStones: 50,
     herbs: 0,
     jade: 0,
     qiCondensationPills: 0,
   });
 
-  // Gains and spends flow normally after repair.
+  // Gains and spends flow normally after repair. The repaired slice
+  // includes the master's parting gift (50 stones), so the post-spend
+  // balance is 50 + 10 - 4 = 56.
   assert.equal(system.add('spiritStones', 10), 10);
-  assert.equal(state.resources.spiritStones, 10);
+  assert.equal(state.resources.spiritStones, 60);
   assert.equal(system.spend('spiritStones', 4), true);
-  assert.equal(state.resources.spiritStones, 6);
+  assert.equal(state.resources.spiritStones, 56);
 });
 
 test('restored primitive and array slices are repaired, healthy slices survive', () => {
@@ -193,7 +223,7 @@ test('restored primitive and array slices are repaired, healthy slices survive',
   primitive.resources = 5; // a primitive top-level slice
   makeSystem(makeConfig(), primitive); // must not throw
   assert.deepEqual(primitive.resources, {
-    spiritStones: 0,
+    spiritStones: 50,
     herbs: 0,
     jade: 0,
     qiCondensationPills: 0,
@@ -203,7 +233,7 @@ test('restored primitive and array slices are repaired, healthy slices survive',
   array.resources = [1, 2, 3]; // an array top-level slice
   makeSystem(makeConfig(), array); // must not throw
   assert.deepEqual(array.resources, {
-    spiritStones: 0,
+    spiritStones: 50,
     herbs: 0,
     jade: 0,
     qiCondensationPills: 0,
@@ -223,20 +253,25 @@ test('a malformed resources slice is repaired before any read, not only at const
   const system = makeSystem(makeConfig(), state);
 
   // External corruption after construction must be repaired on the next call.
+  // The repair re-seeds the master's parting gift (50 stones); get() reads
+  // through the freshly repaired slice.
   state.resources = null;
-  assert.equal(system.get('spiritStones'), 0); // repaired, never throws
+  assert.equal(system.get('spiritStones'), 50); // repaired, never throws
   assert.deepEqual(state.resources, {
-    spiritStones: 0,
+    spiritStones: 50,
     herbs: 0,
     jade: 0,
     qiCondensationPills: 0,
   });
 
-  // A spend after an array-shaped corruption flows through the repair too.
+  // A spend after an array-shaped corruption flows through the repair too;
+  // the freshly repaired 50-stone balance makes the 1-stone spend succeed
+  // (the wallet has enough — formerly the test pre-gift expected a zero
+  // balance, but with the gift active a single-stone spend is affordable).
   state.resources = [];
-  assert.equal(system.spend('spiritStones', 1), false); // zero balance → false
+  assert.equal(system.spend('spiritStones', 1), true);
   assert.deepEqual(state.resources, {
-    spiritStones: 0,
+    spiritStones: 49,
     herbs: 0,
     jade: 0,
     qiCondensationPills: 0,
@@ -421,8 +456,12 @@ test('spend() fails safely for insufficient, non-positive or unknown targets', (
 test('canAfford() reports affordability without ever warning', (t) => {
   const warn = t.mock.method(console, 'warn', () => {});
   const state = structuredClone(GameState);
-  state.resources.spiritStones = 10;
   const system = makeSystem(makeConfig(), state);
+
+  // makeSystem() always zeroes spiritStones; preset a non-zero balance on
+  // the constructed system (the wallet primitive the rest of the test
+  // exercises) without re-coupling to a passing-in convention.
+  state.resources.spiritStones = 10;
 
   assert.equal(system.canAfford('spiritStones', 10), true);
   assert.equal(system.canAfford('spiritStones', 11), false);
@@ -522,3 +561,4 @@ test('resources are independent — touching one never affects another', () => {
   assert.deepEqual(changed.map((p) => p.id), ['spiritStones', 'herbs', 'spiritStones']);
   assert.deepEqual(changed.map((p) => p.delta), [10, 3, -4]);
 });
+

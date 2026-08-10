@@ -312,15 +312,20 @@ export class ResourceSystem {
 }
 
 /**
- * The canonical fresh resources slice (mirrors core/game-state.js). Used as
- * the restore-trust fallback when a restored resources slice is unusable
- * (null, a primitive or an array) — a broken slice must never abort boot.
+ * The canonical fresh resources slice (mirrors core/game-state.js).
+ *
+ * Used as the restore-trust fallback when a restored resources slice is
+ * unusable (null, a primitive or an array) — a broken slice must never
+ * abort boot. Kept in lockstep with the master's parting gift in
+ * `createGameState()`: when the gift is 50, the repair slice also lands 50
+ * so a hostile save that nulls state.resources gets the canonical origin
+ * endowment back, not a bare-zero restart.
  *
  * @returns {object} the canonical resources slice.
  */
 function _freshResourcesSlice() {
   return {
-    spiritStones: 0,
+    spiritStones: 50,
     herbs: 0,
     jade: 0,
     qiCondensationPills: 0,

@@ -49,12 +49,15 @@ test('has the exact default placeholder shape', () => {
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
-      qiSources: { meditation: 0 },
+      qiSources: { meditation: 0, upgrades: 0 },
       breakthroughs: 0,
     },
 
     resources: {
-      spiritStones: 0,
+      // Master's parting gift (Phase 2 origin endowment) — the only
+      // spirit-stone source in Phase 2. Phase 5 Sects will introduce
+      // stipends and replace this narrative with sustainable income.
+      spiritStones: 50,
       herbs: 0,
       jade: 0,
       qiCondensationPills: 0,
@@ -66,6 +69,10 @@ test('has the exact default placeholder shape', () => {
         used: 0,
       },
       items: [],
+    },
+
+    upgrades: {
+      purchased: {},
     },
 
     techniques: {
@@ -102,7 +109,7 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the twelve top-level state slices', () => {
+test('exposes exactly the thirteen top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'cultivation',
     'inventory',
@@ -114,6 +121,7 @@ test('exposes exactly the twelve top-level state slices', () => {
     'settings',
     'statistics',
     'techniques',
+    'upgrades',
     'version',
     'world',
   ]);
@@ -130,7 +138,10 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.cultivation.realmProgress, 0);
   assert.equal(GameState.cultivation.qi, 0);
   assert.equal(GameState.cultivation.breakthroughs, 0);
-  assert.equal(GameState.resources.spiritStones, 0);
+  // Master's parting gift — fresh-state spirit-stone endowment (50 stones).
+  // The other resources still start at zero (no equivalent endowment for
+  // herbs/jade/pills yet; those arrive with the Phase-4 alchemical market).
+  assert.equal(GameState.resources.spiritStones, 50);
   assert.equal(GameState.inventory.slots.used, 0);
   assert.equal(GameState.sect.contributions, 0);
   assert.equal(GameState.world.time, 0);

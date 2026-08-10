@@ -203,6 +203,20 @@ async function bootstrap() {
     });
     initActivityLog({ eventBus: EventBus, notifications });
 
+    // Master's parting gift: on a FRESH game (no save to restore), narrate
+    // the origin endowment that matches state.resources.spiritStones === 50
+    // (the only spirit-stone source until Phase 5 introduces sects + stipends).
+    // The notification is fire-once-per-game: a restored save has already
+    // heard the story on its original boot. Capture-once is a soft guarantee
+    // — a hostile restored save without the queued notification still gets
+    // its 50 stones (the gift is in state, not the queue).
+    if (!restored) {
+      notifications.add(
+        'Your shifu gave you his last pouch before setting off on his final tribulation. 50 spirit stones — spend them wisely.',
+        { type: 'info' }
+      );
+    }
+
     // Start the simulation loop, then begin autosave.
     game.start();
     saveManager.start();

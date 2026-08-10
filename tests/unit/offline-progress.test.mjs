@@ -419,7 +419,9 @@ test('an overflowing rate (uncapped producer) yields zero gains, never Infinity'
   });
 
   assert.equal(summary.producers[0].amount, 0);
-  assert.equal(state.resources.spiritStones, 0); // never Infinity
+  // The overflowing rate produces nothing; the fresh-state gift (50 stones)
+  // is the only balance. The deeper claim — never Infinity — still holds.
+  assert.equal(state.resources.spiritStones, 50);
   assert.equal(Number.isFinite(state.resources.spiritStones), true);
 });
 

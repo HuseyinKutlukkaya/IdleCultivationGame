@@ -30,6 +30,7 @@ import { MeditationSystem } from '../../js/systems/meditation.js';
 import { QiSystem } from '../../js/systems/qi.js';
 import { ResourceSystem } from '../../js/systems/resources.js';
 import { InventorySystem } from '../../js/systems/inventory.js';
+import { UpgradeSystem } from '../../js/systems/upgrades.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { initActivityLog } from '../../js/ui/activity-log.js';
@@ -69,6 +70,7 @@ const DATA_FILES = {
       baseMaxQi: 100,
       sources: [
         { id: 'meditation', label: 'Meditation', ratePath: 'cultivation.qiSources.meditation' },
+        { id: 'upgrades', label: 'Upgrades', ratePath: 'cultivation.qiSources.upgrades' },
       ],
     },
     resources: {
@@ -100,6 +102,27 @@ const DATA_FILES = {
         files: ['data/realms/realms.json'],
         validation: { requiredFields: ['id', 'name'], uniqueField: 'id' },
       },
+      {
+        id: 'items',
+        files: ['data/items/items.json'],
+        validation: { requiredFields: ['id', 'name', 'stackSize'], uniqueField: 'id' },
+      },
+      {
+        id: 'upgrades',
+        files: ['data/upgrades/upgrades.json'],
+        validation: {
+          requiredFields: [
+            'id',
+            'name',
+            'category',
+            'costResource',
+            'baseCost',
+            'costGrowth',
+            'effectPerLevel',
+          ],
+          uniqueField: 'id',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -107,6 +130,28 @@ const DATA_FILES = {
     definitions: [
       { id: 'mortal', name: 'Mortal', tier: 0 },
       { id: 'qi-gathering', name: 'Qi Gathering', tier: 1 },
+    ],
+  },
+  'data/items/items.json': {
+    meta: {},
+    definitions: [
+      { id: 'spirit-herb', name: 'Spirit Herb', stackSize: 99, category: 'herb', grade: 'Mortal', quality: 'Normal', value: 5, tags: ['herb'], icon: '' },
+    ],
+  },
+  'data/upgrades/upgrades.json': {
+    meta: {},
+    definitions: [
+      {
+        id: 'foundation-breathing',
+        name: 'Foundation Breathing',
+        description: '+1 qi/s per level.',
+        category: 'qiRateAdd',
+        costResource: 'spiritStones',
+        baseCost: 10,
+        costGrowth: 1.5,
+        effectPerLevel: 1,
+        maxLevel: null,
+      },
     ],
   },
 };
@@ -300,7 +345,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 2 definitions loaded. Game loop running.'
+    'Scaffold ready — 4 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -313,17 +358,32 @@ test('successful bootstrap wires the app globals and reports the definition coun
   // The resource wallet is wired from config.resources: all four resources
   // are managed and their balances start at the fresh-state zeros.
   assert.equal(globalThis.window.__resources.resources.length, 4);
-  assert.equal(globalThis.window.__resources.get('spiritStones'), 0);
+  // Master's parting gift: a fresh boot lands 50 spirit stones (the only
+  // Phase-2 spirit-stone source until Sects land in Phase 5). The matching
+  // narrative is in the notification queue (verified below).
+  assert.equal(globalThis.window.__resources.get('spiritStones'), 50);
   // The inventory system is wired with the DataManager: the canonical fresh
-  // inventory slice is active (20 slots, empty). The canned content has no
-  // 'items' collection registered, so add() of any id fails soft — 0 added,
-  // no write — proving the definition lookup never hardcodes metadata.
+  // inventory slice is active (20 slots, empty). With the canned items
+  // collection present, a known item id is added (5 of 'spirit-herb');
+  // the next assertion confirms a stack shows up in state.
   assert.ok(globalThis.window.__inventory instanceof InventorySystem);
   assert.equal(globalThis.window.__inventory.totalSlots, 20);
   assert.equal(globalThis.window.__inventory.usedSlots, 0);
-  assert.equal(globalThis.window.__inventory.add('spirit-herb', 5), 0);
+  assert.equal(globalThis.window.__inventory.add('spirit-herb', 5), 5);
+  assert.equal(GameState.inventory.slots.used, 1);
+  assert.deepEqual(GameState.inventory.items, [{ id: 'spirit-herb', count: 5 }]);
+  // Drain the stack so the rest of the test sees the canonical fresh
+  // inventory shape (the assertion is otherwise unchanged).
+  globalThis.window.__inventory.remove('spirit-herb', 5);
   assert.equal(GameState.inventory.slots.used, 0);
   assert.deepEqual(GameState.inventory.items, []);
+  // The Upgrades system lands in a follow-up commit (the data-driven
+  // purchases + UpgradesPanel wiring). Until then __upgrades is undefined.
+  assert.equal(globalThis.window.__upgrades, undefined);
+  // The master's parting gift seeds a fresh game with 50 spirit stones — the
+  // endowment lands BEFORE the Upgrades system ships so the wallet is already
+  // populated when upgrades go live in the next commit.
+  assert.equal(globalThis.window.__resources.get('spiritStones'), 50);
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -337,7 +397,14 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'error',
     'achievement',
   ]);
-  assert.equal(globalThis.window.__notifications.size(), 0);
+  // Master's parting gift: the very first notification on a fresh boot
+  // frames the origin endowment (50 spirit stones, no save to restore).
+  assert.equal(globalThis.window.__notifications.size(), 1);
+  assert.equal(globalThis.window.__notifications.queue[0].type, 'info');
+  assert.match(
+    globalThis.window.__notifications.queue[0].message,
+    /master|shifu|pouch/i
+  );
   // The Settings panel handle is wired: in this fake DOM the panel is
   // absent (installDocument only provides #status-text + #year), so
   // initSettingsPanel's defensive guard returns the no-op shape (each
@@ -365,6 +432,8 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/game-config.json',
     'data/manifest.json',
     'data/realms/realms.json',
+    'data/items/items.json',
+    'data/upgrades/upgrades.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -446,4 +515,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__inventory, undefined);
   assert.equal(globalThis.window.__notation, undefined);
   assert.equal(globalThis.window.__notifications, undefined);
+  assert.equal(globalThis.window.__upgrades, undefined);
 });

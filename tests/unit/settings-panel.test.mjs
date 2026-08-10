@@ -1154,9 +1154,11 @@ test('applyReset replaces state with a fresh slice and emits settings:reset, gam
   const { events } = recordEvents();
   assert.equal(handle.applyReset(), true);
 
-  // State slice was reset.
+  // State slice was reset. The fresh slice includes the master's parting
+  // gift (50 spirit stones) — applyReset replaces state with the canonical
+  // fresh slice in full, so the gift is part of the reset.
   assert.equal(state.cultivation.qi, 0);
-  assert.equal(state.resources.spiritStones, 0);
+  assert.equal(state.resources.spiritStones, 50);
   assert.deepEqual(state.inventory.items, []);
   assert.equal(state.settings.notationStyle, null);
   assert.equal(state.settings.offlineProgress, true); // createGameState's default
