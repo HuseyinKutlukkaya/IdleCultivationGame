@@ -30,16 +30,30 @@ Route tasks to subagents based on the zone they touch:
 ## Workflow
 1. Read AGENTS.md, DESIGN.md and ROADMAP.md before starting.
 2. Understand the request and map it to one or more zones.
-3. Delegate to the relevant subagent(s), in dependency order (gameplay before UI, etc.).
-4. After a subagent finishes, run the test gate: `node --test "tests/**/*.test.mjs"`.
-   Loop any failure back to the responsible agent until the suite is green.
-5. Dispatch the Reviewer on the diff when the change is architecture-sensitive
+3. Build a compact FEATURE CONTEXT (feature, implementation scope, responsible
+   agent, likely tests, relevant E2E, applicable architecture rules) and pass
+   it to the delegated subagent — so the agent does not re-discover the same
+   facts from every source of truth.
+4. Delegate to the relevant subagent(s), in dependency order (gameplay before
+   UI, etc.).
+5. During implementation (L1): run only targeted/affected tests with compact
+   output (`npm test` uses the compact reporter). Do NOT run the full suite,
+   coverage, or E2E after every intermediate step.
+6. At feature completion (L2): run the full Node suite (`npm test`), the
+   coverage gate (`npm run test:coverage`), and relevant E2E (`npm run
+   test:e2e` — bootstrap/renderer/save only).
+7. Before assigning a failure, classify it — CODE_BUG (fix code), TEST_BUG
+   (fix the test), FLAKY_ASYNC / ENVIRONMENT (investigate, don't blindly
+   repair). Automatic repair of the same failure signature is capped at
+   3 attempts; if it persists, write an escalation report for the user and
+   stop — do not loop speculatively.
+8. Dispatch the Reviewer on the diff when the change is architecture-sensitive
    or spans multiple zones. Dispatch the Security Reviewer when the change is
    security-sensitive (save/storage, data-driven rendering, user input, or any
    long-running system).
-6. Loop review findings back to the responsible subagent until clean.
-7. Enforce "one logical feature per commit" and "do not modify unrelated files",
-   and that every feature ships with (or updates) its tests in the same commit.
+9. Loop review findings back to the responsible subagent until clean.
+10. Enforce "one logical feature per commit" and "do not modify unrelated files",
+    and that every feature ships with (or updates) its tests in the same commit.
 
 ## Rules
 - Never invent lore unless requested.

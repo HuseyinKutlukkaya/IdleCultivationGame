@@ -89,6 +89,18 @@
   where possible (a test, a gate, a rule), a Feature Gate checklist item, and a
   dated note in `tests/README.md`. The same mistake must never be discoverable
   twice.
+- **Failure classification.** Before a failing test is assigned to an agent for
+  repair, classify it: `CODE_BUG` (implementation violates the intended
+  contract → fix code), `TEST_BUG` (assertion, fixture, setup or expected
+  result is wrong → fix test), `FLAKY_ASYNC` (timing, race, nondeterminism →
+  investigate), or `ENVIRONMENT` (dependency, browser, OS, tooling, filesystem
+  → investigate). Never assume every failure means the production code is
+  wrong, and never weaken a test to make it pass.
+- **Bounded repair loop.** Automatic repair of the same failing test is capped
+  at **3 attempts per failure signature**. If the failure persists after the
+  budget is spent, stop and produce an escalation report (failure, files
+  changed, what each attempt did, reason for stopping) for the human — do not
+  loop speculatively on the same failure.
 - The full suite must be green before a feature is reported done. The Architect
   runs the Feature Gate at the end of every feature cycle and loops failures
   back to the responsible agent.
