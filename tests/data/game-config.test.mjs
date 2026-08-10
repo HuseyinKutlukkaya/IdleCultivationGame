@@ -46,6 +46,40 @@ test('meditation block declares the qi-per-second rate with a sane shape', () =>
   );
 });
 
+test('qi block declares the qi cap and its per-second sources', () => {
+  const qi = config.qi;
+  assert.ok(qi, 'config.qi block must exist');
+  assert.ok(
+    Number.isFinite(qi.baseMaxQi) && qi.baseMaxQi >= 0,
+    'qi.baseMaxQi must be a non-negative finite number'
+  );
+  assert.ok(Array.isArray(qi.sources), 'qi.sources must be an array');
+  assert.ok(qi.sources.length > 0, 'at least one qi source must be declared');
+});
+
+test('every qi source carries a non-empty id, label and ratePath with unique ids', () => {
+  const ids = new Set();
+  for (const source of config.qi.sources) {
+    assert.equal(typeof source.id, 'string', `source missing id (${JSON.stringify(source)})`);
+    assert.ok(source.id !== '', 'source id must not be empty');
+    assert.equal(typeof source.label, 'string', `source "${source.id}" missing label`);
+    assert.ok(source.label !== '', `source "${source.id}" label must not be empty`);
+    assert.equal(typeof source.ratePath, 'string', `source "${source.id}" missing ratePath`);
+    assert.ok(source.ratePath !== '', `source "${source.id}" ratePath must not be empty`);
+    assert.ok(!ids.has(source.id), `source ids must be unique (duplicate "${source.id}")`);
+    ids.add(source.id);
+  }
+});
+
+test('every qi source ratePath resolves against the real GameState shape', () => {
+  for (const source of config.qi.sources) {
+    assert.ok(
+      _resolves(GameState, source.ratePath),
+      `source "${source.id}" ratePath "${source.ratePath}" does not resolve in GameState`
+    );
+  }
+});
+
 test('every producer carries a non-empty id, path and ratePath', () => {
   for (const producer of config.offline.producers) {
     assert.equal(typeof producer.id, 'string', `producer missing id (${JSON.stringify(producer)})`);

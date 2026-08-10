@@ -77,6 +77,13 @@ function createGameState() {
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
+      // Per-source qi rate contribution slots. Each qi source owns its slot:
+      // the MeditationSystem writes cultivation.qiSources.meditation (its
+      // effective rate while active, 0 while inactive); the QiSystem
+      // (js/systems/qi.js) aggregates them every tick via
+      // config.qi.sources[].ratePath. More slots appear as more qi-producing
+      // systems land.
+      qiSources: { meditation: 0 },
       breakthroughs: 0,
     },
 

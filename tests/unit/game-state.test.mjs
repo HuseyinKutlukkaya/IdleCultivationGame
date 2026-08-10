@@ -49,6 +49,7 @@ test('has the exact default placeholder shape', () => {
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
+      qiSources: { meditation: 0 },
       breakthroughs: 0,
     },
 

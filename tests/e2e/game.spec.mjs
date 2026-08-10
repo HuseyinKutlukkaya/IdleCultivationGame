@@ -61,6 +61,13 @@ test('meditation is active by default and Qi climbs in state and DOM', async ({ 
   const qiAfter = await stateValue(page, 'cultivation.qi');
   expect(qiAfter).toBeGreaterThan(qiBefore);
 
+  // QiSystem is wired and the meditation rate slot feeds the aggregate rate
+  // (assert state, not formatted text — see tests/README.md E2E rules).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__qi)))
+    .toBe(true);
+  expect(await stateValue(page, 'cultivation.qiSources.meditation')).toBe(2);
+
   // The rendered text followed the state (no longer the static "0" shell).
   const rendered = await qiBinding.textContent();
   expect(Number(rendered.replace(/[^\d]/g, ''))).toBeGreaterThan(0);

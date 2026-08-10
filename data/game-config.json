@@ -39,6 +39,13 @@
     "comment": "MeditationSystem tuning (Phase 2 — First Gameplay). baseQiPerSecond is the qi produced per second of active meditation before future multipliers (spirit root, realm, technique, ...). Placeholder balancing.",
     "baseQiPerSecond": 2
   },
+  "qi": {
+    "comment": "QiSystem tuning (Phase 2 — First Gameplay). baseMaxQi is the qi cap (derived tuning; future realm/root multipliers stack in _computeQiMax). sources declares every per-second qi income source: ratePath is the state path of that source's current rate contribution (owned by the source's own system, e.g. MeditationSystem writes cultivation.qiSources.meditation). Add a source whenever a new qi-producing system lands — no code changes required.",
+    "baseMaxQi": 100,
+    "sources": [
+      { "id": "meditation", "label": "Meditation", "ratePath": "cultivation.qiSources.meditation" }
+    ]
+  },
   "futureSystems": {
     "comment": "Add per-system tuning blocks below as systems are implemented."
   }

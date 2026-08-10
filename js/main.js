@@ -18,6 +18,7 @@ import { OfflineProgress } from './core/offline-progress.js';
 import { Storage } from './core/storage.js';
 import { SaveManager } from './managers/save-manager.js';
 import { MeditationSystem } from './systems/meditation.js';
+import { QiSystem } from './systems/qi.js';
 import { Renderer } from './ui/renderer.js';
 import { initFooter } from './ui/footer.js';
 import { initScrollReveal } from './ui/reveal.js';
@@ -102,14 +103,25 @@ async function bootstrap() {
       renderer.refresh();
     }
 
-    // Meditation: first Phase-2 gameplay system — produces Qi every tick
-    // while the cultivator is meditating. Constructed AFTER the save restore
-    // and offline-progress apply (so it starts from the restored active flag
-    // and the away-gains are already in state) and BEFORE the game loop
-    // starts (so the very first tick finds it subscribed). It reads its
-    // per-second rate from config.meditation (data-driven, placeholder
-    // balancing) and owns the meditation slice of state.
+    // Meditation: first Phase-2 gameplay system — owns the meditation
+    // session and its qi rate-contribution slot (cultivation.qiSources.
+    // meditation). Constructed AFTER the save restore and offline-progress
+    // apply (so it starts from the restored active flag and the away-gains
+    // are already in state) and BEFORE the game loop starts (so the very
+    // first tick finds it subscribed). It reads its per-second rate from
+    // config.meditation (data-driven, placeholder balancing).
     const meditation = new MeditationSystem({
+      config,
+      eventBus: EventBus,
+    });
+
+    // Qi: single owner of the qi resource. Constructed AFTER the meditation
+    // system so the contribution slot already exists when this constructor
+    // syncs the aggregate rate (a restored session shows the right cap/rate
+    // before the first tick). Every qi source is declared in config.qi.sources
+    // (ratePath = that source's own state slot); this system owns the resource
+    // math — aggregation, cap clamping, statistics and 'qi:gained'.
+    const qi = new QiSystem({
       config,
       eventBus: EventBus,
     });
@@ -128,6 +140,7 @@ async function bootstrap() {
     window.__renderer = renderer;
     window.__offlineProgress = offlineProgress;
     window.__meditation = meditation;
+    window.__qi = qi;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)

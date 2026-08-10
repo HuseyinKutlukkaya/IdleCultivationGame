@@ -23,8 +23,8 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [x] Offline progress (last timestamp, elapsed calc, caps, summary) — done (js/core/offline-progress.js)
 
 ## Phase 2 — First Gameplay
-- [ ] Meditation (first gameplay system, produces Qi)
-- [ ] Qi (gathering, max, per-second)
+- [x] Meditation (first gameplay system, produces Qi) — done (js/systems/meditation.js)
+- [x] Qi (gathering, max, per-second) — done (js/systems/qi.js)
 - [ ] Resources (spirit stones, herbs)
 - [ ] Inventory (basic)
 - [ ] Notifications (queue-based)

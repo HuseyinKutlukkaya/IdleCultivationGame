@@ -26,6 +26,7 @@ import { DataManager } from '../../js/core/data-manager.js';
 import { SaveManager } from '../../js/managers/save-manager.js';
 import { SAVE_KEY } from '../../js/core/storage.js';
 import { MeditationSystem } from '../../js/systems/meditation.js';
+import { QiSystem } from '../../js/systems/qi.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { createFakeElement } from '../helpers/fake-dom.mjs';
 import { createRevealTarget } from '../helpers/intersection-observer-stub.mjs';
@@ -58,6 +59,12 @@ const DATA_FILES = {
     },
     meditation: {
       baseQiPerSecond: 2,
+    },
+    qi: {
+      baseMaxQi: 100,
+      sources: [
+        { id: 'meditation', label: 'Meditation', ratePath: 'cultivation.qiSources.meditation' },
+      ],
     },
   },
   'data/manifest.json': {
@@ -277,8 +284,10 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.ok(globalThis.window.__saveManager instanceof SaveManager);
   assert.ok(globalThis.window.__renderer instanceof Renderer);
   assert.ok(globalThis.window.__meditation instanceof MeditationSystem);
-  // The fresh state is active, so the MeditationSystem constructor synced
-  // the per-second rate immediately (no save present to override it).
+  assert.ok(globalThis.window.__qi instanceof QiSystem);
+  // The fresh state is active, so the MeditationSystem constructor wrote its
+  // contribution slot immediately and the QiSystem constructor aggregated it
+  // into the canonical per-second rate (no save present to override it).
   assert.equal(GameState.cultivation.qiPerSecond, 2);
   // Config + manifest + every registered collection were fetched in order.
   assert.deepEqual(fetchCalls, [
@@ -298,8 +307,10 @@ test('bootstrap applies offline progress from a restored save and reports the ga
   installDocument({ statusElement });
 
   // Seed a save written ~2h ago: the qi producer in the canned config runs
-  // at 2 qi/s against a 100,000 cap, so the boot must add ~14,400 qi and
-  // report the gains in the status bar.
+  // at 2 qi/s against a 100 cap (the config-derived qiMax), so the boot must
+  // add exactly 100 qi (raw ~14,400 clamped at the cap) and report the gains
+  // in the status bar. The cap path is now guarded end-to-end: QiSystem owns
+  // cultivation.qiMax and offline progress clamps against it.
   const awayMs = 2 * HOUR_MS;
   const lastSeenAt = Date.now() - awayMs;
   const store = new Map([
@@ -314,7 +325,7 @@ test('bootstrap applies offline progress from a restored save and reports the ga
         savedAt: lastSeenAt,
         state: {
           meta: { lastSeenAt },
-          cultivation: { qi: 0, qiMax: 100000, qiPerSecond: 2 },
+          cultivation: { qi: 0, qiMax: 100, qiPerSecond: 2 },
         },
       }),
     ],
@@ -326,11 +337,11 @@ test('bootstrap applies offline progress from a restored save and reports the ga
   await domContentLoaded();
 
   assert.equal(errorMock.mock.callCount(), 0);
-  // The boot runs against the real clock, so the exact amount tolerates a
-  // few seconds of boot latency: "2h" and +14400..+14409 qi at a 2/s rate.
+  // The cap dominates the boot-latency jitter, so the gain is exactly 100
+  // regardless of the few seconds of test execution time.
   assert.match(
     statusElement.textContent,
-    /Save restored\. Offline gains: 2h \(Qi: \+1440\d\)/,
+    /Save restored\. Offline gains: 2h \(Qi: \+100\)/,
     `unexpected status text: ${statusElement.textContent}`
   );
   // The offline system is exposed for debugging and ran enabled.
@@ -359,4 +370,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__game, undefined);
   assert.equal(globalThis.window.__saveManager, undefined);
   assert.equal(globalThis.window.__meditation, undefined);
+  assert.equal(globalThis.window.__qi, undefined);
 });

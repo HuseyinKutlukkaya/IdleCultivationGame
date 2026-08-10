@@ -1,39 +1,44 @@
 /**
- * systems/meditation.js — MeditationSystem (first gameplay system, produces Qi).
+ * systems/meditation.js — MeditationSystem (session owner + qi source).
  *
- * The first Phase-2 gameplay system. While the cultivator is meditating
- * (state.meditation.active), every fixed simulation tick ('loop:update')
- * produces qi into state.cultivation.qi, clamped to the qi cap
- * (cultivation.qiMax), and reports each gain as a fact on the EventBus so
- * downstream consumers (renderer, statistics, notifications, audio) can react
- * without this system referencing them. A start/stop/toggle session API is
- * provided for the future UI; the system itself never touches the DOM.
+ * The first Phase-2 gameplay system. Meditation owns ONLY the session
+ * (state.meditation.active / mode / startedAt), its own session accounting
+ * (this._sessionQi) and its rate-contribution slot
+ * (cultivation.qiSources.meditation): while the cultivator is meditating,
+ * every fixed simulation tick ('loop:update') writes the current effective
+ * rate into that slot (0 while inactive). It no longer produces qi itself —
+ * the QiSystem (js/systems/qi.js) aggregates every configured source's slot
+ * every tick, applies the gains to cultivation.qi (clamped to the cap) and
+ * emits 'qi:gained'. The slot is matched by config.qi.sources[].ratePath
+ * ("cultivation.qiSources.meditation") in data/game-config.json, so adding
+ * another qi source never touches this system. A start/stop/toggle session
+ * API is provided for the future UI; the system itself never touches the
+ * DOM.
  *
  * Data-driven tuning: the per-second rate comes from
  * config.meditation.baseQiPerSecond (see data/game-config.json) — nothing is
  * hardcoded. A MISSING meditation config block is silent (rate 0); a present
  * but invalid value warns once in the constructor and falls back to 0
- * (mirroring the _readNonNegativeNumber pattern in save-manager and
- * offline-progress).
+ * (mirroring the _readNonNegativeNumber pattern in save-manager,
+ * offline-progress and qi).
  *
  * State owned (writes): meditation.active, meditation.startedAt,
- * cultivation.qi, cultivation.qiPerSecond, statistics.qiGenerated,
- * statistics.meditationsCompleted. The `meditation` slice and every other
- * path are part of the canonical GameState (see core/game-state.js), so they
- * always exist; reads of qi/qiMax/statistics are still coerced with a
- * fail-safe _asNumber so a malformed or legacy value can never poison the
- * math.
+ * cultivation.qiSources.meditation, statistics.meditationsCompleted. The
+ * `meditation` slice and every other path are part of the canonical GameState
+ * (see core/game-state.js), so they always exist; reads of
+ * startedAt/statistics are still coerced with a fail-safe _asNumber so a
+ * malformed or legacy value can never poison the math.
  *
  * Event contract (all emitted on the shared EventBus; consumed: 'loop:update'):
  *   loop:update          { deltaMs, elapsedMs, tick } — subscribed in the
  *                         constructor; the fixed-timestep simulation pulse
  *                         (deltaMs === tickRateMs) that drives production.
- *   qi:gained            { amount, source: 'meditation', total } — fired per
- *                         tick whenever qi actually increased (never on zero
- *                         gains, to avoid noise).
  *   meditation:started   { startedAt, mode } — a session began.
  *   meditation:stopped   { durationMs, qiGained, meditationsCompleted } —
- *                         a session ended; qiGained is that session's total.
+ *                         a session ended; qiGained is the session's
+ *                         CONTRIBUTED qi (what the session fed into the qi
+ *                         pool via the qiSources slot; actual gains may be
+ *                         lower while the qi cap is reached).
  *
  * Pure gameplay — no DOM access, no storage I/O, framework-free and GitHub
  * Pages compatible. Systems communicate through the EventBus only; this
@@ -58,8 +63,8 @@ export class MeditationSystem {
    *        is silent (rate 0); an invalid value warns once and falls back to 0.
    * @param {object} [options.state] — game state object the system reads from
    *        and writes to; defaults to the shared GameState singleton (same
-   *        dependency-injection pattern as DataManager, GameLoop, Renderer
-   *        and OfflineProgress).
+   *        dependency-injection pattern as DataManager, GameLoop, Renderer,
+   *        OfflineProgress and QiSystem).
    * @param {object} [options.eventBus] — pub/sub bus for lifecycle events;
    *        defaults to the shared EventBus singleton.
    * @param {() => number} [options.now] — clock returning the current epoch ms;
@@ -76,14 +81,14 @@ export class MeditationSystem {
     /** @type {() => number} wall-clock source (epoch ms). */
     this._now = typeof options.now === 'function' ? options.now : Date.now;
 
-    /** @type {number} base qi produced per second of active meditation. */
+    /** @type {number} base qi contributed per second of active meditation. */
     this._baseRate = _readNonNegativeNumber(
       meditation.baseQiPerSecond,
       0,
       'baseQiPerSecond'
     );
 
-    /** @type {number} qi accumulated during the current session (reset on start/stop). */
+    /** @type {number} qi contributed during the current session (reset on start/stop). */
     this._sessionQi = 0;
 
     // Bound once so subscribe/unsubscribe always see the same function
@@ -91,15 +96,14 @@ export class MeditationSystem {
     this._onUpdate = this._onUpdate.bind(this);
     this._eventBus.subscribe('loop:update', this._onUpdate);
 
-    // Reflect the (possibly restored) active flag in the per-second rate
-    // immediately — this is what the renderer bindings and the
-    // offline-progress qi producer read.
-    this._syncPerSecondRate(this.isActive ? this._effectiveRate() : 0);
+    // Reflect the (possibly restored) active flag in the contribution slot
+    // immediately — this is what the QiSystem's aggregate rate reads.
+    this._syncQiSource(this.isActive ? this._effectiveRate() : 0);
   }
 
   /**
    * @returns {boolean} true while the cultivator is meditating (an active
-   *          session is producing qi every tick).
+   *          session is contributing qi to the pool every tick).
    */
   get isActive() {
     return Boolean(this._state.meditation && this._state.meditation.active);
@@ -109,7 +113,7 @@ export class MeditationSystem {
    * Begin a meditation session. No-op (returns false) when a session is
    * already active; otherwise marks state active, records the session start
    * from the injected clock, resets the session-qi accumulator, syncs the
-   * per-second rate into state and emits 'meditation:started'.
+   * contribution slot into state and emits 'meditation:started'.
    *
    * @returns {boolean} true when a session was started, false when one was
    *          already running.
@@ -121,7 +125,7 @@ export class MeditationSystem {
     this._state.meditation.active = true;
     this._state.meditation.startedAt = this._now();
     this._sessionQi = 0;
-    this._syncPerSecondRate(this._effectiveRate());
+    this._syncQiSource(this._effectiveRate());
 
     this._eventBus.emit('meditation:started', {
       startedAt: this._state.meditation.startedAt,
@@ -135,7 +139,7 @@ export class MeditationSystem {
    * session is active; otherwise computes the session duration from the
    * injected clock (0 when no start was recorded, e.g. the fresh-default
    * session), marks state inactive, resets the session accumulator, counts
-   * one completed meditation in statistics, zeroes the per-second rate and
+   * one completed meditation in statistics, zeroes the contribution slot and
    * emits 'meditation:stopped' with the session totals.
    *
    * @returns {boolean} true when a session was stopped, false when none was
@@ -157,7 +161,7 @@ export class MeditationSystem {
     this._sessionQi = 0;
     this._state.statistics.meditationsCompleted =
       _asNumber(this._state.statistics.meditationsCompleted) + 1;
-    this._syncPerSecondRate(0);
+    this._syncQiSource(0);
 
     this._eventBus.emit('meditation:stopped', {
       durationMs,
@@ -190,13 +194,13 @@ export class MeditationSystem {
   /**
    * Fixed-timestep tick handler (bound; invoked via 'loop:update').
    *
-   * While inactive: guarantee cultivation.qiPerSecond is 0 (only writing
-   * when it differs) and return — no qi, no event. While active: sync the
-   * per-second rate, compute the raw gain from the payload's deltaMs (the
-   * tick interval, never hardcoded), clamp it to the room left below the qi
-   * cap and, when anything was actually gained, apply it to state, add it to
-   * the session accumulator and emit 'qi:gained' (zero-gain ticks stay
-   * silent).
+   * While inactive: guarantee the contribution slot is 0 (only writing when
+   * it differs) and return — no session accounting, no events. While active:
+   * sync the current effective rate into the slot, then compute the session
+   * contribution from the payload's deltaMs (the tick interval, never
+   * hardcoded) and accumulate it. This is session accounting ONLY — the
+   * actual qi gain is applied (and possibly clamped) by QiSystem, so no qi,
+   * statistics or 'qi:gained' writes happen here.
    *
    * @param {object} [payload] — the 'loop:update' payload
    *        ({ deltaMs, elapsedMs, tick }).
@@ -204,37 +208,19 @@ export class MeditationSystem {
    */
   _onUpdate(payload) {
     if (!this.isActive) {
-      this._syncPerSecondRate(0);
+      this._syncQiSource(0);
       return;
     }
 
     const rate = this._effectiveRate();
-    this._syncPerSecondRate(rate);
+    this._syncQiSource(rate);
 
     // Use the payload's deltaMs (=== tickRateMs from the GameLoop); a
     // missing or non-finite delta coerces to 0 via _asNumber, so a malformed
-    // payload can never produce a bogus gain.
+    // payload can never produce a bogus session contribution.
     const deltaMs = _asNumber(payload && payload.deltaMs);
-    const gain = (rate * deltaMs) / 1000;
-
-    const qi = _asNumber(this._state.cultivation.qi);
-    const qiMax = _asNumber(this._state.cultivation.qiMax);
-    const room = Math.max(qiMax - qi, 0);
-    const added = Math.min(gain, room);
-
-    if (added > 0) {
-      const total = qi + added;
-      this._state.cultivation.qi = total;
-      this._state.statistics.qiGenerated =
-        _asNumber(this._state.statistics.qiGenerated) + added;
-      this._sessionQi += added;
-
-      this._eventBus.emit('qi:gained', {
-        amount: added,
-        source: 'meditation',
-        total,
-      });
-    }
+    const contributed = (rate * deltaMs) / 1000;
+    this._sessionQi += contributed;
   }
 
   /**
@@ -242,25 +228,69 @@ export class MeditationSystem {
    * base rate from config. Future multipliers (spirit root, realm,
    * technique, meditation mode, ...) multiply in here — the tick handler
    * already applies the result, so stacking factors never touches the
-   * production math.
+   * contribution math.
    *
-   * @returns {number} qi produced per second while meditating.
+   * @returns {number} qi contributed per second while meditating.
    */
   _effectiveRate() {
     return this._baseRate;
   }
 
   /**
-   * Write the per-second rate into state, but ONLY when it differs from the
-   * current value — a steady rate leaves the field untouched (keeps renderer
-   * partial-refresh comparisons and offline-progress reads stable).
+   * Write this system's rate contribution into its slot in state, but ONLY
+   * when it differs from the current value — a steady rate leaves the slot
+   * untouched (keeps renderer partial-refresh comparisons and QiSystem's
+   * aggregate reads stable). `meditation` is this system's canonical
+   * contribution slot, matched by config.qi.sources[].ratePath in
+   * data/game-config.json.
    *
-   * @param {number} rate — the rate to expose in cultivation.qiPerSecond.
+   * @param {number} rate — the rate to expose in
+   *        cultivation.qiSources.meditation.
    * @returns {void}
    */
-  _syncPerSecondRate(rate) {
-    if (this._state.cultivation.qiPerSecond !== rate) {
-      this._state.cultivation.qiPerSecond = rate;
+  _syncQiSource(rate) {
+    const qiSources = this._ensureQiSources();
+    if (qiSources.meditation !== rate) {
+      qiSources.meditation = rate;
+    }
+  }
+
+  /**
+   * Make sure the qi-sources container exists before writing the slot. A
+   * state predating the container (an old save shape restored without it)
+   * gets a fresh plain object; the placeholder slot key is created lazily on
+   * first write. The parent cultivation slice is repaired first — a malformed
+   * top-level slice (null, a primitive or an array) restored from an
+   * attacker-shaped save must never abort boot.
+   *
+   * @returns {object} the (possibly repaired) cultivation.qiSources object.
+   */
+  _ensureQiSources() {
+    this._ensureCultivationSlice();
+    const current = this._state.cultivation.qiSources;
+    if (current === null || typeof current !== 'object' || Array.isArray(current)) {
+      this._state.cultivation.qiSources = {};
+    }
+    return this._state.cultivation.qiSources;
+  }
+
+  /**
+   * Make sure the cultivation slice is a plain object before touching any of
+   * its fields. A malformed slice restored from an attacker-shaped save (null,
+   * a primitive or an array) is replaced with the canonical fresh cultivation
+   * shape — restore-trust: a broken top-level slice must never abort boot. A
+   * healthy restored slice (extra/missing fields) keeps its own fields.
+   *
+   * @returns {void}
+   */
+  _ensureCultivationSlice() {
+    const cultivation = this._state.cultivation;
+    if (
+      cultivation === null ||
+      typeof cultivation !== 'object' ||
+      Array.isArray(cultivation)
+    ) {
+      this._state.cultivation = _freshCultivationSlice();
     }
   }
 
@@ -280,6 +310,30 @@ export class MeditationSystem {
       };
     }
   }
+}
+
+/**
+ * The canonical fresh cultivation slice (mirrors core/game-state.js). Used as
+ * the restore-trust fallback when a restored cultivation slice is unusable
+ * (null, a primitive or an array) — a broken top-level slice must never abort
+ * boot.
+ *
+ * @returns {object} the canonical cultivation slice.
+ */
+function _freshCultivationSlice() {
+  return {
+    realm: 'Mortal',
+    realmStage: 1,
+    nextRealm: 'Qi Condensation',
+    breakthroughCost: null,
+    realmProgress: 0,
+    realmProgressMax: 1000,
+    qi: 0,
+    qiMax: 100,
+    qiPerSecond: 0,
+    qiSources: { meditation: 0 },
+    breakthroughs: 0,
+  };
 }
 
 /**
