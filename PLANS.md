@@ -142,8 +142,14 @@ animations, icons, history, filters.
 
 ### Offline progression
 Store last timestamp. On load: calculate elapsed time → simulate production →
-apply caps → display summary. Simulate qi generation, herb growth, sect income,
-disciple tasks, alchemy, research.
+apply caps → display summary. Simulate qi generation (Phase 2) and growth
+tasks **owned by the player** — herb patches (Phase 4+), sect stipends /
+mine royalties (Phase 5+) accrue only when the player owns the producing
+asset; "no ownership, no accrual" is the rule. A wanderer who has not
+yet joined a sect earns nothing offline; a sect master earns sect income
+while away. This keeps the offline producer pipeline lore-grounded — the
+spirit-stone source ladder in DESIGN.md "Spirit Stone Acquisition" is the
+authoritative reference for which assets even *can* accrue stones.
 
 ## AI Development Workflow
 

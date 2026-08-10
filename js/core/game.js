@@ -31,6 +31,22 @@ export class Game {
     this.state = GameState;
     this.isRunning = false;
 
+    // Apply data-driven origin endowment on construction. The canonical
+    // fresh slice (js/core/game-state.js createGameState()) carries the
+    // same value as the canonical fallback below; we overwrite here so:
+    //   - a custom `config.startingState.spiritStones` (testing, modding,
+    //     Phase-5 sect-origin adjustments) lands in state WITHOUT a code
+    //     edit;
+    //   - a missing/malformed config still gets the lore-canonical 50;
+    //   - on a restored save (`Game.restore()` is called next), the deep-
+    //     merged snapshot's spiritStones wins, leaving this write as a
+    //     frame for restore-trust (a hostile empty save still lands at
+    //     50, not 0).
+    // See DESIGN.md "Spirit Stone Acquisition" + ROADMAP "Spirit stones
+    // origin endowment".
+    this.state.resources.spiritStones =
+      _readStartingSpiritStones(config);
+
     // Build the fixed-timestep loop from config.loop (data-driven tuning —
     // never hardcode rates). Missing keys fall back to GameLoop defaults,
     // so a partial config can never break the loop.
@@ -91,4 +107,23 @@ export class Game {
     }
     deepMerge(GameState, snapshot);
   }
+}
+
+/**
+ * Resolve the master's parting gift amount from the config. Reads
+ * `config.startingState.spiritStones` (data-driven per AGENTS.md) and
+ * falls back to the lore-canonical 50 stones so the game always boots at
+ * a sane baseline (a missing / malformed config is never fatal).
+ *
+ * @param {object} [config] — game-config object (or undefined on miss).
+ * @returns {number} a finite, non-negative integer.
+ */
+function _readStartingSpiritStones(config) {
+  const raw =
+    config && config.startingState
+      ? config.startingState.spiritStones
+      : undefined;
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed) && parsed >= 0) return Math.trunc(parsed);
+  return 50;
 }

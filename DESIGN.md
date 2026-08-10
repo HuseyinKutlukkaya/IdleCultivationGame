@@ -301,6 +301,42 @@ tags, stack size, icon and optional lore.
   Fusion, Artifact Evolution
 - Currencies — spirit stones, sect contribution, reputation, ancient tokens,
   merit. Sinks: buildings, recipes, artifacts, upgrades, auction, research
+
+#### Spirit Stone Acquisition
+
+Spirit stones are a *salary from the world*, never a personal-cultivation
+output. Meditation produces qi, not stones. The canonical source ladder:
+
+| Tier              | Source                                                | Phase |
+|-------------------|-------------------------------------------------------|-------|
+| Origin endowment  | Master's parting gift / family heirloom / roadside  | 2     |
+|                   | find — a one-shot narrative event on first boot only.  |       |
+| Outer disciple    | Sect daily stipend + mission pay                       | 5     |
+| Inner disciple    | Stipend scales up; sect contribution redemption        | 5     |
+| Core disciple     | Sect subsidizes techniques / pills / breakthroughs    | 5     |
+| Legacy disciple   | Sect-funded endowment; quests pay better              | 5     |
+| Elder / Master    | Mine royalties, treasury rights, sect tax income       | 7+    |
+
+No per-second "stones from meditation" producer exists at any tier. The
+Phase-2 wallet starts at 50 spirit stones — the master's parting gift, a
+lore-canonical value (config-driven via `data/game-config.json`'s
+`startingState.spiritStones`, fallback 50). Phase 5 sects replace this
+endowment with sustainable income from the ladder above.
+
+#### Sect ranks (income)
+
+Every sect-affiliated disciple receives a daily stipend scaled by rank.
+The earlier ranks *feel* scarce on purpose — the player is meant to
+climb the ladder. Stipends live in `data/sects/` JSON (Phase 5) and are
+declared per rank tier; the player never invents a new stipend in code.
+
+- **Outer disciple**: a pittance, forces mission pay to complement.
+- **Inner disciple**: sustainable; covers basic cultivation.
+- **Core disciple**: comfortable; meaningful technique investment.
+- **Legacy disciple**: attributed endowment; sect funds projects.
+- **Elder**: paid from sect coffers (mines, treasury, taxes).
+
+See DESIGN.md "Sects" and ROADMAP.md Phase 5 for the sect system itself.
 - Inventory — filtering, sorting, search, favorites, auto stack, auto sell, lock
 - Collections — artifacts, techniques, pills, herbs, NPCs, secret realms,
   achievements; completion bonuses unlock over multiple reincarnations

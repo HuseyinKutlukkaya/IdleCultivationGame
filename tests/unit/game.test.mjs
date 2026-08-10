@@ -71,6 +71,30 @@ test('partial or missing config falls back to GameLoop defaults', () => {
   assert.equal(nullConfig.loop.uiRefreshRateMs, 100);
 });
 
+test('master\'s parting gift is data-driven (config.startingState.spiritStones) with a 50 fallback', () => {
+  // Configure an origin endowment via config — the lore-canonical 50 is
+  // overwritten to whatever the config says (Phase 5 will retune sect-origin
+  // gifts without a code change).
+  const tuned = new Game({ startingState: { spiritStones: 200 } });
+  assert.equal(tuned.state.resources.spiritStones, 200);
+
+  // A missing startingState falls back to the canonical 50 — the game always
+  // boots at a sane baseline even with a malformed or absent config.
+  const fallback = new Game({});
+  assert.equal(fallback.state.resources.spiritStones, 50);
+
+  // No config at all also falls back to 50 (never fatal).
+  const noConfig = new Game();
+  assert.equal(noConfig.state.resources.spiritStones, 50);
+
+  // NaN / negative / non-number values ALSO fall back to 50 (defense: the
+  // player never boots into 0 spirit stones from a bad config).
+  const garbage = new Game({ startingState: { spiritStones: 'lots' } });
+  assert.equal(garbage.state.resources.spiritStones, 50);
+  const negative = new Game({ startingState: { spiritStones: -5 } });
+  assert.equal(negative.state.resources.spiritStones, 50);
+});
+
 test('start() is idempotent and flips isRunning without double-starting the loop', () => {
   const started = [];
   EventBus.subscribe('loop:started', (payload) => started.push(payload));
@@ -106,7 +130,10 @@ test('serialize() returns a deep copy — mutating it leaves GameState untouched
 
   assert.equal(GameState.cultivation.qi, 0);
   assert.equal(GameState.player.name, 'Unnamed Cultivator');
-  assert.equal(GameState.resources.spiritStones, 0);
+  // Fresh GameState carries the master's parting gift (50 stones); the
+  // serialized snapshot's tampering (12345) must NOT bleed back through the
+  // deep-copy isolation.
+  assert.equal(GameState.resources.spiritStones, 50);
 });
 
 test('restore() deep-merges a snapshot and keeps current defaults for missing keys', () => {

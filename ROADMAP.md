@@ -31,7 +31,8 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [x] Settings (incl. notation style picker — general English suffix default with selectable styles) — done (js/ui/settings-panel.js)
 - [x] Autosave (interval + on unload) — done in SaveManager (js/managers/save-manager.js)
 - [x] Number notation (abbreviated/scientific display, data-driven styles) — done (js/ui/notation.js)
-- [ ] Upgrades (basic purchasable boosts — spend resources for passive gains)
+- [x] Upgrades (basic purchasable boosts — spend resources for passive gains) — done (js/systems/upgrades.js + js/ui/upgrades-panel.js + data/upgrades/upgrades.json)
+- [x] **Spirit stones origin endowment** (Phase 2: 50 stones — the master's parting gift on first boot, narratively framed as a one-shot endowment; Phase 5 sects replace with stipends per DESIGN.md "Spirit Stone Acquisition")
 - [ ] Statistics (lifetime counters: playtime, qi generated, breakthroughs, meditations)
 
 ## Phase 3 — Cultivation

@@ -27,6 +27,20 @@
 - Do not invent lore unless requested.
 - Use placeholders where appropriate.
 - Do not modify unrelated files.
+
+### World economy (lore discipline)
+
+Spirit stones are a *world salary* — they are earned through the
+canonical source ladder in `DESIGN.md` "Spirit Stone Acquisition"
+(origin endowment, sect stipends, mission pay, mine royalties,
+breakthrough gifts). Never introduce a passive per-second "spirit stones
+from meditation" producer or any equivalent "stones from air" mechanic —
+the world's lore-discipline rule is that *personal cultivation produces
+qi, not stones*. New spirit-stone producers, when Phase 5 adds sect
+stipends or mining royalties, MUST be wired through `config.resources`
+or a sect config and MUST carry an in-world source (a sect's treasury,
+a mine's output, etc.). A pure-time "stones tick up while you play"
+producer is a lore-breaker even when the math is balanced.
 - One logical feature per commit.
 - Whenever a clearly good option appears — new tooling, dependencies,
   architecture, process, content, or anything that would drastically improve

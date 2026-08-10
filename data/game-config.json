@@ -8,7 +8,9 @@
   "startingState": {
     "qi": 0,
     "realm": 0,
-    "breakthroughs": 0
+    "breakthroughs": 0,
+    "spiritStones": 50,
+    "comment": "Master's parting gift — see DESIGN.md 'Spirit Stone Acquisition' and ROADMAP 'Spirit stones origin endowment'. The only spirit-stone source in Phase 2; sect stipends replace this in Phase 5. Tunable here, with the canonical 50-stone fallback in js/core/game.js."
   },
   "loop": {
     "comment": "GameLoop tuning. tickRateMs is the fixed simulation step; uiRefreshRateMs throttles 'loop:uiRefresh' emissions; maxFrameDeltaMs clamps per-frame deltas so tab switches cannot cause huge time jumps.",
@@ -39,11 +41,12 @@
     "comment": "MeditationSystem tuning (Phase 2 — First Gameplay). baseQiPerSecond is the qi produced per second of active meditation before future multipliers (spirit root, realm, technique, ...). Placeholder balancing.",
     "baseQiPerSecond": 2
   },
-  "qi": {
+    "qi": {
     "comment": "QiSystem tuning (Phase 2 — First Gameplay). baseMaxQi is the qi cap (derived tuning; future realm/root multipliers stack in _computeQiMax). sources declares every per-second qi income source: ratePath is the state path of that source's current rate contribution (owned by the source's own system, e.g. MeditationSystem writes cultivation.qiSources.meditation). Add a source whenever a new qi-producing system lands — no code changes required.",
     "baseMaxQi": 100,
     "sources": [
-      { "id": "meditation", "label": "Meditation", "ratePath": "cultivation.qiSources.meditation" }
+      { "id": "meditation", "label": "Meditation", "ratePath": "cultivation.qiSources.meditation" },
+      { "id": "upgrades", "label": "Upgrades", "ratePath": "cultivation.qiSources.upgrades" }
     ]
   },
   "resources": {
