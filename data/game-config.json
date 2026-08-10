@@ -55,6 +55,11 @@
       { "id": "qiCondensationPills", "label": "Qi Condensation Pills" }
     ]
   },
+  "notifications": {
+    "comment": "NotificationManager tuning (Phase 2 — First Gameplay). maxQueueSize bounds the in-memory FIFO queue (oldest drops first). types lists every valid notification type id; the Activity Log renders each entry with a log__item--<type> class. Add a type by adding an id here — no code changes required.",
+    "maxQueueSize": 50,
+    "types": ["info", "success", "warning", "error", "achievement"]
+  },
   "notation": {
     "defaultStyle": "standard",
     "styles": {

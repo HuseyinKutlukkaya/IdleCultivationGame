@@ -4,7 +4,7 @@ The project's automated test suite. It runs with **Node's built-in test runner**
 (`node:test`) — no build step, never shipped to GitHub Pages. The suite grows
 with the game: testing is mandatory for every feature (never skipped or
 deferred), and the full suite is run at the end of every feature cycle. Current
-coverage: **264 tests** across every existing `js/` module (see the Coverage map
+coverage: **312 tests** across every existing `js/` module (see `Coverage map`
 below).
 
 The **shipped game stays zero-runtime-dependency, framework-free and static**
@@ -83,6 +83,7 @@ feature touching a system knows exactly which tests to run and update.
 | deepMerge (`js/utils/deep-merge.js`) | `tests/unit/deep-merge.test.mjs` | done |
 | Project paths (`js/utils/paths.js`) | `tests/unit/paths.test.mjs` | done |
 | SaveManager (`js/managers/save-manager.js`) | `tests/unit/save-manager.test.mjs` + `tests/fixtures/saves/` | done |
+| NotificationManager (`js/managers/notification-manager.js`) | `tests/unit/notification-manager.test.mjs` | done |
 | Bootstrap (`js/main.js`) | `tests/integration/bootstrap.test.mjs` | done |
 | Renderer (`js/ui/renderer.js`) | `tests/dom/renderer.test.mjs` | done |
 | Footer (`js/ui/footer.js`) | `tests/dom/footer.test.mjs` | done |
@@ -97,7 +98,9 @@ feature touching a system knows exactly which tests to run and update.
 | Notation (`js/ui/notation.js`) | `tests/unit/notation.test.mjs` | done |
 | Inventory | `tests/unit/inventory.test.mjs` | done |
 | Item content (`data/items/items.json`) | `tests/data/items.test.mjs` | done |
-| Notifications, Settings | `tests/unit/*` | pending |
+| Notifications (queue) | `tests/unit/notification-manager.test.mjs` + `tests/dom/activity-log.test.mjs` | done |
+| Activity Log (DOM) | `tests/dom/activity-log.test.mjs` | done |
+| Settings | `tests/unit/settings.test.mjs` | pending |
 | Realms, Breakthroughs, Tribulations | `tests/unit/realms.test.mjs`, `tests/unit/breakthroughs.test.mjs` | pending |
 | Spirit roots, Meridians, Physiques, Bloodlines | `tests/unit/character-gen.test.mjs` | pending |
 | Pills, Alchemy, Artifacts, Crafting | `tests/unit/items.test.mjs` | pending |

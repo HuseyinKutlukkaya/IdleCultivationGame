@@ -16,6 +16,7 @@ import { EventBus } from './core/event-bus.js';
 import { Game } from './core/game.js';
 import { OfflineProgress } from './core/offline-progress.js';
 import { Storage } from './core/storage.js';
+import { NotificationManager } from './managers/notification-manager.js';
 import { SaveManager } from './managers/save-manager.js';
 import { MeditationSystem } from './systems/meditation.js';
 import { QiSystem } from './systems/qi.js';
@@ -23,6 +24,7 @@ import { ResourceSystem } from './systems/resources.js';
 import { InventorySystem } from './systems/inventory.js';
 import { NotationFormatter } from './ui/notation.js';
 import { Renderer } from './ui/renderer.js';
+import { initActivityLog } from './ui/activity-log.js';
 import { initFooter } from './ui/footer.js';
 import { initScrollReveal } from './ui/reveal.js';
 
@@ -162,6 +164,24 @@ async function bootstrap() {
       dataManager,
     });
 
+    // NotificationManager: the queue-based notification service. Tuning
+    // (queue cap, type whitelist) comes from config.notifications and is
+    // already validated by tests/data/game-config.test.mjs — never hardcode.
+    // Constructed AFTER the save restore and offline apply so future
+    // post-boot systems (achievements, sect events, ...) can announce gains
+    // through the same queue once they land; today's bootstrap does not push
+    // any notification itself (initial state is an empty queue). The
+    // activity-log UI subscribes to 'notification:changed' and re-renders on
+    // every add/dismiss/clear, so the very first real notification will light
+    // up the existing #activity-log panel automatically. No DOM access, no
+    // GameState mutation, no loop subscription — pure manager service (same
+    // shape as SaveManager, js/managers/save-manager.js).
+    const notifications = new NotificationManager({
+      config,
+      eventBus: EventBus,
+    });
+    initActivityLog({ eventBus: EventBus, notifications });
+
     // Start the simulation loop, then begin autosave.
     game.start();
     saveManager.start();
@@ -180,6 +200,7 @@ async function bootstrap() {
     window.__resources = resources;
     window.__inventory = inventory;
     window.__notation = notation;
+    window.__notifications = notifications;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)

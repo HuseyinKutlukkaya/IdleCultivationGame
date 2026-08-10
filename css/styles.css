@@ -577,6 +577,22 @@ a:hover {
   flex-shrink: 0;
 }
 
+.log__item--success {
+  color: var(--color-success);
+}
+
+.log__item--warning {
+  color: var(--color-warning);
+}
+
+.log__item--error {
+  color: var(--color-danger);
+}
+
+.log__item--achievement {
+  color: var(--color-accent-bright);
+}
+
 .setting {
   display: flex;
   align-items: center;

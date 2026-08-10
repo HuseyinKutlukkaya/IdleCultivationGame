@@ -24,6 +24,7 @@ import { Game } from '../../js/core/game.js';
 import { GameState } from '../../js/core/game-state.js';
 import { DataManager } from '../../js/core/data-manager.js';
 import { SaveManager } from '../../js/managers/save-manager.js';
+import { NotificationManager } from '../../js/managers/notification-manager.js';
 import { SAVE_KEY } from '../../js/core/storage.js';
 import { MeditationSystem } from '../../js/systems/meditation.js';
 import { QiSystem } from '../../js/systems/qi.js';
@@ -76,6 +77,10 @@ const DATA_FILES = {
         { id: 'jade', label: 'Jade' },
         { id: 'qiCondensationPills', label: 'Qi Condensation Pills' },
       ],
+    },
+    notifications: {
+      maxQueueSize: 50,
+      types: ['info', 'success', 'warning', 'error', 'achievement'],
     },
     notation: {
       defaultStyle: 'standard',
@@ -318,6 +323,20 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(globalThis.window.__inventory.add('spirit-herb', 5), 0);
   assert.equal(GameState.inventory.slots.used, 0);
   assert.deepEqual(GameState.inventory.items, []);
+  // The notification manager is wired: the queue is empty, the cap and the
+  // type catalog come straight from config.notifications — no hardcoded
+  // values. The initial queue is empty because the bootstrap has not yet
+  // called add() (the first real emissions will arrive with future systems).
+  assert.ok(globalThis.window.__notifications instanceof NotificationManager);
+  assert.equal(globalThis.window.__notifications.maxQueueSize, 50);
+  assert.deepEqual(globalThis.window.__notifications.types, [
+    'info',
+    'success',
+    'warning',
+    'error',
+    'achievement',
+  ]);
+  assert.equal(globalThis.window.__notifications.size(), 0);
   // The number notation formatter is wired from config.notation: the renderer
   // delegates numeric formatting to it, so large values abbreviate ("1.5K"
   // instead of "1,500") with the config's default standard style active.
@@ -413,4 +432,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__resources, undefined);
   assert.equal(globalThis.window.__inventory, undefined);
   assert.equal(globalThis.window.__notation, undefined);
+  assert.equal(globalThis.window.__notifications, undefined);
 });

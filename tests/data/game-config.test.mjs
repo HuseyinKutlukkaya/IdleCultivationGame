@@ -198,6 +198,24 @@ test('every notation style has a positive numeric threshold and string suffixes'
   }
 });
 
+test('notifications block declares the queue bound and its type catalog', () => {
+  const notifications = config.notifications;
+  assert.ok(notifications, 'config.notifications block must exist');
+  assert.ok(
+    Number.isFinite(notifications.maxQueueSize) && notifications.maxQueueSize >= 1,
+    'notifications.maxQueueSize must be a finite number >= 1'
+  );
+  assert.ok(Array.isArray(notifications.types), 'notifications.types must be an array');
+  assert.ok(notifications.types.length > 0, 'at least one notification type must be declared');
+  const ids = new Set();
+  for (const typeId of notifications.types) {
+    assert.equal(typeof typeId, 'string', `type id must be a string (${JSON.stringify(typeId)})`);
+    assert.ok(typeId !== '', 'type id must not be empty');
+    assert.ok(!ids.has(typeId), `type ids must be unique (duplicate "${typeId}")`);
+    ids.add(typeId);
+  }
+});
+
 /**
  * Whether a dot path resolves through a root object: every intermediate
  * segment must be an object and the terminal segment must be defined.

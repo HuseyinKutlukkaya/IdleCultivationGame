@@ -27,7 +27,7 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [x] Qi (gathering, max, per-second) — done (js/systems/qi.js)
 - [x] Resources (spirit stones, herbs) — done (js/systems/resources.js)
 - [x] Inventory (basic) — done (js/systems/inventory.js)
-- [ ] Notifications (queue-based)
+- [x] Notifications (queue-based) — done (js/managers/notification-manager.js + js/ui/activity-log.js)
 - [ ] Settings (incl. notation style picker — general English suffix default with selectable styles)
 - [x] Autosave (interval + on unload) — done in SaveManager (js/managers/save-manager.js)
 - [x] Number notation (abbreviated/scientific display, data-driven styles) — done (js/ui/notation.js)
