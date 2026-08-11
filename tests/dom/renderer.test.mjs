@@ -389,6 +389,171 @@ test('without notation the legacy Intl formatting is unchanged', () => {
   assert.match(qiPerSecond.textContent, /^999[.,]50$/);
 });
 
+test('duration mode formats milliseconds as "Xh Ym" / "Xh" / "Xm" / "Xs"', () => {
+  // Every branch the public contract exposes: hours + minutes, hours
+  // only, minutes only, seconds only. Each binding targets its own
+  // state slot so a single refresh can show all four formats at once.
+  const state = {
+    playtimeMs: 0,
+    playtimeHours: 0,
+    playtimeMinutes: 0,
+    playtimeSeconds: 0,
+  };
+  const cases = [
+    { ms: 3_661_000, path: 'playtimeMs', expected: '1h 1m' },
+    { ms: 7_200_000, path: 'playtimeHours', expected: '2h' },
+    { ms: 1_800_000, path: 'playtimeMinutes', expected: '30m' },
+    { ms: 45_000, path: 'playtimeSeconds', expected: '45s' },
+  ];
+
+  const elements = cases.map(({ path }) =>
+    createFakeElement({
+      'data-bind': path,
+      'data-bind-mode': 'duration',
+    })
+  );
+
+  renderer = new Renderer({
+    state,
+    root: createFakeRoot(elements),
+  });
+  renderer.init();
+
+  // First flush with all 0 ms — every binding renders "0s".
+  for (const element of elements) {
+    assert.equal(element.textContent, '0s');
+  }
+
+  // Stamp every slot with its branch's value, then a single refresh
+  // renders all four formats at once.
+  for (const { ms, path } of cases) {
+    state[path] = ms;
+  }
+  renderer.refresh();
+
+  for (let i = 0; i < cases.length; i += 1) {
+    assert.equal(
+      elements[i].textContent,
+      cases[i].expected,
+      `${cases[i].ms} ms → "${cases[i].expected}"`
+    );
+  }
+});
+
+test('duration mode writes zero seconds below one second', () => {
+  const state = { statistics: { playtimeMs: 250 } }; // under one second
+  const element = createFakeElement({
+    'data-bind': 'statistics.playtimeMs',
+    'data-bind-mode': 'duration',
+  });
+
+  renderer = new Renderer({
+    state,
+    root: createFakeRoot([element]),
+  });
+  renderer.init();
+
+  // sub-second durations floor to 0 seconds.
+  assert.equal(element.textContent, '0s');
+});
+
+test('duration mode renders "0s" for non-finite or negative values', () => {
+  const state = { statistics: { playtimeMs: NaN } };
+  const element = createFakeElement({
+    'data-bind': 'statistics.playtimeMs',
+    'data-bind-mode': 'duration',
+  });
+
+  renderer = new Renderer({
+    state,
+    root: createFakeRoot([element]),
+  });
+  renderer.init();
+
+  // NaN: defensive — never "NaNh".
+  assert.equal(element.textContent, '0s');
+
+  // Negative: defensive — never "-3h".
+  state.statistics.playtimeMs = -3_600_000;
+  renderer.refresh();
+  assert.equal(element.textContent, '0s');
+});
+
+test('duration mode follows the partial-refresh contract', () => {
+  const state = { statistics: { playtimeMs: 2_000 } };
+  const element = createFakeElement({
+    'data-bind': 'statistics.playtimeMs',
+    'data-bind-mode': 'duration',
+  });
+
+  renderer = new Renderer({
+    state,
+    root: createFakeRoot([element]),
+  });
+  renderer.init();
+  assert.equal(element.textContent, '2s');
+
+  // Wrap textContent in a setter spy that records every assignment — a
+  // second refresh with the same value must not write.
+  const writes = [];
+  Object.defineProperty(element, 'textContent', {
+    configurable: true,
+    get: () => '2s',
+    set: (value) => writes.push(value),
+  });
+
+  renderer.refresh(); // identical state: no-op
+  assert.equal(writes.length, 0);
+
+  // A changed value must write the new text exactly once.
+  state.statistics.playtimeMs = 3_000;
+  renderer.refresh();
+  assert.deepEqual(writes, ['3s']);
+});
+
+test('an unknown data-bind-mode value (e.g. "potato") falls back to text-mode semantics', (t) => {
+  // The duration mode is recognized through VALID_MODES; this test keeps
+  // the existing whitelist guarantee — an UNKNOWN mode (typo, future
+  // mode name) is treated as "text" and never throws.
+  const warn = t.mock.method(console, 'warn', () => {});
+  const state = { statistics: { playtimeMs: 2_000 } };
+  const element = createFakeElement({
+    'data-bind': 'statistics.playtimeMs',
+    'data-bind-mode': 'potato',
+  });
+
+  renderer = new Renderer({
+    state,
+    root: createFakeRoot([element]),
+  });
+  renderer.init();
+
+  assert.equal(warn.mock.callCount(), 1);
+  // Text-mode fallback renders the raw value (here: 2000), not the
+  // duration string the unknown mode would have produced.
+  assert.equal(element.textContent, '2,000');
+});
+
+test('"duration" is recognized as a valid data-bind-mode value (no warning)', (t) => {
+  // The "unrecognized mode" warning must NOT fire for "duration" — the
+  // round-trip guarantee that "duration" makes it into VALID_MODES.
+  const warn = t.mock.method(console, 'warn', () => {});
+  const state = { statistics: { playtimeMs: 3_600_000 } };
+  const element = createFakeElement({
+    'data-bind': 'statistics.playtimeMs',
+    'data-bind-mode': 'duration',
+  });
+
+  renderer = new Renderer({
+    state,
+    root: createFakeRoot([element]),
+  });
+  renderer.init();
+
+  assert.equal(warn.mock.callCount(), 0);
+  assert.equal(element.textContent, '1h');
+});
+
 test('_formatNumber delegates to the notation formatter when injected', () => {
   const notation = new NotationFormatter({
     config: {

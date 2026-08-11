@@ -178,6 +178,40 @@
               </div>
             </article>
 
+            <!-- Statistics: lifetime counters driven by js/systems/statistics.js.
+                 playtimeMs uses the new "duration" data-bind-mode so the
+                 renderer formats it as "Xh Ym" / "Xh" / "Xm" / "Xs"; the
+                 other three counters use plain text. The panel keeps the
+                 Meditation counter here AND in Cultivation Progress on
+                 purpose (the two views serve different purposes: a quick
+                 lifetime readout here vs. the active-session context
+                 there). -->
+            <article class="game-panel" data-statistics-panel>
+              <header class="game-panel__head">
+                <span class="game-panel__icon" aria-hidden="true">📊</span>
+                <h3 class="game-panel__title">Statistics</h3>
+                <span class="game-panel__tag">Placeholder</span>
+              </header>
+              <div class="game-panel__body">
+                <div class="stat">
+                  <span class="stat__label">Playtime</span>
+                  <span class="stat__value" data-bind="statistics.playtimeMs" data-bind-mode="duration">0s</span>
+                </div>
+                <div class="stat">
+                  <span class="stat__label">Qi generated</span>
+                  <span class="stat__value" data-bind="statistics.qiGenerated">0</span>
+                </div>
+                <div class="stat">
+                  <span class="stat__label">Meditations</span>
+                  <span class="stat__value" data-bind="statistics.meditationsCompleted">0</span>
+                </div>
+                <div class="stat">
+                  <span class="stat__label">Breakthroughs</span>
+                  <span class="stat__value" data-bind="statistics.breakthroughsTotal">0</span>
+                </div>
+              </div>
+            </article>
+
             <!-- Resources -->
             <article class="game-panel">
               <header class="game-panel__head">

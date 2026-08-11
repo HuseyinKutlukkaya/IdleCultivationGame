@@ -94,6 +94,7 @@ feature touching a system knows exactly which tests to run and update.
 | Meditation | `tests/unit/meditation.test.mjs` | done |
 | Bootstrap + renderer + save (real browser) | `tests/e2e/game.spec.mjs` | done |
 | Qi | `tests/unit/qi.test.mjs` | done |
+| Statistics | `tests/unit/statistics.test.mjs` + `tests/dom/renderer.test.mjs` (duration mode) | done |
 | Resources | `tests/unit/resources.test.mjs` | done |
 | Notation (`js/ui/notation.js`) | `tests/unit/notation.test.mjs` | done |
 | Inventory | `tests/unit/inventory.test.mjs` | done |

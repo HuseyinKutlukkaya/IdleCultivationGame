@@ -346,6 +346,95 @@ test('Settings panel initializer: toggles flip state, notation select changes th
   expect(errors).toEqual([]);
 });
 
+test('Statistics: system is wired, playtime grows, panel renders the four counters', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  // StatisticsSystem is exposed after bootstrap (it's a debug global
+  // like __meditation / __qi).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__statistics)))
+    .toBe(true);
+
+  // The system owns playtimeMs; its public query API exposes every
+  // counter in canonical shape (snapshot order is stable).
+  const initial = await page.evaluate(() => window.__statistics.getAll());
+  expect(initial).toEqual({
+    playtimeMs: 0,
+    meditationsCompleted: 0,
+    breakthroughsTotal: 0,
+    qiGenerated: 0,
+  });
+
+  // The fixed-timestep loop's tick — the same one that grows qi — must
+  // also grow playtimeMs (assert state, not formatted text — see
+  // tests/README.md E2E rules).
+  await page.waitForFunction(
+    () => window.__statistics && window.__statistics.get('playtimeMs') > 0,
+    null,
+    { timeout: 15_000 }
+  );
+  const playtimeAfterWait = await page.evaluate(() =>
+    window.__statistics.get('playtimeMs')
+  );
+  expect(playtimeAfterWait).toBeGreaterThan(0);
+  expect(playtimeAfterWait).toBeLessThanOrEqual(initial.playtimeMs + 60_000);
+
+  // Snapshot's playtimeMs agrees with get() — single source of truth.
+  const liveSnapshot = await page.evaluate(() => window.__statistics.getAll());
+  expect(liveSnapshot.playtimeMs).toBe(playtimeAfterWait);
+
+  // The Statistics panel renders all four counters via data-bind. Playtime
+  // uses the new duration mode ("\d+s" branch on a fresh boot — relaxed
+  // to catch the future "Xh Ym" branch too). The other three counters use
+  // text mode; we assert their NON-EMPTY textContent (the value range is
+  // 0..a-few-after-the-first-tick — far below the notation threshold).
+  const panel = page.locator('[data-statistics-panel]');
+  await expect(panel).toBeVisible();
+  await expect(
+    panel.locator('[data-bind="statistics.playtimeMs"]')
+  ).toHaveText(/^\d+s$/);
+  // The text-mode bindings render an integer (or an em dash for null —
+  // none of these are null on a healthy fresh state). The notation
+  // formatter thresholds above ~1000; a couple of seconds of qi at the
+  // 2 qi/s rate stay well below that, so an integer regex is fine.
+  const qiText = await panel
+    .locator('[data-bind="statistics.qiGenerated"]')
+    .textContent();
+  expect(qiText).toMatch(/^\d+$/);
+  const meditationsText = await panel
+    .locator('[data-bind="statistics.meditationsCompleted"]')
+    .textContent();
+  expect(meditationsText).toMatch(/^\d+$/);
+  const breakthroughsText = await panel
+    .locator('[data-bind="statistics.breakthroughsTotal"]')
+    .textContent();
+  expect(breakthroughsText).toMatch(/^\d+$/);
+
+  // The panel rendered exactly four stat bindings — guards against
+  // accidental stray data-binds leaking into the new article.
+  await expect(panel.locator('[data-bind]')).toHaveCount(4);
+
+  // After more ticks the bound playtimeMs keeps advancing and the rendered
+  // string reflects it.
+  await page.waitForFunction(
+    () => window.__statistics.get('playtimeMs') > 1000,
+    null,
+    { timeout: 15_000 }
+  );
+  // Read the rendered duration text and parse the leading digits — the
+  // panel rounds to whole seconds, so "1s" → 1, "2s" → 2, … .
+  const playtimeRendered = await panel
+    .locator('[data-bind="statistics.playtimeMs"]')
+    .textContent();
+  const playtimeRenderedSeconds = Number(playtimeRendered.replace(/[^\d]/g, ''));
+  expect(playtimeRenderedSeconds).toBeGreaterThanOrEqual(1);
+
+  expect(errors).toEqual([]);
+});
+
 test('upgrades system renders data-driven rows, buying one levels it up and grows qi', async ({
   page,
 }) => {

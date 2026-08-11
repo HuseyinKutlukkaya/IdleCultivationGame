@@ -20,8 +20,8 @@
  *   data-bind          — dot path into GameState, e.g. "cultivation.qi".
  *                        Multiple paths are allowed separated by "|" for
  *                        composed displays (combined via data-bind-format).
- *   data-bind-mode     — "text" (DEFAULT), "progress", "switch" or
- *                        "remaining":
+ *   data-bind-mode     — "text" (DEFAULT), "progress", "switch",
+ *                        "remaining" or "duration":
  *                          text      sets element.textContent; null/undefined
  *                                    render as an em dash "—".
  *                          progress  element is [role=progressbar]; sizes its
@@ -36,6 +36,12 @@
  *                                    empty inventory slots); renders "—" when
  *                                    either side is null/undefined. Requires
  *                                    data-bind-max.
+ *                          duration  compact human-duration display for a
+ *                                    numeric value in milliseconds: "Xh Ym" /
+ *                                    "Xh" / "Xm" / "Xs". Mirrors the
+ *                                    bootstrap's formatDuration convention.
+ *                                    Defensive — non-finite or negative
+ *                                    values render as "0s".
  *   data-bind-format   — optional text template for "text" mode using {0},
  *                        {1}, ... placeholders substituted with the bound
  *                        values in order (e.g. "{0} / {1}", "× {0}",
@@ -74,7 +80,7 @@ import { GameState } from '../core/game-state.js';
 const EMDASH = '—';
 
 /** Recognized data-bind-mode values; unknown modes fall back to "text". */
-const VALID_MODES = new Set(['text', 'progress', 'switch', 'remaining']);
+const VALID_MODES = new Set(['text', 'progress', 'switch', 'remaining', 'duration']);
 
 /**
  * Guardrail for data-bind-decimals: Intl.NumberFormat throws on fraction
@@ -249,7 +255,9 @@ export class Renderer {
     const text =
       binding.mode === 'remaining'
         ? this._renderRemaining(binding)
-        : this._renderText(binding);
+        : binding.mode === 'duration'
+          ? this._renderDuration(binding)
+          : this._renderText(binding);
     if (text === binding.last) return;
     binding.last = text;
     binding.element.textContent = text;
@@ -454,6 +462,22 @@ export class Renderer {
   }
 
   /**
+   * Compute the compact human-duration display for a numeric bound value
+   * in milliseconds — "Xh Ym" / "Xh" / "Xm" / "Xs". Mirrors the bootstrap's
+   * formatDuration convention (see main.js) so a status-bar note and the
+   * Statistics panel render the same shape. Defensive — non-finite or
+   * negative values render as "0s" so a hostile or partially-restored state
+   * can never produce "NaNh" or "−5h".
+   *
+   * @param {object} binding — parsed binding.
+   * @returns {string} the formatted duration.
+   */
+  _renderDuration(binding) {
+    const value = this._resolvePath(binding.paths[0]);
+    return _formatDuration(value);
+  }
+
+  /**
    * Substitute bound values into a {0} / {1} template. Placeholder indexes
    * without a bound value (or bound to null/undefined) render "—".
    *
@@ -527,4 +551,29 @@ function _parseDecimals(value) {
     return 0;
   }
   return parsed;
+}
+
+/**
+ * Compact duration formatting for the "duration" data-bind-mode: "2h 15m",
+ * "8h", "45m", "30s". Mirrors the bootstrap's formatDuration helper
+ * (main.js) so the status-bar note and the Statistics panel render the
+ * same shape. Duplicated for now (acceptable per the Phase-2 statistics
+ * scope: the renderer is a separate concern, both must never depend on
+ * each other). Non-finite or negative inputs collapse to "0s" — defensive
+ * against hostile / partially-restored state.
+ *
+ * @param {*} ms — duration in milliseconds (any value; non-finite/
+ *        negative → "0s").
+ * @returns {string} the formatted duration.
+ */
+function _formatDuration(ms) {
+  const parsed = Number(ms);
+  if (!Number.isFinite(parsed) || parsed < 0) return '0s';
+  const totalSeconds = Math.max(Math.floor(parsed / 1000), 0);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h`;
+  if (minutes > 0) return `${minutes}m`;
+  return `${totalSeconds}s`;
 }

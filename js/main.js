@@ -22,6 +22,7 @@ import { MeditationSystem } from './systems/meditation.js';
 import { QiSystem } from './systems/qi.js';
 import { ResourceSystem } from './systems/resources.js';
 import { InventorySystem } from './systems/inventory.js';
+import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { NotationFormatter } from './ui/notation.js';
 import { Renderer } from './ui/renderer.js';
@@ -160,6 +161,21 @@ async function bootstrap() {
       eventBus: EventBus,
     });
 
+    // Statistics: single owner of state.statistics.playtimeMs and the read-
+    // only query API for the four lifetime counters (playtimeMs,
+    // meditationsCompleted, breakthroughsTotal, qiGenerated). The other
+    // three counters stay where they are written today (meditationsCompleted
+    // in MeditationSystem.stop, qiGenerated in QiSystem._onUpdate,
+    // breakthroughsTotal in the future BreakthroughSystem) — the system only
+    // READS them for its snapshot/snapshot-equality emit, so adding a new
+    // writer never requires touching this system. Constructed AFTER qi so
+    // the same 'loop:update' subscription order is meditation → qi →
+    // statistics, and BEFORE game.start() so the very first tick finds it
+    // subscribed.
+    const statistics = new StatisticsSystem({
+      eventBus: EventBus,
+    });
+
     // Resources: single owner of the wallet resources (spirit stones, herbs,
     // jade, qi-condensation pills). Constructed AFTER the save restore and
     // offline apply so it starts from the restored balances. It reads its
@@ -262,6 +278,7 @@ async function bootstrap() {
     window.__qi = qi;
     window.__resources = resources;
     window.__inventory = inventory;
+    window.__statistics = statistics;
     window.__notation = notation;
     window.__notifications = notifications;
     window.__settingsPanel = settingsPanel;
