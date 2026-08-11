@@ -202,6 +202,41 @@ Every new system must answer: what state does it own, what events does it emit
 and consume, what JSON does it load, how is it rendered, how is it saved, how
 can it expand.
 
+### Design notes (current)
+Dated log of design decisions committed BEFORE implementation, so the "how"
+survives and each next system's integration mirrors the previous one. Format:
+feature, JSON contract, owned state, multiplier/consumer slots, non-goals,
+tuning, tests. Append a new dated bullet when the next feature is designed.
+
+- **2026-08-15 — Meridians (Phase 3, next after Spirit Roots).**
+  Data-driven qi-circulation ladder mirroring the SpiritRootSystem precedent
+  exactly: data → system-owned state slice → multiplier slots → QiSystem
+  consumes. JSON: `data/meridians/meridians.json` + a `data/manifest.json`
+  collection entry (validation.requiredFields: `id`, `name`,
+  `capacityMultiplier`, `flowMultiplier`; validation.uniqueField: `id`); one
+  entry per DESIGN.md state, file order = the ladder Broken → Heavenly. Each
+  entry: id, name, description, capacityMultiplier (qi cap), flowMultiplier
+  (qi rate); `purityMultiplier` and `mutations` (Twin Network, Spiral, Dragon,
+  Phoenix, Void) are reserved for later phases — no consumer yet. State:
+  new `state.meridians` slice owned by the MeridianSystem (canonical shape
+  `{ id, state, capacityMultiplier, flowMultiplier }`); the
+  `player.meridians: 0` placeholder is replaced by `player.meridians` (the
+  display-name string, default `Normal` — same precedent as player.spiritRoot).
+  Multiplier slots: MeridianSystem writes `cultivation.meridianCapacityMultiplier`
+  (stacks in QiSystem's `_computeQiMax` alongside realmEffects.qiMaxMultiplier)
+  and `cultivation.meridianFlowMultiplier` (stacks in the aggregate per-second
+  rate alongside cultivation.spiritRootMultiplier), both with the existing
+  neutral-1 coercion — a missing/malformed/<=0 factor reads as 1, so a hostile
+  save can never zero out the cap or rate. No events, no UI, no character-gen
+  roll yet (matches Spirit Roots). Old saves stay identical: the default state
+  Normal is 1.0×1.0. Tuning table (flat placeholder ladder, monotonic —
+  Phase 10 Balancing retunes): Broken 0.70/0.60, Damaged 0.85/0.80,
+  Normal 1.00/1.00, Wide 1.25/1.10, Perfect 1.60/1.25, Golden 2.00/1.50,
+  Heavenly 2.50/1.80 (capacity/flow). Tests in the same commit:
+  data-validation (manifest entry + ladder shape), MeridianSystem unit tests
+  (loads ladder, writes both slots, neutral coercion, hostile-state fallback),
+  qi unit tests for the two new stacking slots, game-state slice test.
+
 ## Testing Checklist
 Application loads · no console errors · no network errors · save works ·
 reload works · offline calculation works · GitHub Pages compatible.
