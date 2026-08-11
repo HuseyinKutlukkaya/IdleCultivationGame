@@ -38,8 +38,9 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 ## Phase 3 — Cultivation
 - [x] Realms (JSON-driven) — done (js/systems/realms.js + data/realms/realms.json)
 - [x] Breakthroughs (requirements, results, bottlenecks) — done (js/systems/breakthroughs.js + data/breakthroughs/breakthroughs.json)
-- [ ] Tribulations
-- [ ] Spirit Roots
+- [x] Tribulations — done (js/systems/tribulations.js + data/tribulations/tribulations.json)
+- [x] Spirit Roots — done (js/systems/spirit-roots.js + data/spirit-roots/spirit-roots.json)
+- [ ] Playtest gate — the full cultivation loop (qi → breakthrough → tribulation → realm change) is reachable and completable by a human player through the UI (Cultivation panel, js/ui/cultivation-panel.js; the real-browser e2e drives the loop). Close after the user's playtest + revision cycle, before Meridians.
 - [ ] Meridians
 - [ ] Physiques
 - [ ] Dantian (qi storage capacity, density, purity — DESIGN.md character system)
