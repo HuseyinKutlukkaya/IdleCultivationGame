@@ -8,7 +8,20 @@
     {
       "id": "realms",
       "files": ["data/realms/realms.json"],
-      "validation": { "requiredFields": ["id", "name"], "uniqueField": "id" }
+      "validation": {
+        "requiredFields": [
+          "id",
+          "name",
+          "description",
+          "tier",
+          "qiMaxMultiplier",
+          "cultivationSpeedMultiplier",
+          "lifespanYears",
+          "powerMultiplier",
+          "unlocks"
+        ],
+        "uniqueField": "id"
+      }
     },
     {
       "id": "items",

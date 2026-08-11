@@ -100,6 +100,7 @@ feature touching a system knows exactly which tests to run and update.
 | Inventory | `tests/unit/inventory.test.mjs` | done |
 | Item content (`data/items/items.json`) | `tests/data/items.test.mjs` | done |
 | Upgrade content (`data/upgrades/upgrades.json`) | `tests/data/upgrades.test.mjs` | done |
+| Realm content (`data/realms/realms.json`) | `tests/data/realms.test.mjs` | done |
 | Upgrade system | `tests/unit/upgrades.test.mjs` | done |
 | Upgrades panel (DOM) | `tests/unit/upgrades-panel.test.mjs` | done |
 | Notifications (queue) | `tests/unit/notification-manager.test.mjs` + `tests/dom/activity-log.test.mjs` | done |

@@ -1,22 +1,173 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "meta": {
-    "comment": "PLACEHOLDER realm definitions created to exercise the DataManager pipeline. Real realm content and balancing are authored during the Cultivation phase (ROADMAP Phase 3)."
+    "comment": "Phase-3 realm ladder (ROADMAP 'Realms (JSON-driven)'). The canonical 15-tier DESIGN.md progression (Mortal → Beyond Heaven): ids and names follow DESIGN.md 'Realms' exactly. Balancing multipliers are monotonic placeholder curves — Phase 10 Balancing retunes them. The Breakthroughs roadmap item will consume this collection; the per-realm 'unlocks' arrays stay empty placeholders until the unlock-bearing systems land."
   },
   "definitions": [
     {
       "id": "mortal",
       "name": "Mortal",
-      "description": "The starting realm of every new life. Placeholder definition.",
+      "description": "The starting realm of every new life, before cultivation begins.",
       "tier": 0,
-      "placeholder": true
+      "qiMaxMultiplier": 1,
+      "cultivationSpeedMultiplier": 1,
+      "lifespanYears": 100,
+      "powerMultiplier": 1,
+      "unlocks": []
     },
     {
       "id": "qi-gathering",
       "name": "Qi Gathering",
-      "description": "First step on the path of cultivation. Placeholder definition.",
+      "description": "The first realm on the path of cultivation — the body begins drawing in and refining ambient qi.",
       "tier": 1,
-      "placeholder": true
+      "qiMaxMultiplier": 2,
+      "cultivationSpeedMultiplier": 1.5,
+      "lifespanYears": 200,
+      "powerMultiplier": 2,
+      "unlocks": []
+    },
+    {
+      "id": "foundation-establishment",
+      "name": "Foundation Establishment",
+      "description": "The cultivator lays a stable foundation, anchoring qi in the body.",
+      "tier": 2,
+      "qiMaxMultiplier": 4,
+      "cultivationSpeedMultiplier": 2.2,
+      "lifespanYears": 400,
+      "powerMultiplier": 5,
+      "unlocks": []
+    },
+    {
+      "id": "core-formation",
+      "name": "Core Formation",
+      "description": "The cultivator condenses refined qi into a solid core.",
+      "tier": 3,
+      "qiMaxMultiplier": 8,
+      "cultivationSpeedMultiplier": 3.4,
+      "lifespanYears": 800,
+      "powerMultiplier": 12,
+      "unlocks": []
+    },
+    {
+      "id": "nascent-soul",
+      "name": "Nascent Soul",
+      "description": "The cultivator births a nascent soul from the formed core.",
+      "tier": 4,
+      "qiMaxMultiplier": 16,
+      "cultivationSpeedMultiplier": 5,
+      "lifespanYears": 1600,
+      "powerMultiplier": 30,
+      "unlocks": []
+    },
+    {
+      "id": "soul-transformation",
+      "name": "Soul Transformation",
+      "description": "The cultivator transforms and strengthens the nascent soul.",
+      "tier": 5,
+      "qiMaxMultiplier": 32,
+      "cultivationSpeedMultiplier": 7.5,
+      "lifespanYears": 3000,
+      "powerMultiplier": 70,
+      "unlocks": []
+    },
+    {
+      "id": "void-refinement",
+      "name": "Void Refinement",
+      "description": "The cultivator refines the void within, purifying qi and soul alike.",
+      "tier": 6,
+      "qiMaxMultiplier": 64,
+      "cultivationSpeedMultiplier": 11,
+      "lifespanYears": 5000,
+      "powerMultiplier": 160,
+      "unlocks": []
+    },
+    {
+      "id": "body-integration",
+      "name": "Body Integration",
+      "description": "The cultivator integrates the body with qi, strengthening flesh and spirit as one.",
+      "tier": 7,
+      "qiMaxMultiplier": 128,
+      "cultivationSpeedMultiplier": 16,
+      "lifespanYears": 8000,
+      "powerMultiplier": 350,
+      "unlocks": []
+    },
+    {
+      "id": "great-ascension",
+      "name": "Great Ascension",
+      "description": "The cultivator approaches the limits of the mortal world, readying for ascension.",
+      "tier": 8,
+      "qiMaxMultiplier": 256,
+      "cultivationSpeedMultiplier": 24,
+      "lifespanYears": 12000,
+      "powerMultiplier": 750,
+      "unlocks": []
+    },
+    {
+      "id": "true-immortal",
+      "name": "True Immortal",
+      "description": "The first immortal realm — the cultivator sheds mortality and gains an immortal body.",
+      "tier": 9,
+      "qiMaxMultiplier": 512,
+      "cultivationSpeedMultiplier": 36,
+      "lifespanYears": 20000,
+      "powerMultiplier": 1500,
+      "unlocks": []
+    },
+    {
+      "id": "celestial-immortal",
+      "name": "Celestial Immortal",
+      "description": "The cultivator ascends into the celestial heavens.",
+      "tier": 10,
+      "qiMaxMultiplier": 1024,
+      "cultivationSpeedMultiplier": 55,
+      "lifespanYears": 40000,
+      "powerMultiplier": 3000,
+      "unlocks": []
+    },
+    {
+      "id": "golden-immortal",
+      "name": "Golden Immortal",
+      "description": "The cultivator's immortal body and soul become imperishable, tempered to gold.",
+      "tier": 11,
+      "qiMaxMultiplier": 2048,
+      "cultivationSpeedMultiplier": 82,
+      "lifespanYears": 80000,
+      "powerMultiplier": 6000,
+      "unlocks": []
+    },
+    {
+      "id": "dao-lord",
+      "name": "Dao Lord",
+      "description": "The cultivator grasps and embodies a Dao, becoming a lord of their own path.",
+      "tier": 12,
+      "qiMaxMultiplier": 4096,
+      "cultivationSpeedMultiplier": 124,
+      "lifespanYears": 150000,
+      "powerMultiplier": 12000,
+      "unlocks": []
+    },
+    {
+      "id": "heavenly-sovereign",
+      "name": "Heavenly Sovereign",
+      "description": "The cultivator's authority spans the heavens themselves.",
+      "tier": 13,
+      "qiMaxMultiplier": 8192,
+      "cultivationSpeedMultiplier": 186,
+      "lifespanYears": 300000,
+      "powerMultiplier": 24000,
+      "unlocks": []
+    },
+    {
+      "id": "beyond-heaven",
+      "name": "Beyond Heaven",
+      "description": "The final realm — the cultivator transcends heaven and all within it.",
+      "tier": 14,
+      "qiMaxMultiplier": 16384,
+      "cultivationSpeedMultiplier": 280,
+      "lifespanYears": 1000000,
+      "powerMultiplier": 50000,
+      "unlocks": []
     }
   ]
 }

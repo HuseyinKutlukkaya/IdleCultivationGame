@@ -63,6 +63,37 @@ test('page boots cleanly and the game loop is running', async ({ page }) => {
   expect(await stateValue(page, 'resources.spiritStones')).toBe(50);
   await expect(page.locator('[data-bind="resources.spiritStones"]').first()).toBeVisible();
 
+  // The data manager is wired from the manifest: the 'realms' collection
+  // holds the canonical DESIGN.md 15-tier ladder (data/realms/realms.json),
+  // loaded through the real DataManager pipeline (assert on state — the
+  // count and the ordered canonical ids — not formatted text; see
+  // tests/README.md E2E rules). Breakthroughs will consume it later.
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__dataManager)))
+    .toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__dataManager.count('realms')))
+    .toBe(15);
+  expect(
+    await page.evaluate(() => window.__dataManager.keys('realms'))
+  ).toEqual([
+    'mortal',
+    'qi-gathering',
+    'foundation-establishment',
+    'core-formation',
+    'nascent-soul',
+    'soul-transformation',
+    'void-refinement',
+    'body-integration',
+    'great-ascension',
+    'true-immortal',
+    'celestial-immortal',
+    'golden-immortal',
+    'dao-lord',
+    'heavenly-sovereign',
+    'beyond-heaven',
+  ]);
+
   // The number notation formatter is wired from config.notation and defaults
   // to the config's standard style; an explicit setStyle writes the player
   // preference into state.settings (assert state, not formatted text — see
