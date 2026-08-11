@@ -35,6 +35,14 @@
         "requiredFields": ["id", "name", "category", "costResource", "baseCost", "costGrowth", "effectPerLevel"],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "breakthroughs",
+      "files": ["data/breakthroughs/breakthroughs.json"],
+      "validation": {
+        "requiredFields": ["realmId", "requiredProgress", "cost", "bottleneck", "results"],
+        "uniqueField": "realmId"
+      }
     }
   ]
 }

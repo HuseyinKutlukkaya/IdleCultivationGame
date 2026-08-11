@@ -23,6 +23,7 @@ import { QiSystem } from './systems/qi.js';
 import { RealmSystem } from './systems/realms.js';
 import { ResourceSystem } from './systems/resources.js';
 import { InventorySystem } from './systems/inventory.js';
+import { BreakthroughSystem } from './systems/breakthroughs.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { NotationFormatter } from './ui/notation.js';
@@ -264,6 +265,28 @@ async function bootstrap() {
     });
     initActivityLog({ eventBus: EventBus, notifications });
 
+    // Breakthroughs: single owner of realm breakthrough attempts
+    // (requirements, results, bottlenecks — data/breakthroughs/
+    // breakthroughs.json via the DataManager, one entry per realm id).
+    // Constructed AFTER realms, qi, resources and inventory (it advances the
+    // ladder through RealmSystem.setRealm(), spends the entry's cost through
+    // ResourceSystem.spend and removes bottleneck items through
+    // InventorySystem.remove — no system writes another system's state
+    // directly) and BEFORE game.start() so the very first tick finds its
+    // 'loop:update' subscription. The subscription order (qi before
+    // breakthroughs) is deliberate: on every tick the QiSystem writes
+    // cultivation.qiPerSecond first and this system's accrual reads it. It
+    // owns cultivation.realmProgress / realmProgressMax / breakthroughCost
+    // and emits 'realm:breakthrough' on every accepted attempt.
+    const breakthroughs = new BreakthroughSystem({
+      config,
+      eventBus: EventBus,
+      realmSystem: realms,
+      resourceSystem: resources,
+      inventorySystem: inventory,
+      dataManager,
+    });
+
     // Master's parting gift: on a FRESH game (no save to restore), narrate
     // the origin endowment that matches state.resources.spiritStones === 50
     // (the only spirit-stone source until Phase 5 introduces sects + stipends).
@@ -301,6 +324,7 @@ async function bootstrap() {
     window.__notifications = notifications;
     window.__settingsPanel = settingsPanel;
     window.__upgrades = upgrades;
+    window.__breakthroughs = breakthroughs;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)

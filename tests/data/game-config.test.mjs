@@ -165,6 +165,15 @@ test('every resource capPath resolves against the real GameState shape', () => {
   }
 });
 
+test('breakthroughs block declares the realm-progress rate with a sane shape', () => {
+  const breakthroughs = config.breakthroughs;
+  assert.ok(breakthroughs, 'config.breakthroughs block must exist');
+  assert.ok(
+    Number.isFinite(breakthroughs.progressRate) && breakthroughs.progressRate >= 0,
+    'breakthroughs.progressRate must be a non-negative finite number'
+  );
+});
+
 test('notation block declares a default style that is one of its own styles', () => {
   const notation = config.notation;
   assert.ok(notation, 'config.notation block must exist');

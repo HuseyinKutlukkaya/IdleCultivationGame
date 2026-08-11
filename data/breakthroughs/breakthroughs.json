@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 breakthrough tables (ROADMAP 'Breakthroughs (requirements, results, bottlenecks)'). One entry per realm id — the canonical 15-tier DESIGN.md ladder, in tier order — consumed by the BreakthroughSystem (js/systems/breakthroughs.js): requiredProgress is the cultivation.realmProgress gate, cost.spiritStones is the wallet gate (spent via ResourceSystem), bottleneck lists the carried items the attempt consumes (ids reference data/items/items.json only), and results is the weighted outcome table. Canonical outcomes: perfect, great-success, success, barely-successful (SUCCESS — advance one tier), failure (progressLoss 0), heavy-failure (progressLoss 0.5), qi-deviation (progressLoss 1). Death is excluded in v1 — DESIGN.md marks it 'future optional'. Per-realm success weight is ~80% and failure ~20% (placeholder balancing — Phase 10 Balancing retunes). requiredProgress and cost.spiritStones are monotonic placeholder curves (1000 early; 0 for mortal)."
+  },
+  "definitions": [
+    {
+      "realmId": "mortal",
+      "requiredProgress": 1000,
+      "cost": { "spiritStones": 0 },
+      "bottleneck": [],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 12, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 5, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 3, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "qi-gathering",
+      "requiredProgress": 1000,
+      "cost": { "spiritStones": 50 },
+      "bottleneck": [],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 11, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 6, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 3, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "foundation-establishment",
+      "requiredProgress": 1500,
+      "cost": { "spiritStones": 150 },
+      "bottleneck": [
+        { "id": "qi-condensation-pill", "count": 1 }
+      ],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 12, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 4, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 4, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "core-formation",
+      "requiredProgress": 2000,
+      "cost": { "spiritStones": 400 },
+      "bottleneck": [
+        { "id": "spirit-herb", "count": 2 }
+      ],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 10, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 6, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 4, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "nascent-soul",
+      "requiredProgress": 3000,
+      "cost": { "spiritStones": 1000 },
+      "bottleneck": [
+        { "id": "spirit-grass", "count": 3 }
+      ],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 11, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 5, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 4, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "soul-transformation",
+      "requiredProgress": 4500,
+      "cost": { "spiritStones": 2500 },
+      "bottleneck": [
+        { "id": "iron-ore", "count": 2 }
+      ],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 10, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 7, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 3, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "void-refinement",
+      "requiredProgress": 6500,
+      "cost": { "spiritStones": 6000 },
+      "bottleneck": [],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 12, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 5, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 3, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "body-integration",
+      "requiredProgress": 9000,
+      "cost": { "spiritStones": 14000 },
+      "bottleneck": [
+        { "id": "mortal-sword", "count": 1 }
+      ],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 11, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 6, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 3, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "great-ascension",
+      "requiredProgress": 12000,
+      "cost": { "spiritStones": 32000 },
+      "bottleneck": [],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 10, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 6, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 4, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "true-immortal",
+      "requiredProgress": 16000,
+      "cost": { "spiritStones": 75000 },
+      "bottleneck": [
+        { "id": "jade-slip", "count": 1 }
+      ],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 11, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 4, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 5, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "celestial-immortal",
+      "requiredProgress": 21000,
+      "cost": { "spiritStones": 170000 },
+      "bottleneck": [],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 12, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 4, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 4, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "golden-immortal",
+      "requiredProgress": 27000,
+      "cost": { "spiritStones": 380000 },
+      "bottleneck": [],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 10, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 7, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 3, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "dao-lord",
+      "requiredProgress": 34000,
+      "cost": { "spiritStones": 850000 },
+      "bottleneck": [],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 11, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 5, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 4, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "heavenly-sovereign",
+      "requiredProgress": 42000,
+      "cost": { "spiritStones": 1900000 },
+      "bottleneck": [],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 12, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 5, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 3, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "beyond-heaven",
+      "requiredProgress": 50000,
+      "cost": { "spiritStones": 4200000 },
+      "bottleneck": [],
+      "results": [
+        { "outcome": "perfect", "weight": 5 },
+        { "outcome": "great-success", "weight": 10 },
+        { "outcome": "success", "weight": 55 },
+        { "outcome": "barely-successful", "weight": 10 },
+        { "outcome": "failure", "weight": 10, "progressLoss": 0 },
+        { "outcome": "heavy-failure", "weight": 6, "progressLoss": 0.5 },
+        { "outcome": "qi-deviation", "weight": 4, "progressLoss": 1 }
+      ]
+    }
+  ]
+}

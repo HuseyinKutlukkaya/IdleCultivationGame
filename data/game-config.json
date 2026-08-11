@@ -58,6 +58,10 @@
       { "id": "qiCondensationPills", "label": "Qi Condensation Pills" }
     ]
   },
+  "breakthroughs": {
+    "comment": "BreakthroughSystem tuning (Phase 3 — Breakthroughs). progressRate multiplies the qi-driven realm-progress accrual: cultivation.realmProgress gains qiPerSecond × progressRate per second, clamped to the current realm's requiredProgress (data/breakthroughs/breakthroughs.json). Placeholder balancing — Phase 10 Balancing retunes.",
+    "progressRate": 1
+  },
   "notifications": {
     "comment": "NotificationManager tuning (Phase 2 — First Gameplay). maxQueueSize bounds the in-memory FIFO queue (oldest drops first). types lists every valid notification type id; the Activity Log renders each entry with a log__item--<type> class. Add a type by adding an id here — no code changes required.",
     "maxQueueSize": 50,

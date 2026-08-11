@@ -32,6 +32,7 @@ import { RealmSystem } from '../../js/systems/realms.js';
 import { ResourceSystem } from '../../js/systems/resources.js';
 import { InventorySystem } from '../../js/systems/inventory.js';
 import { UpgradeSystem } from '../../js/systems/upgrades.js';
+import { BreakthroughSystem } from '../../js/systems/breakthroughs.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { initActivityLog } from '../../js/ui/activity-log.js';
@@ -82,6 +83,9 @@ const DATA_FILES = {
         { id: 'qiCondensationPills', label: 'Qi Condensation Pills' },
       ],
     },
+    breakthroughs: {
+      progressRate: 1,
+    },
     notifications: {
       maxQueueSize: 50,
       types: ['info', 'success', 'warning', 'error', 'achievement'],
@@ -124,6 +128,14 @@ const DATA_FILES = {
           uniqueField: 'id',
         },
       },
+      {
+        id: 'breakthroughs',
+        files: ['data/breakthroughs/breakthroughs.json'],
+        validation: {
+          requiredFields: ['realmId', 'requiredProgress', 'cost', 'bottleneck', 'results'],
+          uniqueField: 'realmId',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -152,6 +164,31 @@ const DATA_FILES = {
         costGrowth: 1.5,
         effectPerLevel: 1,
         maxLevel: null,
+      },
+    ],
+  },
+  'data/breakthroughs/breakthroughs.json': {
+    meta: {},
+    definitions: [
+      {
+        realmId: 'mortal',
+        requiredProgress: 1000,
+        cost: { spiritStones: 0 },
+        bottleneck: [],
+        results: [
+          { outcome: 'success', weight: 100 },
+          { outcome: 'failure', weight: 0, progressLoss: 0 },
+        ],
+      },
+      {
+        realmId: 'qi-gathering',
+        requiredProgress: 1500,
+        cost: { spiritStones: 50 },
+        bottleneck: [{ id: 'spirit-herb', count: 1 }],
+        results: [
+          { outcome: 'success', weight: 100 },
+          { outcome: 'failure', weight: 0, progressLoss: 0 },
+        ],
       },
     ],
   },
@@ -346,7 +383,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 4 definitions loaded. Game loop running.'
+    'Scaffold ready — 6 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -413,6 +450,30 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(globalThis.window.__upgrades.level('foundation-breathing'), 1);
   assert.equal(globalThis.window.__resources.get('spiritStones'), 40);
   assert.equal(GameState.cultivation.qiSources.upgrades, 1);
+  // The Breakthrough system is wired with the DataManager: the breakthrough
+  // tables come from the loaded 'breakthroughs' collection (2 canned entries
+  // for the two canned realms). The constructor boot-syncs the current
+  // realm's gates into the cultivation slice — the mortal entry (required
+  // progress 1000, cost 0) is active from the first tick (no save present
+  // to override it). Attempts gate on the canonical requirements: progress
+  // 0 < 1000 → 'progress' reason, zero mutation, no event.
+  assert.ok(globalThis.window.__breakthroughs instanceof BreakthroughSystem);
+  assert.equal(globalThis.window.__breakthroughs.count, 2);
+  assert.equal(globalThis.window.__breakthroughs.byRealm('mortal').requiredProgress, 1000);
+  assert.equal(globalThis.window.__breakthroughs.byRealm('qi-gathering').requiredProgress, 1500);
+  assert.equal(globalThis.window.__breakthroughs.byRealm('missing'), null);
+  assert.equal(GameState.cultivation.realmProgressMax, 1000);
+  assert.equal(GameState.cultivation.breakthroughCost, 0);
+  assert.equal(GameState.cultivation.realmProgress, 0);
+  assert.deepEqual(globalThis.window.__breakthroughs.attempt(), {
+    outcome: null,
+    advanced: false,
+    reason: 'progress',
+  });
+  // requirements() mirrors the same read-only gate snapshot: canAttempt is
+  // false while progress 0 < required 1000 (the attempt above also left the
+  // slice untouched — progress stayed 0, cost stayed 0, stats stayed 0).
+  assert.equal(globalThis.window.__breakthroughs.requirements().canAttempt, false);
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -463,6 +524,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/realms/realms.json',
     'data/items/items.json',
     'data/upgrades/upgrades.json',
+    'data/breakthroughs/breakthroughs.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -546,4 +608,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__notation, undefined);
   assert.equal(globalThis.window.__notifications, undefined);
   assert.equal(globalThis.window.__upgrades, undefined);
+  assert.equal(globalThis.window.__breakthroughs, undefined);
 });

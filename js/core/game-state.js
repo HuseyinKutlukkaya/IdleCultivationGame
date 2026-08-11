@@ -80,6 +80,14 @@ function createGameState() {
       realmTier: 0,
       realmStage: 1,
       nextRealm: 'Qi Gathering',
+      // Breakthrough progression. Owned/written by the BreakthroughSystem
+      // (js/systems/breakthroughs.js): realmProgress accrues every tick from
+      // qiPerSecond × config.breakthroughs.progressRate (clamped to
+      // realmProgressMax); realmProgressMax is the current realm's
+      // data-driven requiredProgress (data/breakthroughs/breakthroughs.json);
+      // breakthroughCost is the current realm's spirit-stone cost (null = no
+      // definition for the realm — the renderer renders null as "—"). Both
+      // max and cost are re-synced on boot and after every accepted attempt.
       breakthroughCost: null,
       realmProgress: 0,
       realmProgressMax: 1000,

@@ -36,8 +36,8 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [x] Statistics (lifetime counters: playtime, qi generated, breakthroughs, meditations)
 
 ## Phase 3 — Cultivation
-- [ ] Realms (JSON-driven)
-- [ ] Breakthroughs (requirements, results, bottlenecks)
+- [x] Realms (JSON-driven) — done (js/systems/realms.js + data/realms/realms.json)
+- [x] Breakthroughs (requirements, results, bottlenecks) — done (js/systems/breakthroughs.js + data/breakthroughs/breakthroughs.json)
 - [ ] Tribulations
 - [ ] Spirit Roots
 - [ ] Meridians

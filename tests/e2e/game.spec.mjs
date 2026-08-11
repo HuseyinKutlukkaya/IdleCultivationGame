@@ -16,6 +16,11 @@
  *   7. the upgrades system renders data-driven rows in the Upgrades
  *      panel, a click on the cheapest upgrade deducts spirit stones,
  *      bumps the level, and lets the qi aggregate grow.
+ *   8. the breakthrough system is wired — the data-driven tables load
+ *      for the full ladder, the boot sync lands the current realm's
+ *      gates, a blocked attempt mutates nothing, and a full-progress
+ *      attempt advances the realm through RealmSystem with the post-
+ *      success sync pulling the new realm's entry.
  *
  * These run against the dependency-free static server (static-server.mjs),
  * never inside the node:test suite — the `.spec.mjs` suffix keeps them out of
@@ -579,6 +584,94 @@ test('upgrades system renders data-driven rows, buying one levels it up and grow
   expect(finalStones).toBeLessThanOrEqual(stonesBefore);
   // The original 50-stone gift is now partially spent on upgrades.
   expect(stonesBefore).toBe(50);
+
+  expect(errors).toEqual([]);
+});
+
+test('breakthrough system is wired: gates block, a synced attempt advances the realm', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // Determinism: the shipped JS uses Math.random ONLY for the breakthrough
+  // weighted roll (js/systems/breakthroughs.js, verified by grep — the
+  // injectable `random` option defaults to Math.random), so seeding it here
+  // via a page-scoped addInitScript affects no other test and nothing else
+  // at boot. With Math.random → 0 the roll = 0 × totalWeight lands in the
+  // FIRST bucket of the Mortal results table ('perfect' — a SUCCESS
+  // outcome), so the success path below is deterministic instead of the
+  // real 80/20 dice (~1-in-5 runs used to roll a failure and fail the
+  // `advanced === true` assertion).
+  page.addInitScript(() => {
+    Math.random = () => 0;
+  });
+  await page.goto('/');
+
+  // BreakthroughSystem is exposed after bootstrap; the tables come from the
+  // data-driven 'breakthroughs' collection — one entry per realm id across
+  // the full 15-tier ladder (data/breakthroughs/breakthroughs.json).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__breakthroughs)))
+    .toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__breakthroughs.count))
+    .toBe(15);
+
+  // Boot sync wrote the current (Mortal) realm's entry gates into the
+  // cultivation slice: required progress 1000, zero-cost breakthrough.
+  expect(await stateValue(page, 'cultivation.realmProgressMax')).toBe(1000);
+  expect(await stateValue(page, 'cultivation.breakthroughCost')).toBe(0);
+  expect(await stateValue(page, 'cultivation.realmProgress')).toBe(0);
+
+  // With zero progress the gate blocks deterministically and mutates
+  // nothing (assert state, not formatted text — see tests/README.md E2E
+  // rules).
+  expect(
+    await page.evaluate(() => window.__breakthroughs.attempt())
+  ).toEqual({ outcome: null, advanced: false, reason: 'progress' });
+  expect(await stateValue(page, 'cultivation.realm')).toBe('Mortal');
+  expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(0);
+
+  // A manually-synced qi rate flows into realm progress on real ticks: the
+  // mortal entry requires 1000 progress; at 10 qi/s it clears in ~100s, so
+  // a wait that long is impractical. Instead the E2E exercises the attempt
+  // path directly with the gate satisfied (as the player's click would
+  // once progress accrues) — the real per-second accrual curve is covered
+  // by the unit suite, which drives fake loop:update emissions.
+  await page.evaluate(() => {
+    window.__game.state.cultivation.realmProgress = 1000;
+  });
+
+  // A full-progress attempt on Mortal costs 0 stones, so no wallet spend —
+  // the attempt consumes the entry's cost through the real ResourceSystem.
+  const result = await page.evaluate(() => window.__breakthroughs.attempt());
+  expect(result.advanced).toBe(true);
+  expect(['perfect', 'great-success', 'success', 'barely-successful']).toContain(
+    result.outcome
+  );
+
+  // The realm advanced through RealmSystem, progress reset, and the post-
+  // success sync pulled the NEW realm's entry (Qi Gathering: 1000 progress
+  // cost 50 stones — matching data/breakthroughs/breakthroughs.json).
+  expect(await stateValue(page, 'cultivation.realm')).toBe('Qi Gathering');
+  expect(await stateValue(page, 'cultivation.realmTier')).toBe(1);
+  expect(await stateValue(page, 'cultivation.realmProgress')).toBe(0);
+  expect(await stateValue(page, 'cultivation.realmProgressMax')).toBe(1000);
+  expect(await stateValue(page, 'cultivation.breakthroughCost')).toBe(50);
+  expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(1);
+  // The realm-name DOM binding follows the state (rendered through its
+  // "{0} Realm" format template).
+  const realmName = page.locator('.realm-name');
+  await expect(realmName).toHaveText('Qi Gathering Realm');
+
+  // A second attempt is now blocked by the 50-stone cost (the fresh wallet
+  // spent 0 on the mortal attempt, so it still holds 50 — but the fresh
+  // qi-gathering entry demands a bottleneck-free cost exactly equal to the
+  // wallet, so it CAN afford it; progress is 0 < 1000 → the progress gate
+  // blocks first). Verify the deterministic reason with zero mutation.
+  expect(
+    await page.evaluate(() => window.__breakthroughs.attempt())
+  ).toEqual({ outcome: null, advanced: false, reason: 'progress' });
+  expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(1);
 
   expect(errors).toEqual([]);
 });
