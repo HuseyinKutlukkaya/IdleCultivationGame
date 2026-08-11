@@ -41,11 +41,18 @@ test('has the exact default placeholder shape', () => {
 
     cultivation: {
       realm: 'Mortal',
+      realmTier: 0,
       realmStage: 1,
-      nextRealm: 'Qi Condensation',
+      nextRealm: 'Qi Gathering',
       breakthroughCost: null,
       realmProgress: 0,
       realmProgressMax: 1000,
+      realmEffects: {
+        qiMaxMultiplier: 1,
+        cultivationSpeedMultiplier: 1,
+        powerMultiplier: 1,
+        lifespanYears: 100,
+      },
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,

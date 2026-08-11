@@ -20,6 +20,7 @@ import { NotificationManager } from './managers/notification-manager.js';
 import { SaveManager } from './managers/save-manager.js';
 import { MeditationSystem } from './systems/meditation.js';
 import { QiSystem } from './systems/qi.js';
+import { RealmSystem } from './systems/realms.js';
 import { ResourceSystem } from './systems/resources.js';
 import { InventorySystem } from './systems/inventory.js';
 import { StatisticsSystem } from './systems/statistics.js';
@@ -150,12 +151,28 @@ async function bootstrap() {
       eventBus: EventBus,
     });
 
+    // Realms: single owner of the realm ladder and its applied effects
+    // (data/realms/realms.json via the DataManager). Constructed AFTER the
+    // save restore + offline apply (so it resolves the restored realm and
+    // writes the canonical identity + effect slots into state) and
+    // IMMEDIATELY BEFORE the QiSystem — the realm's qiMaxMultiplier and
+    // cultivationSpeedMultiplier must already be in cultivation.realmEffects
+    // when QiSystem's constructor syncs the cap and rate, or the realm
+    // factor would be missing from the first sync (the next realm:changed
+    // would pick it up, but boot should be right on the first tick).
+    const realms = new RealmSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Qi: single owner of the qi resource. Constructed AFTER the meditation
     // system so the contribution slot already exists when this constructor
     // syncs the aggregate rate (a restored session shows the right cap/rate
-    // before the first tick). Every qi source is declared in config.qi.sources
-    // (ratePath = that source's own state slot); this system owns the resource
-    // math — aggregation, cap clamping, statistics and 'qi:gained'.
+    // before the first tick), and AFTER the RealmSystem so the realm effect
+    // multipliers are already in state for the cap/rate sync. Every qi source
+    // is declared in config.qi.sources (ratePath = that source's own state
+    // slot); this system owns the resource math — aggregation, cap clamping,
+    // statistics and 'qi:gained'.
     const qi = new QiSystem({
       config,
       eventBus: EventBus,
@@ -275,6 +292,7 @@ async function bootstrap() {
     window.__renderer = renderer;
     window.__offlineProgress = offlineProgress;
     window.__meditation = meditation;
+    window.__realms = realms;
     window.__qi = qi;
     window.__resources = resources;
     window.__inventory = inventory;

@@ -13,8 +13,12 @@
  * trust slice repair (malformed cultivation/statistics slices never abort
  * boot or the tick and gains flow normally after repair), the finite-write
  * guard (a restored value at the double limit never puts Infinity into
- * state), the cap-shrink clamp (a smaller cap brings the pool down with it)
- * and destroy() unsubscription.
+ * state), the cap-shrink clamp (a smaller cap brings the pool down with it),
+ * the realm-multiplier stacking (cultivation.realmEffects.qiMaxMultiplier
+ * multiplies the managed cap and cultivationSpeedMultiplier multiplies the
+ * aggregate rate, with neutral coercion for missing/malformed factors and a
+ * finite clamp so an absurd restored multiplier never overflows) and
+ * destroy() unsubscription.
  *
  * Each test injects a fresh deep clone of GameState (so the shared singleton
  * stays pristine) and the shared EventBus (cleared in beforeEach so event
@@ -372,11 +376,18 @@ test('a restored cultivation slice that is null is repaired and never aborts boo
   // Repaired to the canonical fresh cultivation slice (see core/game-state.js).
   assert.deepEqual(state.cultivation, {
     realm: 'Mortal',
+    realmTier: 0,
     realmStage: 1,
-    nextRealm: 'Qi Condensation',
+    nextRealm: 'Qi Gathering',
     breakthroughCost: null,
     realmProgress: 0,
     realmProgressMax: 1000,
+    realmEffects: {
+      qiMaxMultiplier: 1,
+      cultivationSpeedMultiplier: 1,
+      powerMultiplier: 1,
+      lifespanYears: 100,
+    },
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
@@ -420,10 +431,12 @@ test('restored primitive cultivation and null statistics slices are repaired', (
 });
 
 test('the finite-write guard: a restored value at the double limit never overflows', () => {
-  // Unmanaged cap (no baseMaxQi) so the room below the cap stays huge; the
-  // huge finite rate yields a large gain that, added to a restored statistic
-  // at Number.MAX_VALUE, would overflow to Infinity — the whole gain must be
-  // skipped (no qi write, no statistics write, no event).
+  // Unmanaged cap (no baseMaxQi) so the room below the cap stays huge. The
+  // absurd-but-finite restored rate is clamped to MAX_SAFE_INTEGER by the
+  // realm-multiplier aggregation (a hostile save can never overflow the rate
+  // field), but an absurd deltaMs still overflows gain = rate × deltaMs/1000
+  // to Infinity — the guard must drop the whole gain (no qi write, no
+  // statistics write, no event) rather than put Infinity into state.
   const config = makeConfig({ baseMaxQi: undefined });
   const state = structuredClone(GameState);
   state.cultivation.qiMax = Number.MAX_VALUE;
@@ -435,7 +448,10 @@ test('the finite-write guard: a restored value at the double limit never overflo
 
   makeSystem(config, state);
 
-  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+  // The clamped rate is finite (never the raw 1e308, never Infinity).
+  assert.equal(state.cultivation.qiPerSecond, Number.MAX_SAFE_INTEGER);
+
+  EventBus.emit('loop:update', { deltaMs: 1e308, elapsedMs: 1e308, tick: 1 });
 
   assert.equal(state.cultivation.qi, 1e308);
   assert.equal(state.statistics.qiGenerated, Number.MAX_VALUE);
@@ -476,4 +492,114 @@ test('getters expose the configured cap and defensive source copies', () => {
   copy.id = 'hacked';
   assert.equal(system.sources[0].id, 'meditation');
   assert.equal(system.baseMaxQi, 100);
+});
+
+test('realm effects stack: qiMaxMultiplier multiplies the managed cap', () => {
+  // The RealmSystem writes cultivation.realmEffects; a qiMaxMultiplier of 2
+  // doubles the configured baseMaxQi (100 → 200) on the constructor sync.
+  const state = structuredClone(GameState);
+  state.cultivation.realmEffects.qiMaxMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  assert.equal(state.cultivation.qiMax, 200);
+  // The unmanaged path (no baseMaxQi) keeps the state value untouched.
+  const unmanaged = structuredClone(GameState);
+  unmanaged.cultivation.realmEffects.qiMaxMultiplier = 2;
+  makeSystem(makeConfig({ baseMaxQi: undefined }), unmanaged);
+  assert.equal(unmanaged.cultivation.qiMax, 100);
+});
+
+test('realm effects stack: cultivationSpeedMultiplier multiplies the aggregate rate', () => {
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.realmEffects.cultivationSpeedMultiplier = 1.5;
+
+  makeSystem(makeConfig(), state);
+
+  // 2 qi/s × 1.5 → the constructor sync already exposes 3.
+  assert.equal(state.cultivation.qiPerSecond, 3);
+
+  // A full tick gains 3 (not the raw 2), and the event reports the gain.
+  const gained = [];
+  EventBus.subscribe('qi:gained', (payload) => gained.push(payload));
+  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+
+  assert.equal(state.cultivation.qi, 3);
+  assert.equal(state.statistics.qiGenerated, 3);
+  assert.deepEqual(gained[0], { amount: 3, total: 3, sources: ['meditation'] });
+});
+
+test('a missing or malformed realmEffects object is neutral (multiplier 1)', () => {
+  for (const effects of [undefined, null, 'hostile', [], {}]) {
+    EventBus.clear();
+    const state = structuredClone(GameState);
+    if (effects === undefined) delete state.cultivation.realmEffects;
+    else state.cultivation.realmEffects = effects;
+    state.cultivation.qiSources.meditation = 2;
+
+    makeSystem(makeConfig(), state);
+
+    // Neutral cap (100 × 1) and neutral rate (2 × 1).
+    assert.equal(state.cultivation.qiMax, 100);
+    assert.equal(state.cultivation.qiPerSecond, 2);
+  }
+});
+
+test('a missing or malformed realm multiplier field is neutral (multiplier 1)', () => {
+  const state = structuredClone(GameState);
+  state.cultivation.realmEffects.qiMaxMultiplier = -5; // <= 0
+  state.cultivation.realmEffects.cultivationSpeedMultiplier = 'bogus'; // non-finite
+  state.cultivation.qiSources.meditation = 2;
+
+  makeSystem(makeConfig(), state);
+
+  assert.equal(state.cultivation.qiMax, 100);
+  assert.equal(state.cultivation.qiPerSecond, 2);
+});
+
+test('a hostile absurd realm multiplier can never put Infinity into qiMax/qiPerSecond', () => {
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.realmEffects.qiMaxMultiplier = 1e308;
+  state.cultivation.realmEffects.cultivationSpeedMultiplier = 1e308;
+
+  makeSystem(makeConfig(), state);
+
+  // 100 × 1e308 and 2 × 1e308 both overflow the double range — clamped to a
+  // finite MAX_SAFE_INTEGER, never Infinity.
+  assert.equal(Number.isFinite(state.cultivation.qiMax), true);
+  assert.equal(Number.isFinite(state.cultivation.qiPerSecond), true);
+  assert.equal(state.cultivation.qiMax, Number.MAX_SAFE_INTEGER);
+  assert.equal(state.cultivation.qiPerSecond, Number.MAX_SAFE_INTEGER);
+
+  // A tick at the clamped cap/rate stays finite too (no NaN/Infinity writes).
+  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+  assert.equal(Number.isFinite(state.cultivation.qi), true);
+  assert.equal(Number.isFinite(state.statistics.qiGenerated), true);
+});
+
+test('a hostile negative source rate clamps to neutral 0 — never a sign-flipped rate', () => {
+  // A hostile save with a negative source rate (-1e308) times an absurd
+  // multiplier (1e308) overflows to -Infinity. The rate must land at the
+  // neutral 0 (no production), never silently flip sign to +MAX_SAFE_INTEGER.
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = -1e308;
+  state.cultivation.realmEffects.cultivationSpeedMultiplier = 1e308;
+
+  makeSystem(makeConfig(), state);
+
+  assert.equal(state.cultivation.qiPerSecond, 0);
+  assert.equal(Number.isFinite(state.cultivation.qiPerSecond), true);
+
+  // A plain negative source rate (finite, no overflow) is neutral too — the
+  // rate never carries a negative sign into the pool.
+  const negative = structuredClone(GameState);
+  negative.cultivation.qiSources.meditation = -5;
+
+  makeSystem(makeConfig(), negative);
+
+  assert.equal(negative.cultivation.qiPerSecond, 0);
+  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+  assert.equal(negative.cultivation.qi, 0);
 });

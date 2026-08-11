@@ -14,12 +14,24 @@
  * (herbs, sect income, pills, ...) plug in via config with no code changes.
  *
  * Data-driven tuning: the qi cap comes from config.qi.baseMaxQi (derived
- * tuning — see _computeQiMax for where realm/root multipliers will stack)
- * and every income source from config.qi.sources. A MISSING config.qi block
+ * tuning — see _computeQiMax for where realm/root multipliers stack) and
+ * every income source from config.qi.sources. A MISSING config.qi block
  * is silent (the cap stays at the state value and the source list is empty);
  * a present but invalid baseMaxQi warns once in the constructor and leaves
  * the cap untouched (mirroring the _readNonNegativeNumber pattern in
  * save-manager, offline-progress and meditation).
+ *
+ * Realm multipliers (Phase 3): the current realm's effect slots stack here.
+ * The cap (managed path) multiplies by cultivation.realmEffects.
+ * qiMaxMultiplier and the aggregate per-second rate multiplies by
+ * cultivation.realmEffects.cultivationSpeedMultiplier (both the
+ * constructor's immediate sync and every tick) — see _realmMultiplier for
+ * the neutral coercion (a missing/malformed/<=0 factor reads as 1, so a
+ * hostile save can never zero out a cap or rate) and _safeFinite for the
+ * overflow clamp (an absurd restored multiplier can never put Infinity into
+ * qiMax/qiPerSecond). Future spirit-root/technique multipliers stack the
+ * same way: each writes a factor slot into cultivation.realmEffects (or a
+ * future config multiplier block) and nothing else changes.
  *
  * State owned (writes): cultivation.qiMax (derived cap),
  * cultivation.qiPerSecond (aggregate rate), cultivation.qi (current),
@@ -53,9 +65,10 @@
  * module depends solely on the shared GameState and EventBus singletons
  * (both injectable for deterministic tests).
  *
- * Future expansion (see DESIGN.md/PLANS.md): realm, spirit-root, technique,
- * pill and formation multipliers stack in _computeQiMax (cap) and in
- * _onUpdate (per-source rate factors) without touching the resource math;
+ * Future expansion (see DESIGN.md/PLANS.md): spirit-root, technique, pill
+ * and formation multipliers stack in _computeQiMax (cap) and in the rate
+ * aggregation (per-source rate factors) without touching the resource math —
+ * the realm multipliers are already wired through cultivation.realmEffects;
  * additional qi sources (herbs, sect income, ...) are declared in
  * config.qi.sources with their own state rate slot.
  */
@@ -169,6 +182,11 @@ export class QiSystem {
     this._ensureSlice('cultivation', _freshCultivationSlice);
     this._ensureSlice('statistics', _freshStatisticsSlice);
 
+    // Aggregate the RAW source rates first — the active-sources list must
+    // reflect which sources contributed (the realm speed multiplier does NOT
+    // change which sources are active), then stack the realm's
+    // cultivationSpeedMultiplier on the aggregate (clamped finite so an
+    // absurd restored multiplier can never put Infinity into the rate).
     let rateSum = 0;
     const activeSources = [];
     for (const source of this._sources) {
@@ -176,13 +194,16 @@ export class QiSystem {
       rateSum += rate;
       if (rate > 0) activeSources.push(source.id);
     }
-    this._syncPerSecondRate(rateSum);
+    const rate = _safeFinite(
+      rateSum * _realmMultiplier(this._state, 'cultivationSpeedMultiplier')
+    );
+    this._syncPerSecondRate(rate);
 
     // Use the payload's deltaMs (=== tickRateMs from the GameLoop); a
     // missing or non-finite delta coerces to 0 via _asNumber, so a malformed
     // payload can never produce a bogus gain.
     const deltaMs = _asNumber(payload && payload.deltaMs);
-    const gain = (rateSum * deltaMs) / 1000;
+    const gain = (rate * deltaMs) / 1000;
     if (gain <= 0) return;
 
     const qi = _asNumber(this._state.cultivation.qi);
@@ -213,17 +234,21 @@ export class QiSystem {
 
   /**
    * The current qi cap. Managed (a baseMaxQi is configured) → the configured
-   * number; unmanaged (missing/invalid baseMaxQi) → the state value. THE
-   * future hook where realm/spirit-root/technique multipliers will stack:
-   * each factor multiplies in here and the whole game (tick clamp, renderer
-   * progress bars, offline-progress capPath) reads the synced
-   * cultivation.qiMax, so adding a multiplier never touches the production
-   * math.
+   * number × the current realm's qiMaxMultiplier (clamped finite); unmanaged
+   * (missing/invalid baseMaxQi) → the state value unchanged. THE hook where
+   * realm/spirit-root/technique multipliers stack: each factor multiplies in
+   * here and the whole game (tick clamp, renderer progress bars,
+   * offline-progress capPath) reads the synced cultivation.qiMax, so adding
+   * a multiplier never touches the production math.
    *
    * @returns {number} the derived qi cap.
    */
   _computeQiMax() {
-    if (this._baseMaxQi !== null) return this._baseMaxQi;
+    if (this._baseMaxQi !== null) {
+      return _safeFinite(
+        this._baseMaxQi * _realmMultiplier(this._state, 'qiMaxMultiplier')
+      );
+    }
     return _asNumber(this._state.cultivation.qiMax);
   }
 
@@ -289,9 +314,10 @@ export class QiSystem {
   }
 
   /**
-   * Sum the current rate contribution of every configured source. A source
-   * whose ratePath is missing, malformed or unsafe contributes 0 (never
-   * throws, never reaches the prototype chain).
+   * Sum the current rate contribution of every configured source, stacked
+   * with the current realm's cultivationSpeedMultiplier (clamped finite). A
+   * source whose ratePath is missing, malformed or unsafe contributes 0
+   * (never throws, never reaches the prototype chain).
    *
    * @returns {number} the aggregate per-second qi rate right now.
    */
@@ -300,7 +326,9 @@ export class QiSystem {
     for (const source of this._sources) {
       sum += _asNumber(this._readPath(source.ratePath));
     }
-    return sum;
+    return _safeFinite(
+      sum * _realmMultiplier(this._state, 'cultivationSpeedMultiplier')
+    );
   }
 
   /**
@@ -337,11 +365,18 @@ export class QiSystem {
 function _freshCultivationSlice() {
   return {
     realm: 'Mortal',
+    realmTier: 0,
     realmStage: 1,
-    nextRealm: 'Qi Condensation',
+    nextRealm: 'Qi Gathering',
     breakthroughCost: null,
     realmProgress: 0,
     realmProgressMax: 1000,
+    realmEffects: {
+      qiMaxMultiplier: 1,
+      cultivationSpeedMultiplier: 1,
+      powerMultiplier: 1,
+      lifespanYears: 100,
+    },
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
@@ -420,6 +455,52 @@ function _readSources(raw) {
 function _asNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * Read a realm effect multiplier (e.g. 'qiMaxMultiplier' or
+ * 'cultivationSpeedMultiplier') off state.cultivation.realmEffects —
+ * the slot the RealmSystem (js/systems/realms.js) writes. A missing,
+ * malformed or non-positive value returns the neutral factor 1 (never 0, so
+ * a hostile save or a missing realmEffects object can never zero out a cap
+ * or rate). Guards against a null/non-object realmEffects and against a null
+ * cultivation slice.
+ *
+ * @param {object|null} state — game state object.
+ * @param {string} key — the realm effect key to read.
+ * @returns {number} the effective multiplier (>= 1).
+ */
+function _realmMultiplier(state, key) {
+  const effects =
+    state && state.cultivation ? state.cultivation.realmEffects : null;
+  if (effects === null || typeof effects !== 'object' || Array.isArray(effects)) {
+    return 1;
+  }
+  const parsed = Number(effects[key]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+/**
+ * Drop overflow into a finite upper bound so an absurd restored multiplier
+ * (e.g. 1e308 — a hostile save) can never put Infinity into qiMax or
+ * qiPerSecond. Positive overflow (an overflowed product, or a value past
+ * Number.MAX_SAFE_INTEGER) clamps to Number.MAX_SAFE_INTEGER — NEVER 0, so a
+ * huge-but-valid multiplier can never zero out the cap/rate (the
+ * neutral-factor discipline lives in _realmMultiplier). Negative values
+ * (a hostile negative source rate) clamp to the neutral 0 — a rate/cap can
+ * never flip sign, so an overflowed negative product (-Infinity) becomes the
+ * no-production value instead of a silent +MAX_SAFE_INTEGER sign-flip.
+ *
+ * @param {number} value — raw value.
+ * @returns {number} the finite value (0 for negatives), or
+ *          Number.MAX_SAFE_INTEGER when the raw value is not finite or
+ *          overflowed past it.
+ */
+function _safeFinite(value) {
+  if (value < 0) return 0;
+  if (!Number.isFinite(value)) return Number.MAX_SAFE_INTEGER;
+  if (value > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
+  return value;
 }
 
 /**

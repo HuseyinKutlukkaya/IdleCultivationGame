@@ -72,12 +72,28 @@ function createGameState() {
     },
 
     cultivation: {
+      // Realm identity. realm is the DISPLAY NAME (the UI binds it and old
+      // saves store names — kept in state deliberately); realmTier is the
+      // numeric progression key 0..14 that Breakthroughs will advance.
+      // Both are owned/written by the RealmSystem (js/systems/realms.js).
       realm: 'Mortal',
+      realmTier: 0,
       realmStage: 1,
-      nextRealm: 'Qi Condensation',
+      nextRealm: 'Qi Gathering',
       breakthroughCost: null,
       realmProgress: 0,
       realmProgressMax: 1000,
+      // RealmSystem-owned effect slots (consumer pattern like qiSources):
+      // the QiSystem reads qiMaxMultiplier (cap) and
+      // cultivationSpeedMultiplier (rate) from here; powerMultiplier and
+      // lifespanYears are future-consumer slots. Neutral fresh defaults =
+      // the Mortal realm's data-driven effects (data/realms/realms.json).
+      realmEffects: {
+        qiMaxMultiplier: 1,
+        cultivationSpeedMultiplier: 1,
+        powerMultiplier: 1,
+        lifespanYears: 100,
+      },
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,

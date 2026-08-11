@@ -94,6 +94,36 @@ test('page boots cleanly and the game loop is running', async ({ page }) => {
     'beyond-heaven',
   ]);
 
+  // The realm system is wired: the current realm resolves from state and the
+  // DOM binding renders the realm name through its "{0} Realm" format
+  // template (the realm-name rendering is exactly what this feature proves
+  // in a real browser).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__realms)))
+    .toBe(true);
+  expect(await page.evaluate(() => window.__realms.current().id)).toBe('mortal');
+  expect(await stateValue(page, 'cultivation.realmTier')).toBe(0);
+  const realmName = page.locator('.realm-name');
+  await expect(realmName).toBeVisible();
+  await expect(realmName).toHaveText('Mortal Realm');
+
+  // A setRealm round-trip — the mutation the future BreakthroughSystem will
+  // call: the ladder advances in state (name + tier + next realm) with the
+  // real data-driven effects (qiMaxMultiplier 2) and the rendered realm name
+  // follows (the renderer's next loop:uiRefresh paints the new identity).
+  expect(
+    await page.evaluate(() => window.__realms.setRealm('qi-gathering'))
+  ).toBe(true);
+  expect(await stateValue(page, 'cultivation.realm')).toBe('Qi Gathering');
+  expect(await stateValue(page, 'cultivation.realmTier')).toBe(1);
+  expect(await stateValue(page, 'cultivation.nextRealm')).toBe(
+    'Foundation Establishment'
+  );
+  expect(await stateValue(page, 'cultivation.realmEffects.qiMaxMultiplier')).toBe(
+    2
+  );
+  await expect(realmName).toHaveText('Qi Gathering Realm');
+
   // The number notation formatter is wired from config.notation and defaults
   // to the config's standard style; an explicit setStyle writes the player
   // preference into state.settings (assert state, not formatted text — see

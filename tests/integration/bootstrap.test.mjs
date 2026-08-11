@@ -28,6 +28,7 @@ import { NotificationManager } from '../../js/managers/notification-manager.js';
 import { SAVE_KEY } from '../../js/core/storage.js';
 import { MeditationSystem } from '../../js/systems/meditation.js';
 import { QiSystem } from '../../js/systems/qi.js';
+import { RealmSystem } from '../../js/systems/realms.js';
 import { ResourceSystem } from '../../js/systems/resources.js';
 import { InventorySystem } from '../../js/systems/inventory.js';
 import { UpgradeSystem } from '../../js/systems/upgrades.js';
@@ -355,6 +356,23 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.ok(globalThis.window.__meditation instanceof MeditationSystem);
   assert.ok(globalThis.window.__qi instanceof QiSystem);
   assert.ok(globalThis.window.__resources instanceof ResourceSystem);
+  // The realm system is wired from the canned realms fixture (two
+  // definitions, no effect fields): the fresh 'Mortal' state resolves to
+  // the mortal definition, the canonical identity + neutral effect defaults
+  // land in the cultivation slice (multipliers 1, lifespan 0 — the fixture
+  // carries no effect fields, so the defensive coercion kicks in).
+  assert.ok(globalThis.window.__realms instanceof RealmSystem);
+  assert.equal(globalThis.window.__realms.count, 2);
+  assert.equal(globalThis.window.__realms.current().id, 'mortal');
+  assert.equal(globalThis.window.__realms.current().name, 'Mortal');
+  assert.equal(globalThis.window.__realms.next().id, 'qi-gathering');
+  assert.equal(GameState.cultivation.realm, 'Mortal');
+  assert.equal(GameState.cultivation.realmTier, 0);
+  assert.equal(GameState.cultivation.nextRealm, 'Qi Gathering');
+  assert.equal(GameState.cultivation.realmEffects.qiMaxMultiplier, 1);
+  assert.equal(GameState.cultivation.realmEffects.cultivationSpeedMultiplier, 1);
+  assert.equal(GameState.cultivation.realmEffects.powerMultiplier, 1);
+  assert.equal(GameState.cultivation.realmEffects.lifespanYears, 0);
   // The resource wallet is wired from config.resources: all four resources
   // are managed and their balances start at the fresh-state zeros.
   assert.equal(globalThis.window.__resources.resources.length, 4);
@@ -522,6 +540,7 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__saveManager, undefined);
   assert.equal(globalThis.window.__meditation, undefined);
   assert.equal(globalThis.window.__qi, undefined);
+  assert.equal(globalThis.window.__realms, undefined);
   assert.equal(globalThis.window.__resources, undefined);
   assert.equal(globalThis.window.__inventory, undefined);
   assert.equal(globalThis.window.__notation, undefined);

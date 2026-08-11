@@ -345,11 +345,18 @@ test('a restored malformed cultivation slice is repaired on construction', () =>
   // sync wrote the effective rate into it (fresh state is active at rate 2).
   assert.deepEqual(state.cultivation, {
     realm: 'Mortal',
+    realmTier: 0,
     realmStage: 1,
-    nextRealm: 'Qi Condensation',
+    nextRealm: 'Qi Gathering',
     breakthroughCost: null,
     realmProgress: 0,
     realmProgressMax: 1000,
+    realmEffects: {
+      qiMaxMultiplier: 1,
+      cultivationSpeedMultiplier: 1,
+      powerMultiplier: 1,
+      lifespanYears: 100,
+    },
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
