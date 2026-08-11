@@ -18,6 +18,32 @@ the first cycle lands before Meridians (Phase 3).
 - [ ] First human playtest + revision cycle — play the current loop end-to-end
       as a real player, collect bugs and lore/balance feedback, fix, re-gate.
 
+### Revision Cycle 1 (from the first human playtest — 10 findings, 5 packages)
+
+**Confirmed design decisions (user, 2026-08-11):**
+- Breakthroughs no longer gate on spirit stones — the stone-cost data fields and
+  code paths stay intact for reuse in a different way later; only the gating
+  changes. Item (bottleneck) gates get the same treatment until item sources
+  exist (P4).
+- Realm sub-levels (9 per realm): layer-up is **manual** — every one of the 9
+  layers is an explicit player action; realm breakthrough (+ tribulation where
+  applicable) happens at the 9th layer. Rising difficulty per layer.
+- Technique generators produce **qi** (and technique proficiency XP), never
+  spirit stones — stones remain world-salary (AGENTS.md lore rule).
+
+| Pkg | Scope | Playtest findings | Type |
+|---|---|---|---|
+| P1 | Playtest quick fixes | #1 Reset Save confirm dialog + success popup; #3 full progress bar becomes actionable; #4 instant feedback when a breakthrough attempt fails (no silent dead button); #5 show exact missing requirements — stones/items removed from gates per decision above | UX + save |
+| P2 | Event popup & log pipeline | #2 initial 50-stone gift logs to Activity Log; generic event → popup (message + reward) + same message to log; #9 breakthroughs and major events announce as popups AND log entries | Feature |
+| P3 | Tab UI + inventory grid | #10 tab-style layout (Cultivation / Techniques / Inventory / Log / Settings); #8 inventory as box grid with pagination, built once inside its tab | Rework |
+| P4 | Nine sub-levels per realm | #6 manual 9-layer progression per realm, rising qi cost per layer, save-format bump + migration | Major system |
+| P5 | Technique generators & proficiency | #7 idle-style technique shop (classic idle logic: cooldown per producer, levels with geometric price rise, milestone bonuses at 5/10/25/50/100/150/200 — cooldown reduction or revenue bonus, self or global); proficiency ladder: Beginner / Minor / Greater / Complete / Mastered / Assimilated / Transcendence; producers generate qi (lore-safe) | Major system |
+
+Execution order P1 → P2 → P3 → P4 → P5. Each package = its own commit(s) with
+tests in the same commit, full Feature Gate per package. Security review on P1
+(save/reset), P2 (data-driven popup rendering) and P4 (save-format migration).
+E2E updates on every package (renderer/save paths touched throughout).
+
 ## Phase 0 — Foundation
 - [x] Repository
 - [x] Git
