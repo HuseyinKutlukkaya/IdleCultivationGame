@@ -250,6 +250,23 @@ so the reasoning survives:
 - **Active "golden click" layer** — deliberately rejected: DESIGN.md's
   philosophy is a passive cultivation idle, not a clicker. Revisit only if the
   design intent changes.
+- **2026-08-11 — Realm depth & interconnected mechanics (off-the-cuff ideas, NOT a plan).**
+  During a chat about the committed realm ladder (Phase 3 "Realms (JSON-driven)"),
+  the user brainstormed possible directions for deepening realms — thrown out
+  off the top of their head, explicitly tentative, to be discussed later, NOT a
+  definite future list. Recorded here only so the conversation isn't lost. Ideas
+  mentioned (none committed to, none designed, likely to change):
+  - Sub-tier / quality tiers inside major realms (e.g. Foundation Establishment,
+    Golden Core quality stages).
+  - Tribulations having their own levels.
+  - Dao-related gates and interconnected mechanics between realms and other
+    systems.
+  - Deeper xianxia lore flavor woven in.
+  Caveat recorded per the user's instruction: this is a discussion seed, not a
+  roadmap. Whatever survives the future talk must be re-evaluated against the
+  existing realm JSON contract and consuming systems (Breakthroughs,
+  Tribulations, Spirit Roots, Dao) — extension over rewrite, but nothing here
+  is decided.
 
 ## Working Principle
 Build the engine once. Expand forever. Every feature: one feature, one
