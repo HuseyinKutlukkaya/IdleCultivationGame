@@ -8,8 +8,11 @@
  * the 'items' catalog) — the same injection pattern the shipped bootstrap
  * uses. Covered: construction boot-sync (realmProgressMax / breakthroughCost
  * from the current realm's entry), the requirements() gate snapshot
- * (progress / cost / bottleneck / max-realm / no-definition — read-only),
- * attempt() blocked reasons (no mutation, no spend, no event), a successful
+ * (progress / cost / bottleneck / tribulation / max-realm / no-definition —
+ * read-only), attempt() blocked reasons (no mutation, no spend, no event),
+ * the tribulation gate (a pending tribulation blocks attempt() with reason
+ * 'tribulation' until survived; a malformed state.tribulations slice
+ * degrades to gate-open), a successful
  * attempt (realm advances via RealmSystem, progress resets, max/cost re-sync
  * to the new realm, statistics.breakthroughsTotal increments, exact
  * 'realm:breakthrough' payload, RealmSystem's own 'realm:changed' still
@@ -282,6 +285,8 @@ test('requirements() reports the current realm gates as a read-only snapshot', (
     costMet: true,
     bottleneck: [],
     bottleneckMet: true,
+    tribulationRequired: false,
+    tribulationMet: true,
     canAttempt: false,
   });
 
@@ -482,6 +487,77 @@ test('attempt() rejects at the top realm (max-realm)', () => {
   assert.deepEqual(events, []);
 });
 
+test('attempt() is blocked by a pending tribulation gate (no mutation, no spend, no event)', () => {
+  const state = structuredClone(GameState);
+  // random 0.99 → a failure roll — but the tribulation gate blocks first.
+  const { breakthroughs } = makeSystems({ state, random: () => 0.99 });
+  state.tribulations = { type: 'lightning', pending: true, survived: false };
+  state.cultivation.realmProgress = 1000; // the mortal entry's required progress
+
+  const events = [];
+  EventBus.subscribe('realm:breakthrough', (payload) => events.push(payload));
+  const before = structuredClone(state);
+
+  // requirements() reports the closed gate.
+  const requirements = breakthroughs.requirements();
+  assert.equal(requirements.tribulationRequired, true);
+  assert.equal(requirements.tribulationMet, false);
+  assert.equal(requirements.canAttempt, false);
+
+  assert.deepEqual(breakthroughs.attempt(), {
+    outcome: null,
+    advanced: false,
+    reason: 'tribulation',
+  });
+  assert.deepEqual(state, before); // no mutation of any kind
+  assert.deepEqual(events, []);
+  assert.equal(state.statistics.breakthroughsTotal, 0);
+  // The cost gate was passed but nothing was spent (the wallet still holds
+  // the fresh 50-stone endowment).
+  assert.equal(state.resources.spiritStones, 50);
+});
+
+test('the tribulation gate opens once survived (or when nothing is pending)', () => {
+  const state = structuredClone(GameState);
+  // random 0.99 → qi-deviation — a failure, so the realm stays put and the
+  // roll itself proves the gate let the attempt through.
+  const { breakthroughs } = makeSystems({ state, random: () => 0.99 });
+  state.cultivation.realmProgress = 1000;
+
+  // survived=true → gate open → the attempt proceeds to the roll.
+  state.tribulations = { type: 'lightning', pending: true, survived: true };
+  let result = breakthroughs.attempt();
+  assert.equal(result.reason, undefined);
+  assert.equal(result.outcome, 'qi-deviation');
+  assert.equal(result.advanced, false);
+
+  // pending=false → gate open too.
+  state.cultivation.realmProgress = 1000; // the failure wiped it
+  state.tribulations = { type: 'lightning', pending: false, survived: false };
+  result = breakthroughs.attempt();
+  assert.equal(result.reason, undefined);
+  assert.equal(result.outcome, 'qi-deviation');
+  assert.equal(result.advanced, false);
+});
+
+test('a malformed state.tribulations degrades to an open gate (never throws)', () => {
+  for (const malformed of [null, 5, [], {}]) {
+    EventBus.clear();
+    const state = structuredClone(GameState);
+    state.tribulations = malformed;
+    state.cultivation.realmProgress = 1000;
+    const { breakthroughs } = makeSystems({ state, random: () => 0.99 });
+
+    // The gate reads as open and the attempt proceeds to the roll — an old
+    // save without the slice (or a hostile one) never blocks a breakthrough.
+    assert.equal(breakthroughs.requirements().tribulationRequired, false);
+    assert.equal(breakthroughs.requirements().tribulationMet, true);
+    const result = breakthroughs.attempt();
+    assert.equal(result.reason, undefined);
+    assert.equal(result.outcome, 'qi-deviation');
+  }
+});
+
 test('attempt() rejects with no-definition for a realm without an entry (warn once)', (t) => {
   const warn = t.mock.method(console, 'warn', () => {});
   const state = structuredClone(GameState);
@@ -630,6 +706,8 @@ test('without a dataManager the system degrades neutrally: count 0, no writes, a
     costMet: true,
     bottleneck: [],
     bottleneckMet: true,
+    tribulationRequired: false,
+    tribulationMet: true,
     canAttempt: false,
   });
   assert.deepEqual(state.cultivation, before);

@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 tribulation table (ROADMAP 'Tribulations'). One entry per realm id — the canonical 15-tier DESIGN.md ladder, in tier order — consumed by the TribulationSystem (js/systems/tribulations.js): tribulationType is the realm's tribulation (null = the realm imposes no tribulation gate; otherwise one of the canonical DESIGN.md types), and results is the weighted outcome table faced when the pending tribulation is resolved. Canonical outcomes: survived, barely-survived (SUCCESS — the gate opens), injured (progressLoss 0.5), near-death (progressLoss 1) (FAILURE — progress is lost and the gate stays pending). Death is excluded in v1 — DESIGN.md marks it 'future optional' (same discipline as breakthroughs). Per-realm success weight is ~80% and failure ~20% (placeholder balancing — Phase 10 Balancing retunes)."
+  },
+  "definitions": [
+    {
+      "realmId": "mortal",
+      "tribulationType": null,
+      "results": []
+    },
+    {
+      "realmId": "qi-gathering",
+      "tribulationType": null,
+      "results": []
+    },
+    {
+      "realmId": "foundation-establishment",
+      "tribulationType": null,
+      "results": []
+    },
+    {
+      "realmId": "core-formation",
+      "tribulationType": "lightning",
+      "results": [
+        { "outcome": "survived", "weight": 65 },
+        { "outcome": "barely-survived", "weight": 15 },
+        { "outcome": "injured", "weight": 12, "progressLoss": 0.5 },
+        { "outcome": "near-death", "weight": 8, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "nascent-soul",
+      "tribulationType": "heart-devil",
+      "results": [
+        { "outcome": "survived", "weight": 65 },
+        { "outcome": "barely-survived", "weight": 15 },
+        { "outcome": "injured", "weight": 12, "progressLoss": 0.5 },
+        { "outcome": "near-death", "weight": 8, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "soul-transformation",
+      "tribulationType": null,
+      "results": []
+    },
+    {
+      "realmId": "void-refinement",
+      "tribulationType": null,
+      "results": []
+    },
+    {
+      "realmId": "body-integration",
+      "tribulationType": "body",
+      "results": [
+        { "outcome": "survived", "weight": 65 },
+        { "outcome": "barely-survived", "weight": 15 },
+        { "outcome": "injured", "weight": 12, "progressLoss": 0.5 },
+        { "outcome": "near-death", "weight": 8, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "great-ascension",
+      "tribulationType": "karma",
+      "results": [
+        { "outcome": "survived", "weight": 65 },
+        { "outcome": "barely-survived", "weight": 15 },
+        { "outcome": "injured", "weight": 12, "progressLoss": 0.5 },
+        { "outcome": "near-death", "weight": 8, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "true-immortal",
+      "tribulationType": "heavenly-fire",
+      "results": [
+        { "outcome": "survived", "weight": 65 },
+        { "outcome": "barely-survived", "weight": 15 },
+        { "outcome": "injured", "weight": 12, "progressLoss": 0.5 },
+        { "outcome": "near-death", "weight": 8, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "celestial-immortal",
+      "tribulationType": null,
+      "results": []
+    },
+    {
+      "realmId": "golden-immortal",
+      "tribulationType": null,
+      "results": []
+    },
+    {
+      "realmId": "dao-lord",
+      "tribulationType": "void",
+      "results": [
+        { "outcome": "survived", "weight": 65 },
+        { "outcome": "barely-survived", "weight": 15 },
+        { "outcome": "injured", "weight": 12, "progressLoss": 0.5 },
+        { "outcome": "near-death", "weight": 8, "progressLoss": 1 }
+      ]
+    },
+    {
+      "realmId": "heavenly-sovereign",
+      "tribulationType": null,
+      "results": []
+    },
+    {
+      "realmId": "beyond-heaven",
+      "tribulationType": "soul",
+      "results": [
+        { "outcome": "survived", "weight": 65 },
+        { "outcome": "barely-survived", "weight": 15 },
+        { "outcome": "injured", "weight": 12, "progressLoss": 0.5 },
+        { "outcome": "near-death", "weight": 8, "progressLoss": 1 }
+      ]
+    }
+  ]
+}

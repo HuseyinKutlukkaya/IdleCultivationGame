@@ -15,7 +15,14 @@
  * statistics.breakthroughsTotal; a FAILURE outcome (failure, heavy-failure,
  * qi-deviation) subtracts progressLoss × realmProgressMax (never below 0)
  * and leaves the realm unchanged. Requirements gate the attempt: progress
- * met, cost affordable, bottleneck items carried. The cost is spent through
+ * met, cost affordable, bottleneck items carried, and (when the current
+ * realm imposes one) the tribulation survived. The tribulation gate is read
+ * from the SHARED state.tribulations slice, which the TribulationSystem
+ * (js/systems/tribulations.js) owns and writes on every realm change and
+ * face() — this system only READS it (via the _tribulationGate helper), so
+ * a realm that imposes a pending tribulation blocks attempt() with reason
+ * 'tribulation' until the player faces and survives it. Old saves without
+ * the slice degrade to gate-open. The cost is spent through
  * ResourceSystem.spend and the bottleneck removed through
  * InventorySystem.remove — this system never writes state.resources or
  * state.inventory directly (same dependency-injection pattern as
@@ -33,8 +40,10 @@
  * cultivation.breakthroughCost, statistics.breakthroughsTotal. The max and
  * cost are SYNCED from the CURRENT realm's entry on construction (boot) and
  * after every accepted attempt; breakthroughCost is the entry's
- * cost.spiritStones (null when no entry). All paths are part of the
- * canonical GameState (see core/game-state.js).
+ * cost.spiritStones (null when no entry). The tribulation gate is NOT owned
+ * here — state.tribulations is read-only for this system (the
+ * TribulationSystem writes it; a missing slice degrades to gate-open). All
+ * paths are part of the canonical GameState (see core/game-state.js).
  *
  * Restore-trust (attacker-shaped saves): the cultivation/statistics slices
  * are repaired to the canonical fresh shapes when unusable (null, a
@@ -76,11 +85,12 @@
  * (both injectable for deterministic tests) plus the injected RealmSystem /
  * ResourceSystem / InventorySystem / DataManager / random source.
  *
- * Future expansion (see DESIGN.md/PLANS.md): tribulations, physiques and
- * spirit roots stack additional requirement gates and success modifiers
- * into the entry coercion + roll; bottleneck items become real drops once
- * the Phase-4 item producers land; death (DESIGN.md 'future optional') adds
- * a new canonical outcome + a consequence branch in attempt().
+ * Future expansion (see DESIGN.md/PLANS.md): combined tribulations (a realm
+ * imposing several types at once), physiques and spirit roots stack
+ * additional requirement gates and success modifiers into the entry
+ * coercion + roll; bottleneck items become real drops once the Phase-4 item
+ * producers land; death (DESIGN.md 'future optional') adds a new canonical
+ * outcome + a consequence branch in attempt().
  */
 
 import { EventBus } from '../core/event-bus.js';
@@ -221,12 +231,16 @@ export class BreakthroughSystem {
    * Read-only snapshot of the CURRENT realm's breakthrough requirements —
    * never mutates state. Every field is coerced defensively: a missing entry
    * reports the fallback requiredProgress (1000), a zero cost and an empty
-   * bottleneck, with canAttempt false. The returned cost/bottleneck are
+   * bottleneck, with canAttempt false. The tribulation gate (read from the
+   * shared state.tribulations slice owned by the TribulationSystem — a
+   * malformed slice degrades to gate-open) is reported as
+   * tribulationRequired / tribulationMet. The returned cost/bottleneck are
    * fresh copies — mutating them never leaks into the system.
    *
    * @returns {{ realmId: string|null, requiredProgress: number, progress: number,
    *            progressMet: boolean, cost: object, costMet: boolean,
    *            bottleneck: Array<{id: string, count: number}>, bottleneckMet: boolean,
+   *            tribulationRequired: boolean, tribulationMet: boolean,
    *            canAttempt: boolean }} the current requirement gates.
    */
   requirements() {
@@ -243,6 +257,7 @@ export class BreakthroughSystem {
     const progressMet = progress >= requiredProgress;
     const costMet = this._costMet(cost);
     const bottleneckMet = this._bottleneckMet(bottleneck);
+    const tribulation = this._tribulationGate();
 
     return {
       realmId,
@@ -253,12 +268,15 @@ export class BreakthroughSystem {
       costMet,
       bottleneck,
       bottleneckMet,
+      tribulationRequired: tribulation.required,
+      tribulationMet: tribulation.met,
       canAttempt:
         Boolean(entry) &&
         !this._atTopRealm() &&
         progressMet &&
         costMet &&
-        bottleneckMet,
+        bottleneckMet &&
+        tribulation.met,
     };
   }
 
@@ -282,7 +300,11 @@ export class BreakthroughSystem {
    *   - 'max-realm' — the current realm is the top of the ladder;
    *   - 'progress' — cultivation.realmProgress < the entry's requiredProgress;
    *   - 'cost' — the wallet cannot cover the entry's cost;
-   *   - 'items' — the inventory does not carry the entry's bottleneck.
+   *   - 'items' — the inventory does not carry the entry's bottleneck;
+   *   - 'tribulation' — the current realm imposes a tribulation that is
+   *     still pending (state.tribulations.pending true and survived false —
+   *     written by the TribulationSystem on realm changes / face(); old
+   *     saves without the slice degrade to gate-open).
    *
    * Accepted: spend every positive cost entry via ResourceSystem.spend,
    * remove every bottleneck via InventorySystem.remove, weighted-roll an
@@ -324,6 +346,15 @@ export class BreakthroughSystem {
     }
     if (!this._bottleneckMet(entry.bottleneck)) {
       return { outcome: null, advanced: false, reason: 'items' };
+    }
+
+    // The tribulation gate (read-only, after every other gate — the order of
+    // the existing reasons is preserved): a pending tribulation on the
+    // current realm blocks the attempt until the player faces and survives
+    // it through the TribulationSystem.
+    const tribulation = this._tribulationGate();
+    if (tribulation.required && !tribulation.met) {
+      return { outcome: null, advanced: false, reason: 'tribulation' };
     }
 
     // Accepted: consume the requirements first, then roll the outcome. The
@@ -560,6 +591,26 @@ export class BreakthroughSystem {
       if (!this._inventorySystem.has(item.id, item.count)) return false;
     }
     return true;
+  }
+
+  /**
+   * Read the tribulation gate off the SHARED state.tribulations slice (owned
+   * and written by the TribulationSystem — js/systems/tribulations.js). The
+   * gate is required while a tribulation is pending and met once it has been
+   * survived (or nothing is pending). Restore-trust: a malformed slice
+   * (null, a primitive, an array or a missing key) degrades to gate-open —
+   * an old save without the slice must never block a breakthrough or throw.
+   *
+   * @returns {{ required: boolean, met: boolean }} the gate state.
+   */
+  _tribulationGate() {
+    const slice = this._state.tribulations;
+    if (slice === null || typeof slice !== 'object' || Array.isArray(slice)) {
+      return { required: false, met: true };
+    }
+    const pending = slice.pending === true;
+    const survived = slice.survived === true;
+    return { required: pending, met: !pending || survived };
   }
 
   /**

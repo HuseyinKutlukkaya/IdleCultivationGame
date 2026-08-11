@@ -33,6 +33,7 @@ import { ResourceSystem } from '../../js/systems/resources.js';
 import { InventorySystem } from '../../js/systems/inventory.js';
 import { UpgradeSystem } from '../../js/systems/upgrades.js';
 import { BreakthroughSystem } from '../../js/systems/breakthroughs.js';
+import { TribulationSystem } from '../../js/systems/tribulations.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { initActivityLog } from '../../js/ui/activity-log.js';
@@ -136,6 +137,14 @@ const DATA_FILES = {
           uniqueField: 'realmId',
         },
       },
+      {
+        id: 'tribulations',
+        files: ['data/tribulations/tribulations.json'],
+        validation: {
+          requiredFields: ['realmId', 'tribulationType', 'results'],
+          uniqueField: 'realmId',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -188,6 +197,26 @@ const DATA_FILES = {
         results: [
           { outcome: 'success', weight: 100 },
           { outcome: 'failure', weight: 0, progressLoss: 0 },
+        ],
+      },
+    ],
+  },
+  'data/tribulations/tribulations.json': {
+    meta: {},
+    definitions: [
+      {
+        realmId: 'mortal',
+        tribulationType: null,
+        results: [],
+      },
+      {
+        realmId: 'qi-gathering',
+        tribulationType: 'lightning',
+        results: [
+          { outcome: 'survived', weight: 65 },
+          { outcome: 'barely-survived', weight: 15 },
+          { outcome: 'injured', weight: 12, progressLoss: 0.5 },
+          { outcome: 'near-death', weight: 8, progressLoss: 1 },
         ],
       },
     ],
@@ -383,7 +412,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 6 definitions loaded. Game loop running.'
+    'Scaffold ready — 8 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -474,6 +503,47 @@ test('successful bootstrap wires the app globals and reports the definition coun
   // false while progress 0 < required 1000 (the attempt above also left the
   // slice untouched — progress stayed 0, cost stayed 0, stats stayed 0).
   assert.equal(globalThis.window.__breakthroughs.requirements().canAttempt, false);
+  // The Tribulation system is wired with the DataManager: the tribulation
+  // table comes from the loaded 'tribulations' collection (2 canned entries
+  // for the two canned realms — mortal ungated, qi-gathering lightning).
+  // The fresh boot at Mortal (ungated) lands the neutral gate and the
+  // breakthrough gate stays open (tribulationRequired false — the pending
+  // 'progress' reason above is unaffected). A realm change into a gated
+  // realm opens the gate; a change back neutralizes it.
+  assert.ok(globalThis.window.__tribulations instanceof TribulationSystem);
+  assert.equal(globalThis.window.__tribulations.count, 2);
+  assert.equal(
+    globalThis.window.__tribulations.byRealm('mortal').tribulationType,
+    null
+  );
+  assert.equal(
+    globalThis.window.__tribulations.byRealm('qi-gathering').tribulationType,
+    'lightning'
+  );
+  assert.equal(globalThis.window.__tribulations.byRealm('missing'), null);
+  assert.deepEqual(GameState.tribulations, {
+    type: null,
+    pending: false,
+    survived: false,
+  });
+  assert.equal(globalThis.window.__tribulations.requirements().canFace, false);
+  // Enter the gated realm → the gate opens (pending true, canFace true);
+  // back to Mortal → neutral again (setRealm fires no tick and the canned
+  // realms carry no effect fields, so later assertions like qiPerSecond === 2
+  // are unaffected).
+  assert.equal(globalThis.window.__realms.setRealm('qi-gathering'), true);
+  assert.deepEqual(GameState.tribulations, {
+    type: 'lightning',
+    pending: true,
+    survived: false,
+  });
+  assert.equal(globalThis.window.__tribulations.requirements().canFace, true);
+  assert.equal(globalThis.window.__realms.setRealm('mortal'), true);
+  assert.deepEqual(GameState.tribulations, {
+    type: null,
+    pending: false,
+    survived: false,
+  });
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -525,6 +595,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/items/items.json',
     'data/upgrades/upgrades.json',
     'data/breakthroughs/breakthroughs.json',
+    'data/tribulations/tribulations.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -609,4 +680,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__notifications, undefined);
   assert.equal(globalThis.window.__upgrades, undefined);
   assert.equal(globalThis.window.__breakthroughs, undefined);
+  assert.equal(globalThis.window.__tribulations, undefined);
 });

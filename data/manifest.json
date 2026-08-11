@@ -43,6 +43,14 @@
         "requiredFields": ["realmId", "requiredProgress", "cost", "bottleneck", "results"],
         "uniqueField": "realmId"
       }
+    },
+    {
+      "id": "tribulations",
+      "files": ["data/tribulations/tribulations.json"],
+      "validation": {
+        "requiredFields": ["realmId", "tribulationType", "results"],
+        "uniqueField": "realmId"
+      }
     }
   ]
 }

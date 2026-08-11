@@ -12,6 +12,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GameState } from '../../js/core/game-state.js';
+import { deepMerge } from '../../js/utils/deep-merge.js';
 
 test('has the exact default placeholder shape', () => {
   assert.deepEqual(GameState, {
@@ -88,6 +89,12 @@ test('has the exact default placeholder shape', () => {
       activeSlots: 3,
     },
 
+    tribulations: {
+      type: null,
+      pending: false,
+      survived: false,
+    },
+
     sect: {
       name: 'None',
       rank: 'Outer Disciple',
@@ -116,7 +123,7 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the thirteen top-level state slices', () => {
+test('exposes exactly the fifteen top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'cultivation',
     'inventory',
@@ -128,6 +135,7 @@ test('exposes exactly the thirteen top-level state slices', () => {
     'settings',
     'statistics',
     'techniques',
+    'tribulations',
     'upgrades',
     'version',
     'world',
@@ -145,6 +153,9 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.cultivation.realmProgress, 0);
   assert.equal(GameState.cultivation.qi, 0);
   assert.equal(GameState.cultivation.breakthroughs, 0);
+  assert.equal(GameState.tribulations.type, null);
+  assert.equal(GameState.tribulations.pending, false);
+  assert.equal(GameState.tribulations.survived, false);
   // Master's parting gift — fresh-state spirit-stone endowment (50 stones).
   // The other resources still start at zero (no equivalent endowment for
   // herbs/jade/pills yet; those arrive with the Phase-4 alchemical market).

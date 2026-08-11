@@ -22,6 +22,7 @@
  * @property {Object} resources — currency and material counts
  * @property {Object} inventory — carried items
  * @property {Object} techniques — known and active techniques
+ * @property {Object} tribulations — tribulation gate on the current realm's breakthrough (type, pending, survived)
  * @property {Object} sect — sect membership
  * @property {Object} world — world position and progression
  * @property {Object} settings — user preferences
@@ -150,6 +151,21 @@ function createGameState() {
       known: [],
       active: [],
       activeSlots: 3,
+    },
+
+    tribulations: {
+      // Owned by the TribulationSystem (js/systems/tribulations.js). The
+      // tribulation gate on the current realm's breakthrough: type is the
+      // current realm's tribulation type (null when the realm imposes no
+      // tribulation — data/tribulations/tribulations.json); pending is true
+      // while a tribulation stands between the cultivator and the realm's
+      // breakthrough (the player must face() and survive before the
+      // BreakthroughSystem accepts an attempt); survived is true after a
+      // successful face() during this stay in the realm (cleared on every
+      // realm change).
+      type: null,
+      pending: false,
+      survived: false,
     },
 
     sect: {

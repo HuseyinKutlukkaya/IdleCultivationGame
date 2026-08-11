@@ -21,6 +21,10 @@
  *      gates, a blocked attempt mutates nothing, and a full-progress
  *      attempt advances the realm through RealmSystem with the post-
  *      success sync pulling the new realm's entry.
+ *   9. the tribulation system is wired — entering a tribulation-bearing
+ *      realm (Core Formation) opens the gate and blocks the breakthrough
+ *      until a survived face() clears it; the cleared gate survives a
+ *      save round-trip.
  *
  * These run against the dependency-free static server (static-server.mjs),
  * never inside the node:test suite — the `.spec.mjs` suffix keeps them out of
@@ -592,14 +596,15 @@ test('breakthrough system is wired: gates block, a synced attempt advances the r
   page,
 }) => {
   const errors = trackErrors(page);
-  // Determinism: the shipped JS uses Math.random ONLY for the breakthrough
-  // weighted roll (js/systems/breakthroughs.js, verified by grep — the
-  // injectable `random` option defaults to Math.random), so seeding it here
-  // via a page-scoped addInitScript affects no other test and nothing else
-  // at boot. With Math.random → 0 the roll = 0 × totalWeight lands in the
-  // FIRST bucket of the Mortal results table ('perfect' — a SUCCESS
-  // outcome), so the success path below is deterministic instead of the
-  // real 80/20 dice (~1-in-5 runs used to roll a failure and fail the
+  // Determinism: the shipped JS uses Math.random for the breakthrough
+  // weighted roll (js/systems/breakthroughs.js) and for the tribulation
+  // outcome roll in face() (js/systems/tribulations.js) — both verified by
+  // grep; their injectable `random` options default to Math.random. Seeding
+  // it here via a page-scoped addInitScript affects no other test and
+  // nothing else at boot. With Math.random → 0 the roll = 0 × totalWeight
+  // lands in the FIRST bucket of the Mortal results table ('perfect' — a
+  // SUCCESS outcome), so the success path below is deterministic instead of
+  // the real 80/20 dice (~1-in-5 runs used to roll a failure and fail the
   // `advanced === true` assertion).
   page.addInitScript(() => {
     Math.random = () => 0;
@@ -675,3 +680,112 @@ test('breakthrough system is wired: gates block, a synced attempt advances the r
 
   expect(errors).toEqual([]);
 });
+
+test('tribulation system is wired: entering a gated realm blocks the breakthrough until the tribulation is faced', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // Determinism: face() rolls with the same injected Math.random source as
+  // the breakthrough roll (js/systems/tribulations.js, verified by grep —
+  // the injectable `random` option defaults to Math.random). With
+  // Math.random → 0 the roll = 0 × totalWeight lands in the FIRST bucket of
+  // the Core Formation results table ('survived' — a SUCCESS outcome), so
+  // the gate opens deterministically below.
+  page.addInitScript(() => {
+    Math.random = () => 0;
+  });
+  await page.goto('/');
+
+  // TribulationSystem is exposed after bootstrap; the table comes from the
+  // data-driven 'tribulations' collection — one entry per realm id across
+  // the full 15-tier ladder (data/tribulations/tribulations.json), with the
+  // first tribulation-bearing realm being Core Formation (lightning).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__tribulations)))
+    .toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__tribulations.count))
+    .toBe(15);
+  expect(
+    await page.evaluate(
+      () => window.__tribulations.byRealm('core-formation').tribulationType
+    )
+  ).toBe('lightning');
+
+  // Fresh boot at Mortal (ungated): the neutral gate (assert state, not
+  // formatted text — see tests/README.md E2E rules).
+  const mortalRequirements = await page.evaluate(() =>
+    window.__tribulations.requirements()
+  );
+  expect(mortalRequirements.type).toBe(null);
+  expect(mortalRequirements.pending).toBe(false);
+  expect(mortalRequirements.canFace).toBe(false);
+
+  // Enter Core Formation — the first tribulation-bearing realm: the gate
+  // opens (pending) and stays open until the tribulation is faced.
+  expect(
+    await page.evaluate(() => window.__realms.setRealm('core-formation'))
+  ).toBe(true);
+  expect(await stateValue(page, 'tribulations')).toEqual({
+    type: 'lightning',
+    pending: true,
+    survived: false,
+  });
+
+  // Satisfy every non-tribulation gate of the core-formation entry
+  // (requiredProgress 2000, cost 400 stones, 2 spirit-herb bottleneck) and
+  // attempt: the tribulation gate blocks with the dedicated reason and
+  // mutates nothing.
+  await page.evaluate(() => {
+    window.__game.state.cultivation.realmProgress = 2000;
+    window.__resources.add('spiritStones', 400);
+    window.__inventory.add('spirit-herb', 2);
+  });
+  expect(await page.evaluate(() => window.__breakthroughs.attempt())).toEqual({
+    outcome: null,
+    advanced: false,
+    reason: 'tribulation',
+  });
+  expect(await stateValue(page, 'cultivation.realm')).toBe('Core Formation');
+  expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(0);
+  const blocked = await page.evaluate(() =>
+    window.__breakthroughs.requirements()
+  );
+  expect(blocked.tribulationRequired).toBe(true);
+  expect(blocked.tribulationMet).toBe(false);
+
+  // Face the tribulation: Math.random → 0 rolls 'survived' (the first
+  // bucket) — the gate opens.
+  expect(await page.evaluate(() => window.__tribulations.face())).toEqual({
+    outcome: 'survived',
+    survived: true,
+  });
+  expect(await stateValue(page, 'tribulations')).toEqual({
+    type: 'lightning',
+    pending: false,
+    survived: true,
+  });
+  const open = await page.evaluate(() => window.__breakthroughs.requirements());
+  expect(open.tribulationMet).toBe(true);
+
+  // Save round-trip (save path): a reload mid-stay must keep the cleared
+  // gate open — the boot re-syncs the current realm's gate with
+  // preserveSurvived (state.tribulations.survived survives the boot).
+  const saved = await page.evaluate(() => window.__saveManager.save());
+  expect(saved).toBe(true);
+  await page.reload();
+  await expect(page.locator('#status-text')).toContainText('Save restored.');
+  expect(await stateValue(page, 'tribulations')).toEqual({
+    type: 'lightning',
+    pending: false,
+    survived: true,
+  });
+  // The breakthrough gate is still open after the reload.
+  const afterReload = await page.evaluate(() =>
+    window.__breakthroughs.requirements()
+  );
+  expect(afterReload.tribulationMet).toBe(true);
+
+  expect(errors).toEqual([]);
+});
+

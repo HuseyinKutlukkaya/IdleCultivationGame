@@ -24,6 +24,7 @@ import { RealmSystem } from './systems/realms.js';
 import { ResourceSystem } from './systems/resources.js';
 import { InventorySystem } from './systems/inventory.js';
 import { BreakthroughSystem } from './systems/breakthroughs.js';
+import { TribulationSystem } from './systems/tribulations.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { NotationFormatter } from './ui/notation.js';
@@ -287,6 +288,22 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Tribulations: single owner of the tribulation gate on the current
+    // realm's breakthrough (data/tribulations/tribulations.json via the
+    // DataManager — type + weighted outcome table per realm id). Constructed
+    // AFTER the BreakthroughSystem (its boot sync reads the realm the
+    // RealmSystem already resolved, and the gate it writes is what the
+    // BreakthroughSystem reads through the shared state.tribulations slice)
+    // and BEFORE game.start() so the very first 'realm:changed' (a
+    // breakthrough success or a manual setRealm) opens/closes the gate from
+    // the first tick. It has NO loop subscription — tribulations only change
+    // through realm changes and the player's face().
+    const tribulations = new TribulationSystem({
+      eventBus: EventBus,
+      realmSystem: realms,
+      dataManager,
+    });
+
     // Master's parting gift: on a FRESH game (no save to restore), narrate
     // the origin endowment that matches state.resources.spiritStones === 50
     // (the only spirit-stone source until Phase 5 introduces sects + stipends).
@@ -325,6 +342,7 @@ async function bootstrap() {
     window.__settingsPanel = settingsPanel;
     window.__upgrades = upgrades;
     window.__breakthroughs = breakthroughs;
+    window.__tribulations = tribulations;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)
