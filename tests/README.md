@@ -59,7 +59,7 @@ npm run test:e2e        # or: npx playwright test
 | `tests/dom/` | renderer / UI bindings (fake DOM, no jsdom) | UI Renderer |
 | `tests/data/` | content validation of every `data/` JSON collection | Data Author |
 | `tests/integration/` | cross-system contracts (EventBus pipelines) | whoever owns the systems involved |
-| `tests/e2e/` | real-browser smoke tests (Playwright, dev-only): boot, live Qi, save round-trip | shared |
+| `tests/e2e/` | real-browser smoke tests (Playwright, dev-only): boot, live Qi, save round-trip, standing human-playability spec | shared |
 | `tests/perf/` | scalability smoke checks (1,000+ definitions) | Core Engineer |
 | `tests/fixtures/` | canned data: legacy saves, exports, event streams | Core Engineer |
 | `tests/reporters/` | custom node:test reporters (compact output; dev-only) | Architect |
@@ -135,6 +135,13 @@ feature touching a system knows exactly which tests to run and update.
    paths (drive letters, user homes, OS temp dirs, repo-folder-as-absolute-
    location) into any file — the suite fails on them via
    `tests/unit/path-portability.test.mjs`.
+7. **Human playability is a standing E2E contract — not a per-phase
+   deliverable.** The E2E suite always contains a spec proving a real player
+   can complete the game's current core loop through actual UI interactions
+   (real buttons, visible feedback, no console errors, no dead-ends) —
+   `tests/e2e/game.spec.mjs`. Every feature that touches the bootstrap,
+   renderer, UI or game loop extends or keeps that spec green as the loop
+   grows; it never shrinks.
 
 ## Testing decisions (dated project decisions)
 
@@ -228,7 +235,10 @@ They are NOT node:test files — different runner, different rules:
 6. **When do I write one?** Every feature that touches the bootstrap
    (`js/main.js`), the renderer, or the save path ships (or extends) a spec in
    `tests/e2e/` in the same commit — pure logic features rely on node:test
-   only.
+   only. And whenever a feature makes the game loop playable in a new way
+   (a new action, panel, or automation), the **standing human-playability
+   spec** grows with it: extend `game.spec.mjs` so a real player can still
+   complete the loop through the UI.
 7. **Keep them small and deterministic.** A spec is a smoke test of a real
    user-visible flow (boot, live numbers, save round-trip), not a logic
    re-run of unit tests. If a spec starts needing timing hacks or long

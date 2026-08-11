@@ -3,6 +3,21 @@
 Development roadmap from the master plan (see PLANS.md for the full plan).
 `[x]` = done, `[ ]` = pending. Tick boxes as phases complete.
 
+## Cross-Cutting Gates
+Standing quality gates that apply to the whole project — not to a single phase.
+
+**Human playability is a standing E2E contract, not a per-phase deliverable.**
+The E2E suite always contains a spec proving a real player can complete the
+game's current core loop through actual UI interactions (real buttons, visible
+feedback, no console errors, no dead-ends) — see `tests/e2e/game.spec.mjs`.
+Every feature that touches the bootstrap, renderer, UI or game loop extends or
+keeps that spec green as the loop grows. A playtest + revision cycle (collect
+bugs + lore/balance feedback, fix, re-gate) runs after every playable slice —
+the first cycle lands before Meridians (Phase 3).
+
+- [ ] First human playtest + revision cycle — play the current loop end-to-end
+      as a real player, collect bugs and lore/balance feedback, fix, re-gate.
+
 ## Phase 0 — Foundation
 - [x] Repository
 - [x] Git
@@ -40,8 +55,7 @@ Development roadmap from the master plan (see PLANS.md for the full plan).
 - [x] Breakthroughs (requirements, results, bottlenecks) — done (js/systems/breakthroughs.js + data/breakthroughs/breakthroughs.json)
 - [x] Tribulations — done (js/systems/tribulations.js + data/tribulations/tribulations.json)
 - [x] Spirit Roots — done (js/systems/spirit-roots.js + data/spirit-roots/spirit-roots.json)
-- [ ] Playtest gate — the full cultivation loop (qi → breakthrough → tribulation → realm change) is reachable and completable by a human player through the UI (Cultivation panel, js/ui/cultivation-panel.js; the real-browser e2e drives the loop). Close after the user's playtest + revision cycle, before Meridians.
-- [ ] Meridians
+- [ ] Meridians (starts after the first playtest + revision cycle — see Cross-Cutting Gates)
 - [ ] Physiques
 - [ ] Dantian (qi storage capacity, density, purity — DESIGN.md character system)
 - [ ] Bloodlines

@@ -856,10 +856,24 @@ test('spirit roots system is wired and roll() writes a rolled root into state', 
   expect(errors).toEqual([]);
 });
 
-test('cultivation panel is wired: readout renders, buttons drive the systems and follow the gates', async ({
+test('human playability: a real player can complete the core loop through the UI', async ({
   page,
 }) => {
   const errors = trackErrors(page);
+  // This is the STANDING human-playability spec (ROADMAP "Cross-Cutting
+  // Gates"): it proves the game's current core loop is completable by a
+  // real player through actual UI interactions — real buttons, visible
+  // feedback, no dead-ends, no console errors. It is NOT a Phase-3
+  // deliverable: as the loop grows (items, sects, reincarnation, ...) this
+  // spec extends with each new playable action, never shrinks.
+  //
+  // Today the core loop IS the cultivation loop: meditate (qi accrues) →
+  // progress fills → Breakthrough button lights up → click it → the realm
+  // advances → on tribulation-bearing realms the gate opens and the Face
+  // Tribulation button appears → click it → breakthrough again. The clicks
+  // below drive the REAL systems through the Cultivation panel's delegated
+  // listeners (js/ui/cultivation-panel.js), exactly as a player would.
+  //
   // Determinism: face() and the breakthrough attempt share the injected
   // Math.random source (js/systems/tribulations.js + js/systems/breakthroughs.js,
   // verified by grep). With Math.random → 0 the roll lands in the FIRST
