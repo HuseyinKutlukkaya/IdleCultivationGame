@@ -178,6 +178,26 @@
               </div>
             </article>
 
+            <!-- Cultivation: the Phase-3 play-test surface — the human
+                 player's Breakthrough / Face Tribulation buttons plus the
+                 character readout. The body is populated by
+                 js/ui/cultivation-panel.js at init and re-rendered on the
+                 events it subscribes to; the character/action markup is
+                 intentionally data-bind-free (this panel owns it and reads
+                 state fresh on every render). The realm/progress bindings
+                 live in the Cultivation Realm panel — NOT duplicated here. -->
+            <article class="game-panel" data-cultivation-panel>
+              <header class="game-panel__head">
+                <span class="game-panel__icon" aria-hidden="true">⚡</span>
+                <h3 class="game-panel__title">Cultivation</h3>
+                <span class="game-panel__tag">Placeholder</span>
+              </header>
+              <div class="game-panel__body game-panel__body--cultivation" data-cultivation-body>
+                <!-- Character readout, action buttons and feedback are
+                     rendered by js/ui/cultivation-panel.js. -->
+              </div>
+            </article>
+
             <!-- Statistics: lifetime counters driven by js/systems/statistics.js.
                  playtimeMs uses the new "duration" data-bind-mode so the
                  renderer formats it as "Xh Ym" / "Xh" / "Xm" / "Xs"; the

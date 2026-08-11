@@ -30,6 +30,12 @@
  *      root, and a console roll() writes the rolled root into state
  *      (spiritRoot slice, cultivation.spiritRootMultiplier,
  *      player.spiritRoot).
+ *  11. the cultivation panel is wired — the character readout renders the
+ *      fresh-state cultivator, the Breakthrough button enables live as
+ *      realm progress accrues, a click drives the real BreakthroughSystem
+ *      through the delegation, and entering a tribulation realm renders
+ *      the Face button whose click opens the gate and un-blocks the
+ *      breakthrough.
  *
  * These run against the dependency-free static server (static-server.mjs),
  * never inside the node:test suite — the `.spec.mjs` suffix keeps them out of
@@ -616,6 +622,15 @@ test('breakthrough system is wired: gates block, a synced attempt advances the r
   });
   await page.goto('/');
 
+  // Determinism hardening: stop the default-active meditation session so the
+  // loop's realm-progress accrual (qiPerSecond → realmProgress on every
+  // loop:update) can never race the strict `realmProgress === 0` reads below
+  // (a tick landing between the attempt's synchronous reset and a single-shot
+  // read used to be able to accrue progress). Every progress value in this
+  // test is set manually, so nothing depends on active qi.
+  await page.waitForFunction(() => Boolean(window.__meditation));
+  await page.evaluate(() => window.__meditation.stop());
+
   // BreakthroughSystem is exposed after bootstrap; the tables come from the
   // data-driven 'breakthroughs' collection — one entry per realm id across
   // the full 15-tier ladder (data/breakthroughs/breakthroughs.json).
@@ -837,6 +852,162 @@ test('spirit roots system is wired and roll() writes a rolled root into state', 
   expect(await stateValue(page, 'spiritRoot.tier')).toBe(0);
   expect(await stateValue(page, 'cultivation.spiritRootMultiplier')).toBe(0.85);
   expect(await stateValue(page, 'player.spiritRoot')).toBe('No Root');
+
+  expect(errors).toEqual([]);
+});
+
+test('cultivation panel is wired: readout renders, buttons drive the systems and follow the gates', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // Determinism: face() and the breakthrough attempt share the injected
+  // Math.random source (js/systems/tribulations.js + js/systems/breakthroughs.js,
+  // verified by grep). With Math.random → 0 the roll lands in the FIRST
+  // bucket of each results table ('perfect' / 'survived' — both successes),
+  // so the success paths below are deterministic.
+  page.addInitScript(() => {
+    Math.random = () => 0;
+  });
+  await page.goto('/');
+
+  // The panel initializer is exposed after bootstrap.
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__cultivationPanel)))
+    .toBe(true);
+
+  const panel = page.locator('[data-cultivation-panel]');
+  await expect(panel).toBeVisible();
+
+  // The character readout renders the fresh-state cultivator: the canonical
+  // pre-roll display name 'Unawakened' from player.spiritRoot and the
+  // meridian count from player.meridians (assert state-derived text, not
+  // Intl-formatted numbers — see tests/README.md E2E rules).
+  await expect(panel.locator('[data-cultivation-character]')).toHaveText(
+    'Spirit Root: Unawakened · Meridians: 0'
+  );
+
+  // Fresh boot at Mortal with zero realm progress: the Breakthrough button
+  // renders disabled and the reason line names the progress gate.
+  const breakthrough = panel.locator('[data-cultivation-breakthrough]');
+  await expect(breakthrough).toBeDisabled();
+  await expect(panel.locator('[data-cultivation-reason]')).toContainText(
+    'Progress required:'
+  );
+
+  // Mortal imposes no tribulation — the face block does not render.
+  await expect(panel.locator('[data-cultivation-tribulation]')).toHaveCount(0);
+
+  // The panel re-renders on every loop:uiRefresh pulse, so the Breakthrough
+  // button enables LIVE as realm progress accrues on real ticks. Set the
+  // progress directly and wait for the next loop pulse to repaint. Stop the
+  // default-active meditation session in the same evaluate so the loop's
+  // accrual (qiPerSecond → realmProgress per loop:update) can never race the
+  // strict `realmProgress === 0` reads after each breakthrough click below —
+  // a tick landing between the click's synchronous reset and a single-shot
+  // read used to be able to accrue progress. Nothing in this test depends on
+  // active qi (every progress value is set manually).
+  await page.evaluate(() => {
+    window.__meditation.stop();
+    window.__game.state.cultivation.realmProgress = 1000;
+  });
+  await expect(breakthrough).toBeEnabled();
+
+  // A player-like click on the button drives the REAL BreakthroughSystem
+  // through the panel's delegated listener: the realm advances to Qi
+  // Gathering, the lifetime counter ticks, and the panel repaints the button
+  // disabled (progress reset to 0). The feedback line reports the jump.
+  await breakthrough.click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.cultivation.realm))
+    .toBe('Qi Gathering');
+  expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(1);
+  expect(await stateValue(page, 'cultivation.realmProgress')).toBe(0);
+  await expect(breakthrough).toBeDisabled();
+  await expect(panel.locator('[data-cultivation-feedback]')).toHaveText(
+    'Breakthrough to Qi Gathering!'
+  );
+
+  // Reach the first tribulation-bearing realm (Core Formation — tier 3) the
+  // way a player actually would: two more panel breakthroughs. Each accepted
+  // attempt advances exactly one tier, so the ladder runs Qi Gathering →
+  // Foundation Establishment → Core Formation. (A manual setRealm() shortcut
+  // would leave the breakthrough system's realmProgressMax stale at the
+  // previous realm's cap, and the loop's accrual clamp would fight the
+  // progress we set below.)
+
+  // Qi Gathering → Foundation Establishment (gates: 1500 progress, 150
+  // stones, 1 qi-condensation-pill). Mortal's breakthrough is free (cost 0
+  // in data/breakthroughs/breakthroughs.json); the Qi Gathering attempt
+  // just spent the 50-stone wallet, so top the stones back up for the next
+  // entry's 150-stone cost.
+  await page.evaluate(() => {
+    window.__game.state.cultivation.realmProgress = 1500;
+    window.__resources.add('spiritStones', 150);
+    window.__inventory.add('qi-condensation-pill', 1);
+  });
+  await expect(breakthrough).toBeEnabled();
+  await breakthrough.click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.cultivation.realm))
+    .toBe('Foundation Establishment');
+  expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(2);
+  expect(await stateValue(page, 'cultivation.realmProgress')).toBe(0);
+  await expect(breakthrough).toBeDisabled();
+
+  // Foundation Establishment → Core Formation (gates: 2000 progress, 400
+  // stones, 2 spirit-herb). The post-success sync pulls the Core Formation
+  // entry (max 2000, cost 400) and the tribulation gate opens.
+  await page.evaluate(() => {
+    window.__game.state.cultivation.realmProgress = 2000;
+    window.__resources.add('spiritStones', 400);
+    window.__inventory.add('spirit-herb', 2);
+  });
+  await expect(breakthrough).toBeEnabled();
+  await breakthrough.click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.cultivation.realm))
+    .toBe('Core Formation');
+  expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(3);
+  expect(await stateValue(page, 'cultivation.realmProgressMax')).toBe(2000);
+  expect(await stateValue(page, 'cultivation.realmProgress')).toBe(0);
+  await expect(breakthrough).toBeDisabled();
+
+  // The new realm's tribulation gate opened: the panel renders the
+  // tribulation block with the enabled Face button, and the breakthrough
+  // gate stays closed (progress reset to 0).
+  await expect(panel.locator('[data-cultivation-tribulation]')).toHaveCount(1);
+  await expect(panel.locator('[data-cultivation-tribulation-name]')).toHaveText(
+    'Tribulation: lightning'
+  );
+  const face = panel.locator('[data-cultivation-face]');
+  await expect(face).toBeEnabled();
+  await expect(breakthrough).toBeDisabled();
+
+  // Satisfy every non-tribulation gate of the core-formation entry — the
+  // successful attempt consumed its stones + herbs, so re-supply them. The
+  // ONLY unmet gate left is the pending tribulation, and the reason line
+  // (re-rendered from the systems on the next loop pulse) names it.
+  await page.evaluate(() => {
+    window.__game.state.cultivation.realmProgress = 2000;
+    window.__resources.add('spiritStones', 400);
+    window.__inventory.add('spirit-herb', 2);
+  });
+  await expect(panel.locator('[data-cultivation-reason]')).toHaveText(
+    'Face the tribulation first'
+  );
+  await expect(breakthrough).toBeDisabled();
+
+  // A player-like click on the Face button drives the REAL TribulationSystem
+  // through the delegated listener: Math.random → 0 rolls 'survived', the
+  // gate opens, and the breakthrough button enables.
+  await face.click();
+  await expect
+    .poll(() => page.evaluate(() => window.__game.state.tribulations.survived))
+    .toBe(true);
+  await expect(breakthrough).toBeEnabled();
+  await expect(panel.locator('[data-cultivation-feedback]')).toHaveText(
+    'Tribulation survived!'
+  );
 
   expect(errors).toEqual([]);
 });

@@ -1,0 +1,1190 @@
+/**
+ * tests/unit/cultivation-panel.test.mjs — unit tests for js/ui/cultivation-panel.js.
+ *
+ * Exercises the Cultivation panel initializer under fakes (the real shared
+ * EventBus for subscribe/unsubscribe + emission recording, FAKE
+ * breakthroughs/tribulations systems returning canned requirements()/
+ * canAttempt()/attempt()/face() results — the real systems are never
+ * imported here — and a fake root DOM). Coverage:
+ *
+ *   - Constructor resolves [data-cultivation-panel] + [data-cultivation-body]
+ *     once, registers exactly ONE delegated click listener and renders the
+ *     character readout (spirit root + meridians from state).
+ *   - Missing root.querySelector / missing panel / missing state → no-op
+ *     handle that warns once and returns false from applyBreakthrough /
+ *     applyFace.
+ *   - Breakthrough button: disabled + reason line for every gate
+ *     (progress/cost/items/tribulation/max-realm/no-definition), enabled
+ *     with the cost line when canAttempt() is true.
+ *   - Click delegation routes [data-cultivation-breakthrough] clicks to
+ *     applyBreakthrough() and [data-cultivation-face] clicks to applyFace();
+ *     a click outside both buttons is a no-op.
+ *   - applyBreakthrough renders success ("Breakthrough to X!") and failure
+ *     ("Breakthrough failed.") feedback; a blocked attempt changes nothing.
+ *   - Tribulation block: absent when the realm imposes no type; visible with
+ *     an enabled face button while pending; applyFace renders survived /
+ *     overwhelmed feedback.
+ *   - Missing breakthroughs / tribulations dependencies warn ONCE per apply
+ *     call and return false; the panel degrades (disabled button / no block).
+ *   - destroy() removes the click listener and unsubscribes every subscribed
+ *     event (idempotent).
+ *   - Every subscribed event ('realm:changed', 'realm:breakthrough',
+ *     'tribulation:finished', 'resource:changed', 'ui:refresh',
+ *     'loop:uiRefresh') re-renders the panel from the fresh system snapshots.
+ *   - NO console warnings/errors during a normal session; NO innerHTML usage
+ *     anywhere in the module source.
+ *
+ * Run: node --test tests/unit/cultivation-panel.test.mjs (or the full suite
+ * as documented in tests/README.md).
+ */
+import { test, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
+import { EventBus } from '../../js/core/event-bus.js';
+import { initCultivationPanel } from '../../js/ui/cultivation-panel.js';
+
+/** CSS selector the module resolves on root for the panel article. */
+const PANEL_SELECTOR = '[data-cultivation-panel]';
+
+/** CSS selector the module resolves on the article for the body container. */
+const BODY_SELECTOR = '[data-cultivation-body]';
+
+/** CSS selector for the Breakthrough button (delegated click anchor). */
+const BREAKTHROUGH_SELECTOR = '[data-cultivation-breakthrough]';
+
+/** CSS selector for the Face Tribulation button (delegated click anchor). */
+const FACE_SELECTOR = '[data-cultivation-face]';
+
+/** Every event the panel subscribes to (mirrors the module's contract). */
+const SUBSCRIBED_EVENTS = [
+  'realm:changed',
+  'realm:breakthrough',
+  'tribulation:finished',
+  'resource:changed',
+  'ui:refresh',
+  'loop:uiRefresh',
+];
+
+/** Reset the shared EventBus before every test. */
+beforeEach(() => {
+  EventBus.clear();
+});
+
+/**
+ * A deterministic number formatter for assertions: formats as plain decimal
+ * text (no Intl, no locale separators — a machine-independent baseline).
+ *
+ * @param {number} value — the number to format.
+ * @returns {string} String(value).
+ */
+function identityFormatter(value) {
+  return String(value);
+}
+
+/**
+ * Build a fake root with a settable panel + body. The root records
+ * addEventListener / removeEventListener calls (for the delegated click), the
+ * body tracks appended children + replaceChildren, the article resolves the
+ * body, and ownerDocument.createElement returns text-bearing fake nodes.
+ *
+ * @returns {{ root: object, panel: object, body: object, listeners: object }}
+ */
+function createFakeRoot() {
+  const listeners = { click: [] };
+  const body = {
+    children: [],
+    appendChild(node) {
+      this.children.push(node);
+      return node;
+    },
+    replaceChildren(...nodes) {
+      this.children.length = 0;
+      for (const node of nodes) this.children.push(node);
+    },
+  };
+  const panel = {
+    selector: PANEL_SELECTOR,
+    querySelector(selector) {
+      return selector === BODY_SELECTOR ? body : null;
+    },
+  };
+  const root = {
+    querySelector(selector) {
+      return selector === PANEL_SELECTOR ? panel : null;
+    },
+    addEventListener(type, handler) {
+      if (!listeners[type]) listeners[type] = [];
+      listeners[type].push(handler);
+    },
+    removeEventListener(type, handler) {
+      const bucket = listeners[type];
+      if (!bucket) return;
+      const index = bucket.indexOf(handler);
+      if (index >= 0) bucket.splice(index, 1);
+    },
+    ownerDocument: {
+      createElement(tag) {
+        const classes = new Set();
+        const attrs = Object.create(null);
+        const children = [];
+        let text = '';
+        return {
+          tag,
+          classes,
+          attrs,
+          children,
+          classList: {
+            add(...names) {
+              for (const name of names) classes.add(name);
+            },
+          },
+          appendChild(node) {
+            children.push(node);
+            return node;
+          },
+          get textContent() {
+            return text;
+          },
+          set textContent(value) {
+            text = String(value);
+          },
+          setAttribute(name, value) {
+            attrs[name] = String(value);
+          },
+          getAttribute(name) {
+            return Object.hasOwn(attrs, name) ? attrs[name] : null;
+          },
+        };
+      },
+    },
+  };
+  return { root, panel, body, listeners };
+}
+
+/**
+ * Find a body child (or, when `deep`, a descendant) carrying the given
+ * data attribute.
+ *
+ * @param {object} container — the fake body (children array).
+ * @param {string} attr — data attribute name (without the `data-` prefix
+ *        matching: pass the full name, e.g. 'data-cultivation-breakthrough').
+ * @param {boolean} [deep=false] — search nested children too.
+ * @returns {object|null} the matching node, or null.
+ */
+function findNode(container, attr, deep = false) {
+  for (const child of container.children) {
+    if (child.attrs && child.attrs[attr] !== undefined) return child;
+    if (deep) {
+      const nested = findNode(child, attr, true);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+/**
+ * Build a fake BreakthroughSystem handle exposing requirements()/canAttempt()/
+ * attempt(). Each method can be overridden; the fake records attempt() calls.
+ *
+ * @param {object} [overrides] — partial overrides.
+ * @returns {object} the fake.
+ */
+function createFakeBreakthroughs(overrides = {}) {
+  const attemptCalls = [];
+  // An `attempt` override still goes through the recording wrapper so
+  // attemptCalls stays the single source of truth for "the panel asked the
+  // system" (the override only changes the fake's return/mutation).
+  const { attempt: overrideAttempt, ...rest } = overrides;
+  return {
+    attemptCalls,
+    requirements() {
+      return {
+        realmId: 'mortal',
+        requiredProgress: 1000,
+        progress: 0,
+        progressMet: false,
+        cost: { spiritStones: 0 },
+        costMet: true,
+        bottleneck: [],
+        bottleneckMet: true,
+        tribulationRequired: false,
+        tribulationMet: true,
+        canAttempt: false,
+      };
+    },
+    canAttempt() {
+      return this.requirements().canAttempt;
+    },
+    attempt() {
+      attemptCalls.push(1);
+      if (typeof overrideAttempt === 'function') return overrideAttempt();
+      return { outcome: null, advanced: false, reason: 'progress' };
+    },
+    ...rest,
+  };
+}
+
+/**
+ * Build a fake TribulationSystem handle exposing requirements()/canFace()/
+ * face(). Each method can be overridden; the fake records face() calls.
+ *
+ * @param {object} [overrides] — partial overrides.
+ * @returns {object} the fake.
+ */
+function createFakeTribulations(overrides = {}) {
+  const faceCalls = [];
+  // A `face` override still goes through the recording wrapper so faceCalls
+  // stays the single source of truth for "the panel asked the system".
+  const { face: overrideFace, ...rest } = overrides;
+  return {
+    faceCalls,
+    requirements() {
+      return {
+        realmId: 'mortal',
+        type: null,
+        pending: false,
+        survived: false,
+        canFace: false,
+      };
+    },
+    canFace() {
+      return this.requirements().canFace;
+    },
+    face() {
+      faceCalls.push(1);
+      if (typeof overrideFace === 'function') return overrideFace();
+      return { outcome: null, survived: false, reason: 'no-tribulation' };
+    },
+    ...rest,
+  };
+}
+
+/**
+ * A minimal but healthy fake game state (the panel reads player.* and
+ * cultivation.breakthroughCost).
+ *
+ * @param {object} [overrides] — partial overrides (player / cultivation).
+ * @returns {object} the fake state.
+ */
+function createFakeState(overrides = {}) {
+  return {
+    player: { spiritRoot: 'Unawakened', meridians: 0 },
+    cultivation: { realm: 'Mortal', breakthroughCost: 0 },
+    ...overrides,
+  };
+}
+
+/** A canned requirements snapshot with every gate met (canAttempt true). */
+function ALL_MET_REQUIREMENTS() {
+  return {
+    realmId: 'qi-gathering',
+    requiredProgress: 1000,
+    progress: 1000,
+    progressMet: true,
+    cost: { spiritStones: 50 },
+    costMet: true,
+    bottleneck: [],
+    bottleneckMet: true,
+    tribulationRequired: false,
+    tribulationMet: true,
+    canAttempt: true,
+  };
+}
+
+// ---------- Constructor ----------
+
+test('init renders the character readout, buttons and feedback; registers exactly one click listener', () => {
+  const { root, body, listeners } = createFakeRoot();
+  const state = createFakeState();
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  const character = findNode(body, 'data-cultivation-character');
+  assert.ok(character, 'character readout rendered');
+  assert.equal(character.textContent, 'Spirit Root: Unawakened · Meridians: 0');
+
+  const button = findNode(body, 'data-cultivation-breakthrough');
+  assert.ok(button, 'breakthrough button rendered');
+  assert.equal(button.textContent, 'Breakthrough');
+  assert.equal(
+    button.attrs.disabled,
+    'true',
+    'fresh Mortal realm (zero progress) → button disabled'
+  );
+  const reason = findNode(body, 'data-cultivation-reason');
+  assert.ok(reason, 'reason line rendered');
+  assert.match(reason.textContent, /^Progress required:/);
+
+  const feedback = findNode(body, 'data-cultivation-feedback');
+  assert.ok(feedback, 'feedback line rendered (empty on first render)');
+  assert.equal(feedback.textContent, '');
+
+  // No tribulation on Mortal → no tribulation block, no face button.
+  assert.equal(findNode(body, 'data-cultivation-tribulation'), null);
+  assert.equal(findNode(body, 'data-cultivation-face'), null);
+
+  assert.equal(listeners.click.length, 1, 'exactly one delegated click listener attached');
+  handle.destroy();
+});
+
+test('character readout reads spirit root + meridians fresh from state', () => {
+  const { root, body } = createFakeRoot();
+  const state = createFakeState({
+    player: { spiritRoot: 'No Root', meridians: 3 },
+  });
+  initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    root,
+  });
+  const character = findNode(body, 'data-cultivation-character');
+  assert.equal(character.textContent, 'Spirit Root: No Root · Meridians: 3');
+});
+
+test('character readout truncates a hostile very-long spirit root name', () => {
+  const { root, body } = createFakeRoot();
+  const state = createFakeState({
+    player: { spiritRoot: 'X'.repeat(4096), meridians: 0 },
+  });
+  initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    root,
+  });
+  const character = findNode(body, 'data-cultivation-character');
+  const text = character.textContent;
+  // The rendered line stays bounded (the 64-char cap on the root name) so a
+  // hostile save can never churn a multi-MB string on every loop pulse.
+  assert.ok(text.length <= 128, `rendered character line length ${text.length}`);
+  assert.equal(text, `Spirit Root: ${'X'.repeat(64)} · Meridians: 0`);
+});
+
+test('init without a panel warns and returns a no-op handle', () => {
+  const warnCalls = [];
+  const savedWarn = console.warn;
+  console.warn = (...args) => warnCalls.push(args);
+  try {
+    const root = {
+      querySelector: () => null,
+      addEventListener() {},
+      removeEventListener() {},
+    };
+    const handle = initCultivationPanel({
+      eventBus: EventBus,
+      state: createFakeState(),
+      breakthroughs: createFakeBreakthroughs(),
+      tribulations: createFakeTribulations(),
+      root,
+    });
+    assert.equal(warnCalls.length, 1);
+    assert.match(String(warnCalls[0][0]), /data-cultivation-panel/);
+    assert.equal(handle.applyBreakthrough(), false);
+    assert.equal(handle.applyFace(), false);
+    assert.doesNotThrow(() => handle.destroy());
+  } finally {
+    console.warn = savedWarn;
+  }
+});
+
+test('init without root.querySelector warns and returns a no-op handle', () => {
+  const warnCalls = [];
+  const savedWarn = console.warn;
+  console.warn = (...args) => warnCalls.push(args);
+  try {
+    const handle = initCultivationPanel({
+      eventBus: EventBus,
+      state: createFakeState(),
+      breakthroughs: createFakeBreakthroughs(),
+      tribulations: createFakeTribulations(),
+      root: {},
+    });
+    assert.equal(warnCalls.length, 1);
+    assert.match(String(warnCalls[0][0]), /root\.querySelector/);
+    assert.equal(handle.applyBreakthrough(), false);
+    assert.equal(handle.applyFace(), false);
+  } finally {
+    console.warn = savedWarn;
+  }
+});
+
+test('init without game state warns and returns a no-op handle', () => {
+  const warnCalls = [];
+  const savedWarn = console.warn;
+  console.warn = (...args) => warnCalls.push(args);
+  try {
+    const { root } = createFakeRoot();
+    const handle = initCultivationPanel({
+      eventBus: EventBus,
+      state: null,
+      breakthroughs: createFakeBreakthroughs(),
+      tribulations: createFakeTribulations(),
+      root,
+    });
+    assert.equal(warnCalls.length, 1);
+    assert.match(String(warnCalls[0][0]), /game state/);
+    assert.equal(handle.applyBreakthrough(), false);
+    assert.equal(handle.applyFace(), false);
+  } finally {
+    console.warn = savedWarn;
+  }
+});
+
+// ---------- Breakthrough button + reason line ----------
+
+test('breakthrough button disabled with the matching gate reason for every blocked state', () => {
+  const cases = [
+    {
+      label: 'progress gate',
+      requirements: {
+        realmId: 'mortal',
+        requiredProgress: 1000,
+        progress: 123,
+        progressMet: false,
+        cost: { spiritStones: 0 },
+        costMet: true,
+        bottleneck: [],
+        bottleneckMet: true,
+        tribulationRequired: false,
+        tribulationMet: true,
+        canAttempt: false,
+      },
+      reason: 'Progress required: 123 / 1000',
+    },
+    {
+      label: 'cost gate',
+      requirements: {
+        realmId: 'mortal',
+        requiredProgress: 1000,
+        progress: 1000,
+        progressMet: true,
+        cost: { spiritStones: 500 },
+        costMet: false,
+        bottleneck: [],
+        bottleneckMet: true,
+        tribulationRequired: false,
+        tribulationMet: true,
+        canAttempt: false,
+      },
+      reason: 'Cost not met',
+    },
+    {
+      label: 'items gate',
+      requirements: {
+        realmId: 'foundation-establishment',
+        requiredProgress: 1500,
+        progress: 1500,
+        progressMet: true,
+        cost: { spiritStones: 150 },
+        costMet: true,
+        bottleneck: [{ id: 'qi-condensation-pill', count: 1 }],
+        bottleneckMet: false,
+        tribulationRequired: false,
+        tribulationMet: true,
+        canAttempt: false,
+      },
+      reason: 'Missing items',
+    },
+    {
+      label: 'tribulation gate',
+      requirements: {
+        realmId: 'core-formation',
+        requiredProgress: 2000,
+        progress: 2000,
+        progressMet: true,
+        cost: { spiritStones: 400 },
+        costMet: true,
+        bottleneck: [{ id: 'spirit-herb', count: 2 }],
+        bottleneckMet: true,
+        tribulationRequired: true,
+        tribulationMet: false,
+        canAttempt: false,
+      },
+      reason: 'Face the tribulation first',
+    },
+    {
+      label: 'max-realm gate (all gates met, no next tier)',
+      requirements: {
+        realmId: 'beyond-heaven',
+        requiredProgress: 50000,
+        progress: 50000,
+        progressMet: true,
+        cost: { spiritStones: 4200000 },
+        costMet: true,
+        bottleneck: [],
+        bottleneckMet: true,
+        tribulationRequired: false,
+        tribulationMet: true,
+        canAttempt: false,
+      },
+      reason: 'Peak realm reached',
+    },
+  ];
+
+  for (const entry of cases) {
+    const { root, body } = createFakeRoot();
+    const state = createFakeState({ cultivation: { realm: 'X', breakthroughCost: 1 } });
+    initCultivationPanel({
+      eventBus: EventBus,
+      state,
+      breakthroughs: createFakeBreakthroughs({
+        requirements: () => ({ ...entry.requirements }),
+        canAttempt() {
+          return entry.requirements.canAttempt;
+        },
+      }),
+      tribulations: createFakeTribulations(),
+      root,
+      notation: { format: identityFormatter },
+    });
+
+    const button = findNode(body, 'data-cultivation-breakthrough');
+    const reason = findNode(body, 'data-cultivation-reason');
+    assert.equal(
+      button.attrs.disabled,
+      'true',
+      `${entry.label}: button disabled`
+    );
+    assert.equal(reason.textContent, entry.reason, `${entry.label}: reason text`);
+  }
+});
+
+test('breakthrough button disabled with "No path forward" when the realm has no definition', () => {
+  // realmId is null (no current realm) → no-definition.
+  const { root, body } = createFakeRoot();
+  const state = createFakeState({ cultivation: { realm: 'Mortal', breakthroughCost: null } });
+  initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs({
+      requirements: () => ({
+        realmId: null,
+        requiredProgress: 1000,
+        progress: 0,
+        progressMet: false,
+        cost: { spiritStones: 0 },
+        costMet: true,
+        bottleneck: [],
+        bottleneckMet: true,
+        tribulationRequired: false,
+        tribulationMet: true,
+        canAttempt: false,
+      }),
+    }),
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  const button = findNode(body, 'data-cultivation-breakthrough');
+  const reason = findNode(body, 'data-cultivation-reason');
+  assert.equal(button.attrs.disabled, 'true');
+  assert.equal(reason.textContent, 'No path forward');
+});
+
+test('breakthrough button enabled with the cost line when canAttempt() is true', () => {
+  const { root, body } = createFakeRoot();
+  const state = createFakeState();
+  initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs({
+      requirements: ALL_MET_REQUIREMENTS,
+      canAttempt: () => true,
+    }),
+    tribulations: createFakeTribulations(),
+    root,
+    notation: { format: identityFormatter },
+  });
+
+  const button = findNode(body, 'data-cultivation-breakthrough');
+  const reason = findNode(body, 'data-cultivation-reason');
+  assert.equal(button.attrs.disabled, undefined, 'button enabled');
+  assert.equal(reason.textContent, 'Cost: 50 stones');
+});
+
+test('enabled breakthrough button renders "Cost: —" when the cost is not finite', () => {
+  const { root, body } = createFakeRoot();
+  const state = createFakeState();
+  initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs({
+      requirements: () => ({
+        ...ALL_MET_REQUIREMENTS(),
+        cost: { spiritStones: null },
+      }),
+      canAttempt: () => true,
+    }),
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  const reason = findNode(body, 'data-cultivation-reason');
+  assert.equal(reason.textContent, 'Cost: —');
+});
+
+// ---------- Click delegation ----------
+
+test('click on [data-cultivation-breakthrough] delegates to applyBreakthrough', () => {
+  const { root, listeners } = createFakeRoot();
+  const state = createFakeState();
+  const breakthroughs = createFakeBreakthroughs();
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs,
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  // A blocked attempt is the default fake — the call still reaches the system.
+  const fakeButton = {
+    closest(selector) {
+      return selector === BREAKTHROUGH_SELECTOR ? this : null;
+    },
+  };
+  listeners.click[0]({ target: fakeButton });
+  assert.equal(breakthroughs.attemptCalls.length, 1, 'attempt() called through the click');
+
+  // A click on the face anchor routes to applyFace.
+  const fakeFace = {
+    closest(selector) {
+      return selector === FACE_SELECTOR ? this : null;
+    },
+  };
+  listeners.click[0]({ target: fakeFace });
+  assert.equal(breakthroughs.attemptCalls.length, 1, 'face clicks never reach attempt()');
+  handle.destroy();
+});
+
+test('click outside any action button does nothing', () => {
+  const { root, listeners, body } = createFakeRoot();
+  const breakthroughs = createFakeBreakthroughs();
+  const tribulations = createFakeTribulations();
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs,
+    tribulations,
+    root,
+  });
+
+  const before = body.children.length;
+  listeners.click[0]({ target: { closest: () => null } });
+
+  assert.equal(breakthroughs.attemptCalls.length, 0);
+  assert.equal(tribulations.faceCalls.length, 0);
+  assert.equal(body.children.length, before, 'no rerender');
+  handle.destroy();
+});
+
+// ---------- applyBreakthrough feedback ----------
+
+test('applyBreakthrough renders success feedback when the attempt advanced', () => {
+  const { root, body } = createFakeRoot();
+  const state = createFakeState({ cultivation: { realm: 'Qi Gathering', breakthroughCost: 50 } });
+  const breakthroughs = createFakeBreakthroughs({
+    requirements: ALL_MET_REQUIREMENTS,
+    attempt() {
+      // The fake system advances the realm (as the real system would).
+      state.cultivation.realm = 'Qi Gathering';
+      return { outcome: 'perfect', advanced: true };
+    },
+  });
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs,
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  const uiRefresh = [];
+  EventBus.subscribe('ui:refresh', () => uiRefresh.push(1));
+
+  const ok = handle.applyBreakthrough();
+  assert.equal(ok, true, 'accepted attempt returns true');
+  assert.equal(breakthroughs.attemptCalls.length, 1);
+  const feedback = findNode(body, 'data-cultivation-feedback');
+  assert.equal(feedback.textContent, 'Breakthrough to Qi Gathering!');
+  assert.equal(uiRefresh.length, 1, 'success emits ui:refresh');
+  handle.destroy();
+});
+
+test('applyBreakthrough renders failure feedback when the attempt was accepted but failed', () => {
+  const { root, body } = createFakeRoot();
+  const breakthroughs = createFakeBreakthroughs({
+    requirements: ALL_MET_REQUIREMENTS,
+    attempt() {
+      return { outcome: 'heavy-failure', advanced: false };
+    },
+  });
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs,
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  const ok = handle.applyBreakthrough();
+  assert.equal(ok, true);
+  const feedback = findNode(body, 'data-cultivation-feedback');
+  assert.equal(feedback.textContent, 'Breakthrough failed.');
+  handle.destroy();
+});
+
+test('a blocked applyBreakthrough changes nothing and returns false', () => {
+  const { root, body } = createFakeRoot();
+  const breakthroughs = createFakeBreakthroughs(); // default: blocked 'progress'
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs,
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  const ok = handle.applyBreakthrough();
+  assert.equal(ok, false, 'blocked attempt returns false');
+  assert.equal(breakthroughs.attemptCalls.length, 1, 'the system was still asked');
+  const feedback = findNode(body, 'data-cultivation-feedback');
+  assert.equal(feedback.textContent, '', 'no feedback for a blocked attempt');
+  handle.destroy();
+});
+
+// ---------- Tribulation block ----------
+
+test('tribulation block is absent when the realm imposes no tribulation', () => {
+  const { root, body } = createFakeRoot();
+  initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(), // type null
+    root,
+  });
+
+  assert.equal(findNode(body, 'data-cultivation-tribulation'), null);
+  assert.equal(findNode(body, 'data-cultivation-face'), null);
+});
+
+test('tribulation block renders the type and an enabled face button while pending', () => {
+  const { root, body } = createFakeRoot();
+  initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations({
+      requirements: () => ({
+        realmId: 'core-formation',
+        type: 'lightning',
+        pending: true,
+        survived: false,
+        canFace: true,
+      }),
+      canFace: () => true,
+    }),
+    root,
+  });
+
+  const block = findNode(body, 'data-cultivation-tribulation');
+  assert.ok(block, 'tribulation block rendered while pending');
+  const name = findNode(block, 'data-cultivation-tribulation-name');
+  assert.equal(name.textContent, 'Tribulation: lightning');
+  const face = findNode(block, 'data-cultivation-face');
+  assert.ok(face, 'face button rendered');
+  assert.equal(face.attrs.disabled, undefined, 'face button enabled while pending');
+});
+
+test('face button is disabled once the tribulation is survived', () => {
+  const { root, body } = createFakeRoot();
+  initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations({
+      requirements: () => ({
+        realmId: 'core-formation',
+        type: 'lightning',
+        pending: false,
+        survived: true,
+        canFace: false,
+      }),
+    }),
+    root,
+  });
+
+  const block = findNode(body, 'data-cultivation-tribulation');
+  const face = findNode(block, 'data-cultivation-face');
+  assert.equal(face.attrs.disabled, 'true', 'survived → gate open → face disabled');
+});
+
+// ---------- applyFace feedback ----------
+
+test('face click calls face() and renders survived feedback', () => {
+  const { root, listeners } = createFakeRoot();
+  const tribulations = createFakeTribulations({
+    requirements: () => ({
+      realmId: 'core-formation',
+      type: 'lightning',
+      pending: true,
+      survived: false,
+      canFace: true,
+    }),
+    canFace: () => true,
+    face() {
+      return { outcome: 'survived', survived: true };
+    },
+  });
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations,
+    root,
+  });
+
+  const fakeFace = {
+    closest(selector) {
+      return selector === FACE_SELECTOR ? this : null;
+    },
+  };
+  listeners.click[0]({ target: fakeFace });
+
+  assert.equal(tribulations.faceCalls.length, 1, 'face() called through the click');
+  const feedback = findNode(root.querySelector(PANEL_SELECTOR).querySelector(BODY_SELECTOR), 'data-cultivation-feedback');
+  assert.equal(feedback.textContent, 'Tribulation survived!');
+  handle.destroy();
+});
+
+test('a failed face renders the overwhelmed feedback and the gate stays pending', () => {
+  const { root, body } = createFakeRoot();
+  const tribulations = createFakeTribulations({
+    requirements: () => ({
+      realmId: 'core-formation',
+      type: 'lightning',
+      pending: true, // gate stays pending after a failure
+      survived: false,
+      canFace: true,
+    }),
+    canFace: () => true,
+    face() {
+      return { outcome: 'injured', survived: false };
+    },
+  });
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations,
+    root,
+  });
+
+  const ok = handle.applyFace();
+  assert.equal(ok, true, 'accepted face returns true');
+  const feedback = findNode(body, 'data-cultivation-feedback');
+  assert.equal(feedback.textContent, 'The tribulation overwhelms you.');
+
+  // The gate stays pending — the re-rendered block still shows an enabled
+  // face button (the player can try again).
+  const block = findNode(body, 'data-cultivation-tribulation');
+  const face = findNode(block, 'data-cultivation-face');
+  assert.equal(face.attrs.disabled, undefined, 'pending gate → face still available');
+  handle.destroy();
+});
+
+// ---------- Missing dependencies ----------
+
+test('missing breakthroughs degrades: disabled button, applyBreakthrough warns once', () => {
+  const warnCalls = [];
+  const savedWarn = console.warn;
+  console.warn = (...args) => warnCalls.push(args);
+  try {
+    const { root, body } = createFakeRoot();
+    const handle = initCultivationPanel({
+      eventBus: EventBus,
+      state: createFakeState(),
+      breakthroughs: null,
+      tribulations: createFakeTribulations(),
+      root,
+    });
+
+    // No warning at init (the panel renders the unavailable action).
+    assert.equal(warnCalls.length, 0);
+    const button = findNode(body, 'data-cultivation-breakthrough');
+    assert.equal(button.attrs.disabled, 'true', 'no system → button disabled');
+
+    assert.equal(handle.applyBreakthrough(), false);
+    assert.equal(warnCalls.length, 1);
+    assert.match(String(warnCalls[0][0]), /BreakthroughSystem/);
+    // Warns once per instance only.
+    handle.applyBreakthrough();
+    assert.equal(warnCalls.length, 1);
+  } finally {
+    console.warn = savedWarn;
+  }
+});
+
+test('missing tribulations degrades: no block, applyFace warns once', () => {
+  const warnCalls = [];
+  const savedWarn = console.warn;
+  console.warn = (...args) => warnCalls.push(args);
+  try {
+    const { root, body } = createFakeRoot();
+    const handle = initCultivationPanel({
+      eventBus: EventBus,
+      state: createFakeState(),
+      breakthroughs: createFakeBreakthroughs(),
+      tribulations: null,
+      root,
+    });
+
+    assert.equal(findNode(body, 'data-cultivation-tribulation'), null);
+    assert.equal(handle.applyFace(), false);
+    assert.equal(warnCalls.length, 1);
+    assert.match(String(warnCalls[0][0]), /TribulationSystem/);
+    handle.applyFace();
+    assert.equal(warnCalls.length, 1, 'warns once per instance');
+  } finally {
+    console.warn = savedWarn;
+  }
+});
+
+// ---------- Event subscription + re-render ----------
+
+test('every subscribed event re-renders the panel from fresh system snapshots', () => {
+  for (const eventName of SUBSCRIBED_EVENTS) {
+    const { root, body } = createFakeRoot();
+    let gatesMet = false;
+    const breakthroughs = createFakeBreakthroughs({
+      requirements: () =>
+        gatesMet
+          ? ALL_MET_REQUIREMENTS()
+          : {
+              realmId: 'mortal',
+              requiredProgress: 1000,
+              progress: 0,
+              progressMet: false,
+              cost: { spiritStones: 0 },
+              costMet: true,
+              bottleneck: [],
+              bottleneckMet: true,
+              tribulationRequired: false,
+              tribulationMet: true,
+              canAttempt: false,
+            },
+    });
+    const handle = initCultivationPanel({
+      eventBus: EventBus,
+      state: createFakeState(),
+      breakthroughs,
+      tribulations: createFakeTribulations(),
+      root,
+    });
+
+    // Precondition: disabled.
+    assert.equal(findNode(body, 'data-cultivation-breakthrough').attrs.disabled, 'true');
+
+    // Bump the fake gates (as a system would on its own state change) and
+    // emit the event under test — the panel must re-render.
+    gatesMet = true;
+    EventBus.emit(eventName, {});
+
+    assert.equal(
+      findNode(body, 'data-cultivation-breakthrough').attrs.disabled,
+      undefined,
+      `${eventName} re-renders the button to enabled`
+    );
+    handle.destroy();
+  }
+});
+
+test('a resource:changed event re-renders so the cost gate follows the wallet', () => {
+  const { root, body } = createFakeRoot();
+  let costMet = false;
+  const breakthroughs = createFakeBreakthroughs({
+    requirements: () => ({
+      realmId: 'qi-gathering',
+      requiredProgress: 1000,
+      progress: 1000,
+      progressMet: true,
+      cost: { spiritStones: 50 },
+      costMet,
+      bottleneck: [],
+      bottleneckMet: true,
+      tribulationRequired: false,
+      tribulationMet: true,
+      canAttempt: costMet,
+    }),
+  });
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs,
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  assert.equal(findNode(body, 'data-cultivation-breakthrough').attrs.disabled, 'true');
+  assert.equal(findNode(body, 'data-cultivation-reason').textContent, 'Cost not met');
+
+  costMet = true;
+  EventBus.emit('resource:changed', { id: 'spiritStones', label: 'Spirit Stones', delta: 50, total: 50 });
+
+  assert.equal(findNode(body, 'data-cultivation-breakthrough').attrs.disabled, undefined);
+  assert.equal(findNode(body, 'data-cultivation-reason').textContent, 'Cost: 50 stones');
+  handle.destroy();
+});
+
+test('a realm:changed event re-renders so the tribulation block appears for a gated realm', () => {
+  const { root, body } = createFakeRoot();
+  let gated = false;
+  const tribulations = createFakeTribulations({
+    requirements: () =>
+      gated
+        ? {
+            realmId: 'core-formation',
+            type: 'lightning',
+            pending: true,
+            survived: false,
+            canFace: true,
+          }
+        : {
+            realmId: 'mortal',
+            type: null,
+            pending: false,
+            survived: false,
+            canFace: false,
+          },
+  });
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations,
+    root,
+  });
+
+  assert.equal(findNode(body, 'data-cultivation-tribulation'), null, 'ungated: no block');
+
+  gated = true;
+  EventBus.emit('realm:changed', { realmId: 'core-formation' });
+
+  const block = findNode(body, 'data-cultivation-tribulation');
+  assert.ok(block, 'gated realm: block appears after realm:changed');
+  assert.ok(findNode(block, 'data-cultivation-face'), 'face button present');
+  handle.destroy();
+});
+
+// ---------- destroy ----------
+
+test('destroy removes the click listener AND every event subscription (idempotent)', () => {
+  const { root, listeners } = createFakeRoot();
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  assert.equal(listeners.click.length, 1);
+  for (const name of SUBSCRIBED_EVENTS) {
+    assert.equal(EventBus.hasListeners(name), true, `${name} subscribed`);
+  }
+
+  handle.destroy();
+
+  assert.equal(listeners.click.length, 0);
+  for (const name of SUBSCRIBED_EVENTS) {
+    assert.equal(EventBus.hasListeners(name), false, `${name} unsubscribed`);
+  }
+
+  // Second destroy is a no-op.
+  assert.doesNotThrow(() => handle.destroy());
+});
+
+test('feedback persists across event-driven re-renders', () => {
+  const { root, body } = createFakeRoot();
+  const state = createFakeState({ cultivation: { realm: 'Qi Gathering', breakthroughCost: 50 } });
+  const breakthroughs = createFakeBreakthroughs({
+    requirements: ALL_MET_REQUIREMENTS,
+    attempt() {
+      state.cultivation.realm = 'Qi Gathering';
+      return { outcome: 'perfect', advanced: true };
+    },
+  });
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs,
+    tribulations: createFakeTribulations(),
+    root,
+  });
+
+  handle.applyBreakthrough();
+  assert.equal(findNode(body, 'data-cultivation-feedback').textContent, 'Breakthrough to Qi Gathering!');
+
+  // An unrelated event (e.g. the loop pulse) re-renders but keeps the feedback.
+  EventBus.emit('loop:uiRefresh', { elapsedMs: 100 });
+  assert.equal(findNode(body, 'data-cultivation-feedback').textContent, 'Breakthrough to Qi Gathering!');
+  handle.destroy();
+});
+
+// ---------- Purity ----------
+
+test('a normal session produces zero console warnings or errors', () => {
+  const calls = [];
+  const savedWarn = console.warn;
+  const savedError = console.error;
+  console.warn = (...args) => calls.push(['warn', ...args]);
+  console.error = (...args) => calls.push(['error', ...args]);
+  try {
+    const { root, listeners } = createFakeRoot();
+    const state = createFakeState();
+    const handle = initCultivationPanel({
+      eventBus: EventBus,
+      state,
+      breakthroughs: createFakeBreakthroughs({
+        requirements: ALL_MET_REQUIREMENTS,
+        attempt: () => ({ outcome: 'perfect', advanced: true }),
+      }),
+      tribulations: createFakeTribulations(),
+      root,
+    });
+    listeners.click[0]({ target: { closest: (s) => (s === BREAKTHROUGH_SELECTOR ? {} : null) } });
+    EventBus.emit('loop:uiRefresh', {});
+    EventBus.emit('resource:changed', {});
+    handle.render();
+    handle.destroy();
+    assert.deepEqual(calls, [], 'no console output during a normal session');
+  } finally {
+    console.warn = savedWarn;
+    console.error = savedError;
+  }
+});
+
+test('initCultivationPanel never uses innerHTML and imports only the EventBus', async () => {
+  const source = await import('node:fs').then((fs) =>
+    fs.readFileSync(new URL('../../js/ui/cultivation-panel.js', import.meta.url), 'utf8')
+  );
+  // Scan for actual innerHTML PROPERTY access (`.innerHTML`) — the naive
+  // substring 'innerHTML' also matches the module's own doc comments
+  // ("never innerHTML"), which would make this a self-defeating check.
+  assert.ok(
+    !source.includes('.innerHTML'),
+    'data-driven content must render as textContent, never innerHTML'
+  );
+
+  const importMatches = source.match(/^\s*import\s.+from\s+['"][^'"]+['"]/gm) || [];
+  const imports = importMatches.map((line) => line.match(/from\s+['"]([^'"]+)['"]/)[1]);
+  assert.deepEqual(imports, ['../core/event-bus.js'], 'depends on the shared EventBus only');
+});

@@ -172,6 +172,24 @@ feature touching a system knows exactly which tests to run and update.
   smoke, security review). Adopted together with the **incident → guard
   loop**: any bug/gap found by accident becomes an automated guard + checklist
   item + this dated note, so it can never be discovered twice.
+- **2026-08-11 — E2E: manual `setRealm()` leaves `realmProgressMax` stale —
+  drive realm changes through real breakthroughs instead.** Found by accident
+  while writing the cultivation-panel E2E test: the BreakthroughSystem syncs
+  `cultivation.realmProgressMax`/`breakthroughCost` only at boot and after
+  accepted attempts (it has no `realm:changed` subscription), so after a
+  console/debug `setRealm()` the loop's accrual clamp keeps clamping progress
+  to the PREVIOUS realm's cap. In a test that waits/asserts over real time
+  (Playwright), manually-set progress gets silently fought back down (2000 →
+  1000), which surfaces as a "button never enables" failure. In shipped
+  gameplay realm changes only happen through accepted breakthroughs, so this
+  is a test-design pitfall, not a game bug. Guard: E2E specs that exercise
+  multi-realm flows must advance through the panel/`attempt()` (the realistic
+  ladder: Mortal → Qi Gathering → Foundation Establishment → Core Formation),
+  never `setRealm()` + manual progress across waits. The cultivation-panel
+  spec follows this and documents it in a comment; the existing tribulation
+  spec may keep its synchronous `setRealm()` shortcut only because its attempt
+  happens in the same `page.evaluate` as the progress write (no loop tick in
+  between).
 
 ## Writing a new test
 

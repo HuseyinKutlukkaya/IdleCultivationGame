@@ -33,6 +33,7 @@ import { Renderer } from './ui/renderer.js';
 import { initActivityLog } from './ui/activity-log.js';
 import { initFooter } from './ui/footer.js';
 import { initScrollReveal } from './ui/reveal.js';
+import { initCultivationPanel } from './ui/cultivation-panel.js';
 import { initSettingsPanel } from './ui/settings-panel.js';
 import { initUpgradesPanel } from './ui/upgrades-panel.js';
 
@@ -321,6 +322,26 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Cultivation panel: the Phase-3 play-test surface — the human player's
+    // Breakthrough / Face Tribulation buttons plus the character readout.
+    // The "Cultivation Realm" panel shows the realm/progress/cost bindings
+    // read-only; THIS panel is where the loop is actually driven, through the
+    // injected system primitives (breakthroughs.attempt() /
+    // tribulations.face()) — the panel never mutates state directly.
+    // Constructed AFTER the Breakthrough, Tribulation and Spirit Root systems
+    // (it only consumes their public APIs — requirements()/attempt()/face() —
+    // and the SpiritRootSystem is the writer of player.spiritRoot) and BEFORE
+    // game.start() so the very first tick finds it subscribed to
+    // 'loop:uiRefresh' (the Breakthrough button's enabled state follows
+    // accrued realm progress live).
+    const cultivationPanel = initCultivationPanel({
+      eventBus: EventBus,
+      state: game.state,
+      breakthroughs,
+      tribulations,
+      notation,
+    });
+
     // Master's parting gift: on a FRESH game (no save to restore), narrate
     // the origin endowment that matches state.resources.spiritStones === 50
     // (the only spirit-stone source until Phase 5 introduces sects + stipends).
@@ -361,6 +382,7 @@ async function bootstrap() {
     window.__breakthroughs = breakthroughs;
     window.__tribulations = tribulations;
     window.__spiritRoots = spiritRoots;
+    window.__cultivationPanel = cultivationPanel;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)
