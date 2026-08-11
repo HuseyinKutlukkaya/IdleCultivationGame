@@ -34,6 +34,7 @@ import { InventorySystem } from '../../js/systems/inventory.js';
 import { UpgradeSystem } from '../../js/systems/upgrades.js';
 import { BreakthroughSystem } from '../../js/systems/breakthroughs.js';
 import { TribulationSystem } from '../../js/systems/tribulations.js';
+import { SpiritRootSystem } from '../../js/systems/spirit-roots.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { initActivityLog } from '../../js/ui/activity-log.js';
@@ -145,6 +146,14 @@ const DATA_FILES = {
           uniqueField: 'realmId',
         },
       },
+      {
+        id: 'spirit-roots',
+        files: ['data/spirit-roots/spirit-roots.json'],
+        validation: {
+          requiredFields: ['id', 'name', 'tier', 'elements', 'attributes', 'speedMultiplier', 'weight'],
+          uniqueField: 'id',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -218,6 +227,29 @@ const DATA_FILES = {
           { outcome: 'injured', weight: 12, progressLoss: 0.5 },
           { outcome: 'near-death', weight: 8, progressLoss: 1 },
         ],
+      },
+    ],
+  },
+  'data/spirit-roots/spirit-roots.json': {
+    meta: {},
+    definitions: [
+      {
+        id: 'no-root',
+        name: 'No Root',
+        tier: 0,
+        elements: [],
+        attributes: { purity: 0, stability: 0.05, growth: 0, mutation: 0, compatibility: 0.1 },
+        speedMultiplier: 0.85,
+        weight: 100,
+      },
+      {
+        id: 'chaos',
+        name: 'Chaos',
+        tier: 9,
+        elements: ['time'],
+        attributes: { purity: 1, stability: 0.95, growth: 1, mutation: 1, compatibility: 1 },
+        speedMultiplier: 2.7,
+        weight: 1,
       },
     ],
   },
@@ -412,7 +444,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 8 definitions loaded. Game loop running.'
+    'Scaffold ready — 10 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -544,6 +576,37 @@ test('successful bootstrap wires the app globals and reports the definition coun
     pending: false,
     survived: false,
   });
+  // The Spirit Roots system is wired with the DataManager: the ladder comes
+  // from the loaded 'spirit-roots' collection (2 canned entries — no-root
+  // and chaos). The boot leaves the canonical fresh neutral state: the
+  // unawakened root (id 'unawakened', tier -1), the cultivation slot at the
+  // neutral 1 (restored saves stay numerically identical to today) and the
+  // player display name 'Unawakened' — no roll happens at boot.
+  assert.ok(globalThis.window.__spiritRoots instanceof SpiritRootSystem);
+  assert.equal(globalThis.window.__spiritRoots.count, 2);
+  assert.equal(
+    globalThis.window.__spiritRoots.byId('no-root').speedMultiplier,
+    0.85
+  );
+  assert.equal(
+    globalThis.window.__spiritRoots.byId('chaos').name,
+    'Chaos'
+  );
+  assert.equal(globalThis.window.__spiritRoots.byId('missing'), null);
+  assert.deepEqual(GameState.spiritRoot, {
+    id: 'unawakened',
+    name: 'Unawakened',
+    tier: -1,
+    elements: [],
+    purity: 0,
+    stability: 0,
+    growth: 0,
+    mutation: 0,
+    compatibility: 0,
+    speedMultiplier: 1,
+  });
+  assert.equal(GameState.cultivation.spiritRootMultiplier, 1);
+  assert.equal(GameState.player.spiritRoot, 'Unawakened');
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -596,6 +659,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/upgrades/upgrades.json',
     'data/breakthroughs/breakthroughs.json',
     'data/tribulations/tribulations.json',
+    'data/spirit-roots/spirit-roots.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -681,4 +745,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__upgrades, undefined);
   assert.equal(globalThis.window.__breakthroughs, undefined);
   assert.equal(globalThis.window.__tribulations, undefined);
+  assert.equal(globalThis.window.__spiritRoots, undefined);
 });

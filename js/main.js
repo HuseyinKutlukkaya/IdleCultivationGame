@@ -25,6 +25,7 @@ import { ResourceSystem } from './systems/resources.js';
 import { InventorySystem } from './systems/inventory.js';
 import { BreakthroughSystem } from './systems/breakthroughs.js';
 import { TribulationSystem } from './systems/tribulations.js';
+import { SpiritRootSystem } from './systems/spirit-roots.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { NotationFormatter } from './ui/notation.js';
@@ -304,6 +305,22 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Spirit Roots: single owner of the cultivator's spirit root and its
+    // cultivation-speed slot (data/spirit-roots/spirit-roots.json via the
+    // DataManager — the canonical 10-type ladder, weighted Spirit Root Roll
+    // per DESIGN.md Character Generation step 4). Constructed AFTER the
+    // DataManager load (the ladder must resolve) and AFTER the QiSystem and
+    // the TribulationSystem: the constructor sync writes
+    // cultivation.spiritRootMultiplier from the restored root's
+    // speedMultiplier, and the QiSystem stacks that slot into the
+    // per-second rate from the first tick. It has NO loop subscription —
+    // the spirit root only changes through roll() (the future character-gen
+    // flow, the console and tests), never on a tick.
+    const spiritRoots = new SpiritRootSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Master's parting gift: on a FRESH game (no save to restore), narrate
     // the origin endowment that matches state.resources.spiritStones === 50
     // (the only spirit-stone source until Phase 5 introduces sects + stipends).
@@ -343,6 +360,7 @@ async function bootstrap() {
     window.__upgrades = upgrades;
     window.__breakthroughs = breakthroughs;
     window.__tribulations = tribulations;
+    window.__spiritRoots = spiritRoots;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)

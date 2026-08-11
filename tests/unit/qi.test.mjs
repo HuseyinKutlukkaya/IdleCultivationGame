@@ -17,8 +17,12 @@
  * the realm-multiplier stacking (cultivation.realmEffects.qiMaxMultiplier
  * multiplies the managed cap and cultivationSpeedMultiplier multiplies the
  * aggregate rate, with neutral coercion for missing/malformed factors and a
- * finite clamp so an absurd restored multiplier never overflows) and
- * destroy() unsubscription.
+ * finite clamp so an absurd restored multiplier never overflows), the
+ * spirit-root-multiplier stacking (cultivation.spiritRootMultiplier
+ * multiplies the aggregate rate with the same neutral-1 coercion while the
+ * CAP is deliberately NOT affected — a spirit root speeds up cultivation,
+ * it never enlarges the cap; the realm speed multiplier AND the spirit-root
+ * multiplier stack multiplicatively) and destroy() unsubscription.
  *
  * Each test injects a fresh deep clone of GameState (so the shared singleton
  * stays pristine) and the shared EventBus (cleared in beforeEach so event
@@ -388,6 +392,7 @@ test('a restored cultivation slice that is null is repaired and never aborts boo
       powerMultiplier: 1,
       lifespanYears: 100,
     },
+    spiritRootMultiplier: 1,
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
@@ -602,4 +607,88 @@ test('a hostile negative source rate clamps to neutral 0 — never a sign-flippe
   assert.equal(negative.cultivation.qiPerSecond, 0);
   EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
   assert.equal(negative.cultivation.qi, 0);
+});
+
+test('the spirit-root multiplier scales the aggregate rate', () => {
+  // The SpiritRootSystem writes cultivation.spiritRootMultiplier from the
+  // rolled root's speedMultiplier; a factor of 2 doubles the per-second rate.
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.spiritRootMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 2 qi/s × 2 → the constructor sync already exposes 4.
+  assert.equal(state.cultivation.qiPerSecond, 4);
+  // The cap is NOT affected (100 × realm 1).
+  assert.equal(state.cultivation.qiMax, 100);
+
+  const gained = [];
+  EventBus.subscribe('qi:gained', (payload) => gained.push(payload));
+  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+
+  assert.equal(state.cultivation.qi, 4);
+  assert.equal(state.statistics.qiGenerated, 4);
+  assert.deepEqual(gained[0], { amount: 4, total: 4, sources: ['meditation'] });
+});
+
+test('the spirit-root multiplier never touches the qi cap', () => {
+  // The cap is realm/base-driven: a spirit root speeds up cultivation, it
+  // never enlarges the dantian. Even a large spirit-root factor leaves
+  // qiMax at the realm-multiplied value.
+  const state = structuredClone(GameState);
+  state.cultivation.realmEffects.qiMaxMultiplier = 2;
+  state.cultivation.spiritRootMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 100 × 2 (realm only) → 200 — the spirit-root factor never multiplies in.
+  assert.equal(state.cultivation.qiMax, 200);
+
+  // The unmanaged path keeps the state value untouched too.
+  const unmanaged = structuredClone(GameState);
+  unmanaged.cultivation.realmEffects.qiMaxMultiplier = 2;
+  unmanaged.cultivation.spiritRootMultiplier = 2;
+  makeSystem(makeConfig({ baseMaxQi: undefined }), unmanaged);
+  assert.equal(unmanaged.cultivation.qiMax, 100);
+});
+
+test('a missing or malformed spirit-root multiplier is neutral (multiplier 1)', () => {
+  // A missing slot (an old save before the SpiritRootSystem), a hostile
+  // non-positive factor and a non-finite factor must all read as the neutral
+  // 1 — the rate can never be zeroed or pushed to Infinity by the slot.
+  for (const multiplier of [undefined, null, -5, 0, 'bogus', NaN, Infinity]) {
+    EventBus.clear();
+    const state = structuredClone(GameState);
+    if (multiplier === undefined) delete state.cultivation.spiritRootMultiplier;
+    else state.cultivation.spiritRootMultiplier = multiplier;
+    state.cultivation.qiSources.meditation = 2;
+
+    makeSystem(makeConfig(), state);
+
+    assert.equal(state.cultivation.qiPerSecond, 2);
+    assert.equal(state.cultivation.qiMax, 100);
+  }
+});
+
+test('realm speed multiplier and spirit-root multiplier stack', () => {
+  // Both factors multiply the aggregate rate — the realm's
+  // cultivationSpeedMultiplier AND the spirit root's slot.
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.realmEffects.cultivationSpeedMultiplier = 1.5;
+  state.cultivation.spiritRootMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 2 qi/s × 1.5 (realm) × 2 (spirit root) → 6.
+  assert.equal(state.cultivation.qiPerSecond, 6);
+
+  const gained = [];
+  EventBus.subscribe('qi:gained', (payload) => gained.push(payload));
+  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+
+  assert.equal(state.cultivation.qi, 6);
+  assert.equal(state.statistics.qiGenerated, 6);
+  assert.deepEqual(gained[0], { amount: 6, total: 6, sources: ['meditation'] });
 });

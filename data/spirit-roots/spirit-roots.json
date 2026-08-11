@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 spirit root ladder (ROADMAP 'Spirit Roots'). The canonical 10-type DESIGN.md progression (No Root → Chaos), worst→best: ids, names and tier positions follow DESIGN.md 'Spirit Roots' exactly. Spirit Roots are the primary cultivation affinity — they determine cultivation speed (speedMultiplier feeds cultivation.spiritRootMultiplier in the future SpiritRootSystem), elemental affinity (elements: one canonical example element per element-bearing root — a placeholder slot for the future elemental-affinity system, no consumer yet), future techniques, sect and Dao compatibility (attributes). weight is the weighted-roll weight for the Spirit Root Roll during character generation — rarer/better roots roll less often (tuning, not lore). The 'unawakened' fresh-game state is deliberately NOT in this table (it lives in game-state at multiplier 1). All curves are monotonic placeholder tuning — Phase 10 Balancing retunes them."
+  },
+  "definitions": [
+    {
+      "id": "no-root",
+      "name": "No Root",
+      "tier": 0,
+      "description": "A cultivator without an elemental affinity.",
+      "elements": [],
+      "attributes": { "purity": 0, "stability": 0.05, "growth": 0, "mutation": 0, "compatibility": 0.1 },
+      "speedMultiplier": 0.85,
+      "weight": 100
+    },
+    {
+      "id": "pseudo-root",
+      "name": "Pseudo Root",
+      "tier": 1,
+      "description": "A faint elemental trace, too weak to cultivate properly.",
+      "elements": [],
+      "attributes": { "purity": 0.1, "stability": 0.15, "growth": 0.1, "mutation": 0.05, "compatibility": 0.2 },
+      "speedMultiplier": 0.9,
+      "weight": 60
+    },
+    {
+      "id": "mixed-root",
+      "name": "Mixed Root",
+      "tier": 2,
+      "description": "Several weak elemental affinities blended together.",
+      "elements": [],
+      "attributes": { "purity": 0.2, "stability": 0.3, "growth": 0.2, "mutation": 0.1, "compatibility": 0.3 },
+      "speedMultiplier": 0.95,
+      "weight": 40
+    },
+    {
+      "id": "three-element",
+      "name": "Three Element",
+      "tier": 3,
+      "description": "Three balanced elemental affinities within a single root.",
+      "elements": ["fire", "water", "earth"],
+      "attributes": { "purity": 0.35, "stability": 0.45, "growth": 0.4, "mutation": 0.2, "compatibility": 0.5 },
+      "speedMultiplier": 1.05,
+      "weight": 25
+    },
+    {
+      "id": "dual-element",
+      "name": "Dual Element",
+      "tier": 4,
+      "description": "Two complementary elemental affinities within a single root.",
+      "elements": ["fire", "wood"],
+      "attributes": { "purity": 0.5, "stability": 0.6, "growth": 0.55, "mutation": 0.3, "compatibility": 0.65 },
+      "speedMultiplier": 1.2,
+      "weight": 15
+    },
+    {
+      "id": "single-element",
+      "name": "Single Element",
+      "tier": 5,
+      "description": "A single, focused elemental affinity.",
+      "elements": ["lightning"],
+      "attributes": { "purity": 0.65, "stability": 0.75, "growth": 0.7, "mutation": 0.45, "compatibility": 0.8 },
+      "speedMultiplier": 1.4,
+      "weight": 10
+    },
+    {
+      "id": "mutated",
+      "name": "Mutated",
+      "tier": 6,
+      "description": "An elemental affinity mutated beyond its original form.",
+      "elements": ["ice"],
+      "attributes": { "purity": 0.7, "stability": 0.8, "growth": 0.8, "mutation": 0.85, "compatibility": 0.85 },
+      "speedMultiplier": 1.6,
+      "weight": 6
+    },
+    {
+      "id": "heavenly",
+      "name": "Heavenly",
+      "tier": 7,
+      "description": "An exceptionally pure and powerful elemental affinity.",
+      "elements": ["light"],
+      "attributes": { "purity": 0.85, "stability": 0.85, "growth": 0.85, "mutation": 0.9, "compatibility": 0.9 },
+      "speedMultiplier": 1.9,
+      "weight": 3
+    },
+    {
+      "id": "divine",
+      "name": "Divine",
+      "tier": 8,
+      "description": "A divine-grade elemental affinity of remarkable potential.",
+      "elements": ["space"],
+      "attributes": { "purity": 0.95, "stability": 0.9, "growth": 0.9, "mutation": 0.95, "compatibility": 0.95 },
+      "speedMultiplier": 2.2,
+      "weight": 2
+    },
+    {
+      "id": "chaos",
+      "name": "Chaos",
+      "tier": 9,
+      "description": "An affinity that echoes primordial chaos itself.",
+      "elements": ["time"],
+      "attributes": { "purity": 1, "stability": 0.95, "growth": 1, "mutation": 1, "compatibility": 1 },
+      "speedMultiplier": 2.7,
+      "weight": 1
+    }
+  ]
+}

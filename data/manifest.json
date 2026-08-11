@@ -51,6 +51,14 @@
         "requiredFields": ["realmId", "tribulationType", "results"],
         "uniqueField": "realmId"
       }
+    },
+    {
+      "id": "spirit-roots",
+      "files": ["data/spirit-roots/spirit-roots.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "tier", "elements", "attributes", "speedMultiplier", "weight"],
+        "uniqueField": "id"
+      }
     }
   ]
 }

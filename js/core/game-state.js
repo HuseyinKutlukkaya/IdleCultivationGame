@@ -19,6 +19,8 @@
  * @property {Object} meditation — meditation session (active flag, mode, startedAt)
  * @property {Object} player — character identity and attributes
  * @property {Object} cultivation — cultivation progress and qi
+ * @property {number} cultivation.spiritRootMultiplier — spirit-root cultivation-speed slot (neutral 1 while unawakened)
+ * @property {Object} spiritRoot — the cultivator's spirit root (id, name, tier, elements, purity, stability, growth, mutation, compatibility, speedMultiplier)
  * @property {Object} resources — currency and material counts
  * @property {Object} inventory — carried items
  * @property {Object} techniques — known and active techniques
@@ -103,6 +105,14 @@ function createGameState() {
         powerMultiplier: 1,
         lifespanYears: 100,
       },
+      // Spirit-root cultivation-speed slot (consumer pattern like
+      // realmEffects.cultivationSpeedMultiplier): written by the
+      // SpiritRootSystem (js/systems/spirit-roots.js) from the current
+      // root's data-driven speedMultiplier; the QiSystem stacks it into the
+      // per-second rate aggregate. Fresh default 1 (neutral — exactly
+      // today's rates); a missing/malformed value is coerced to 1 by the
+      // QiSystem.
+      spiritRootMultiplier: 1,
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
@@ -116,6 +126,30 @@ function createGameState() {
       // systems land.
       qiSources: { meditation: 0, upgrades: 0 },
       breakthroughs: 0,
+    },
+
+    spiritRoot: {
+      // Owned by the SpiritRootSystem (js/systems/spirit-roots.js). The
+      // cultivator's primary cultivation affinity: id is the data-table key
+      // (data/spirit-roots/spirit-roots.json — 'unawakened' matches nothing
+      // in the ladder: the pre-roll state); name is the display name mirrored
+      // on player.spiritRoot; tier is the numeric progression key, -1 below
+      // the data ladder (data tiers are 0..9: no-root … chaos); elements
+      // holds the future elemental-affinity slots (no consumer yet); purity /
+      // stability / growth / mutation / compatibility are the five canonical
+      // DESIGN attributes, neutral 0 while unawakened; speedMultiplier is the
+      // data-driven cultivation-speed factor (1 = exactly today's rates, so
+      // fresh games and old saves stay numerically identical).
+      id: 'unawakened',
+      name: 'Unawakened',
+      tier: -1,
+      elements: [],
+      purity: 0,
+      stability: 0,
+      growth: 0,
+      mutation: 0,
+      compatibility: 0,
+      speedMultiplier: 1,
     },
 
     resources: {

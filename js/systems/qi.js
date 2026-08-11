@@ -14,8 +14,8 @@
  * (herbs, sect income, pills, ...) plug in via config with no code changes.
  *
  * Data-driven tuning: the qi cap comes from config.qi.baseMaxQi (derived
- * tuning — see _computeQiMax for where realm/root multipliers stack) and
- * every income source from config.qi.sources. A MISSING config.qi block
+ * tuning — see _computeQiMax for where realm multipliers stack) and every
+ * income source from config.qi.sources. A MISSING config.qi block
  * is silent (the cap stays at the state value and the source list is empty);
  * a present but invalid baseMaxQi warns once in the constructor and leaves
  * the cap untouched (mirroring the _readNonNegativeNumber pattern in
@@ -29,9 +29,15 @@
  * the neutral coercion (a missing/malformed/<=0 factor reads as 1, so a
  * hostile save can never zero out a cap or rate) and _safeFinite for the
  * overflow clamp (an absurd restored multiplier can never put Infinity into
- * qiMax/qiPerSecond). Future spirit-root/technique multipliers stack the
- * same way: each writes a factor slot into cultivation.realmEffects (or a
- * future config multiplier block) and nothing else changes.
+ * qiMax/qiPerSecond). The spirit-root multiplier has LANDED
+ * (cultivation.spiritRootMultiplier — the slot the SpiritRootSystem
+ * (js/systems/spirit-roots.js) writes from the current root's data-driven
+ * speedMultiplier): it stacks on the aggregate per-second rate ONLY, with
+ * the same neutral-1 coercion as the realm factor (see _spiritRootMultiplier)
+ * — the CAP is deliberately NOT affected (a spirit root speeds up
+ * cultivation, it never enlarges the dantian; _computeQiMax stays
+ * realm/base-driven). Technique, pill and formation multipliers are still
+ * future: each writes a factor slot and nothing else changes.
  *
  * State owned (writes): cultivation.qiMax (derived cap),
  * cultivation.qiPerSecond (aggregate rate), cultivation.qi (current),
@@ -65,10 +71,12 @@
  * module depends solely on the shared GameState and EventBus singletons
  * (both injectable for deterministic tests).
  *
- * Future expansion (see DESIGN.md/PLANS.md): spirit-root, technique, pill
- * and formation multipliers stack in _computeQiMax (cap) and in the rate
- * aggregation (per-source rate factors) without touching the resource math —
- * the realm multipliers are already wired through cultivation.realmEffects;
+ * Future expansion (see DESIGN.md/PLANS.md): technique, pill and formation
+ * multipliers stack in _computeQiMax (cap) and in the rate aggregation
+ * (per-source rate factors) without touching the resource math — the realm
+ * multipliers are wired through cultivation.realmEffects and the
+ * spirit-root multiplier through cultivation.spiritRootMultiplier (the
+ * rate product multiplies both; the cap takes the realm factor only);
  * additional qi sources (herbs, sect income, ...) are declared in
  * config.qi.sources with their own state rate slot.
  */
@@ -183,10 +191,11 @@ export class QiSystem {
     this._ensureSlice('statistics', _freshStatisticsSlice);
 
     // Aggregate the RAW source rates first — the active-sources list must
-    // reflect which sources contributed (the realm speed multiplier does NOT
-    // change which sources are active), then stack the realm's
-    // cultivationSpeedMultiplier on the aggregate (clamped finite so an
-    // absurd restored multiplier can never put Infinity into the rate).
+    // reflect which sources contributed (the realm and spirit-root speed
+    // multipliers do NOT change which sources are active), then stack the
+    // realm's cultivationSpeedMultiplier AND the spirit-root multiplier on
+    // the aggregate (clamped finite so an absurd restored multiplier can
+    // never put Infinity into the rate).
     let rateSum = 0;
     const activeSources = [];
     for (const source of this._sources) {
@@ -195,7 +204,9 @@ export class QiSystem {
       if (rate > 0) activeSources.push(source.id);
     }
     const rate = _safeFinite(
-      rateSum * _realmMultiplier(this._state, 'cultivationSpeedMultiplier')
+      rateSum *
+        _realmMultiplier(this._state, 'cultivationSpeedMultiplier') *
+        _spiritRootMultiplier(this._state)
     );
     this._syncPerSecondRate(rate);
 
@@ -236,10 +247,12 @@ export class QiSystem {
    * The current qi cap. Managed (a baseMaxQi is configured) → the configured
    * number × the current realm's qiMaxMultiplier (clamped finite); unmanaged
    * (missing/invalid baseMaxQi) → the state value unchanged. THE hook where
-   * realm/spirit-root/technique multipliers stack: each factor multiplies in
-   * here and the whole game (tick clamp, renderer progress bars,
+   * realm/technique/pill/formation multipliers stack: each factor multiplies
+   * in here and the whole game (tick clamp, renderer progress bars,
    * offline-progress capPath) reads the synced cultivation.qiMax, so adding
-   * a multiplier never touches the production math.
+   * a multiplier never touches the production math. The SPIRIT-ROOT
+   * multiplier deliberately does NOT stack here — it affects cultivation
+   * SPEED (the rate) only, never the cap (see _spiritRootMultiplier).
    *
    * @returns {number} the derived qi cap.
    */
@@ -315,9 +328,10 @@ export class QiSystem {
 
   /**
    * Sum the current rate contribution of every configured source, stacked
-   * with the current realm's cultivationSpeedMultiplier (clamped finite). A
-   * source whose ratePath is missing, malformed or unsafe contributes 0
-   * (never throws, never reaches the prototype chain).
+   * with the current realm's cultivationSpeedMultiplier AND the spirit-root
+   * multiplier (both clamped finite). A source whose ratePath is missing,
+   * malformed or unsafe contributes 0 (never throws, never reaches the
+   * prototype chain).
    *
    * @returns {number} the aggregate per-second qi rate right now.
    */
@@ -327,7 +341,9 @@ export class QiSystem {
       sum += _asNumber(this._readPath(source.ratePath));
     }
     return _safeFinite(
-      sum * _realmMultiplier(this._state, 'cultivationSpeedMultiplier')
+      sum *
+        _realmMultiplier(this._state, 'cultivationSpeedMultiplier') *
+        _spiritRootMultiplier(this._state)
     );
   }
 
@@ -377,6 +393,7 @@ function _freshCultivationSlice() {
       powerMultiplier: 1,
       lifespanYears: 100,
     },
+    spiritRootMultiplier: 1,
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
@@ -477,6 +494,26 @@ function _realmMultiplier(state, key) {
     return 1;
   }
   const parsed = Number(effects[key]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+/**
+ * Read the spirit-root cultivation-speed factor off
+ * state.cultivation.spiritRootMultiplier — the slot the SpiritRootSystem
+ * (js/systems/spirit-roots.js) writes from the current root's data-driven
+ * speedMultiplier. A missing, malformed or non-positive value returns the
+ * neutral factor 1 (never 0, so a hostile save or a missing slot can never
+ * zero out a rate). The spirit-root factor stacks on the aggregate rate
+ * ONLY — it never reaches _computeQiMax (a spirit root speeds up
+ * cultivation, it never enlarges the cap). Guards against a null
+ * cultivation slice.
+ *
+ * @param {object|null} state — game state object.
+ * @returns {number} the effective multiplier (>= 1).
+ */
+function _spiritRootMultiplier(state) {
+  if (!state || !state.cultivation) return 1;
+  const parsed = Number(state.cultivation.spiritRootMultiplier);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 

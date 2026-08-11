@@ -25,6 +25,11 @@
  *      realm (Core Formation) opens the gate and blocks the breakthrough
  *      until a survived face() clears it; the cleared gate survives a
  *      save round-trip.
+ *  10. the spirit roots system is wired — the ladder loads for the full
+ *      10-type progression, the fresh boot keeps the neutral unawakened
+ *      root, and a console roll() writes the rolled root into state
+ *      (spiritRoot slice, cultivation.spiritRootMultiplier,
+ *      player.spiritRoot).
  *
  * These run against the dependency-free static server (static-server.mjs),
  * never inside the node:test suite — the `.spec.mjs` suffix keeps them out of
@@ -789,3 +794,49 @@ test('tribulation system is wired: entering a gated realm blocks the breakthroug
   expect(errors).toEqual([]);
 });
 
+test('spirit roots system is wired and roll() writes a rolled root into state', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // Determinism: roll() uses the injectable random source defaulting to
+  // Math.random (js/systems/spirit-roots.js, verified by grep). With
+  // Math.random → 0 the roll = 0 × totalWeight lands in the FIRST bucket of
+  // the ladder ('no-root' — the worst tier), so the rolled root below is
+  // deterministic.
+  page.addInitScript(() => {
+    Math.random = () => 0;
+  });
+  await page.goto('/');
+
+  // SpiritRootSystem is exposed after bootstrap; the ladder comes from the
+  // data-driven 'spirit-roots' collection — the canonical 10-tier DESIGN.md
+  // progression (data/spirit-roots/spirit-roots.json).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__spiritRoots)))
+    .toBe(true);
+  expect(await page.evaluate(() => window.__spiritRoots.count)).toBe(10);
+
+  // Fresh boot: the canonical neutral pre-roll state — unawakened root,
+  // cultivation slot at 1, display name 'Unawakened' (assert state, not
+  // formatted text — see tests/README.md E2E rules).
+  expect(await stateValue(page, 'spiritRoot.id')).toBe('unawakened');
+  expect(await stateValue(page, 'spiritRoot.name')).toBe('Unawakened');
+  expect(await stateValue(page, 'cultivation.spiritRootMultiplier')).toBe(1);
+
+  // roll() via the console mutates state: the rolled root lands in the
+  // spiritRoot slice, the cultivation-speed slot and player.spiritRoot.
+  const rolled = await page.evaluate(() => window.__spiritRoots.roll());
+  expect(rolled).toEqual({
+    id: 'no-root',
+    name: 'No Root',
+    tier: 0,
+    speedMultiplier: 0.85,
+  });
+  expect(await stateValue(page, 'spiritRoot.id')).toBe('no-root');
+  expect(await stateValue(page, 'spiritRoot.name')).toBe('No Root');
+  expect(await stateValue(page, 'spiritRoot.tier')).toBe(0);
+  expect(await stateValue(page, 'cultivation.spiritRootMultiplier')).toBe(0.85);
+  expect(await stateValue(page, 'player.spiritRoot')).toBe('No Root');
+
+  expect(errors).toEqual([]);
+});

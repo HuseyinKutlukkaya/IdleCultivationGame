@@ -54,11 +54,25 @@ test('has the exact default placeholder shape', () => {
         powerMultiplier: 1,
         lifespanYears: 100,
       },
+      spiritRootMultiplier: 1,
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
       qiSources: { meditation: 0, upgrades: 0 },
       breakthroughs: 0,
+    },
+
+    spiritRoot: {
+      id: 'unawakened',
+      name: 'Unawakened',
+      tier: -1,
+      elements: [],
+      purity: 0,
+      stability: 0,
+      growth: 0,
+      mutation: 0,
+      compatibility: 0,
+      speedMultiplier: 1,
     },
 
     resources: {
@@ -133,6 +147,7 @@ test('exposes exactly the fifteen top-level state slices', () => {
     'resources',
     'sect',
     'settings',
+    'spiritRoot',
     'statistics',
     'techniques',
     'tribulations',
@@ -156,6 +171,20 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.tribulations.type, null);
   assert.equal(GameState.tribulations.pending, false);
   assert.equal(GameState.tribulations.survived, false);
+  // The spirit-root slice starts at the canonical neutral pre-roll state:
+  // no id in the data ladder, tier -1 below the data tiers (0..9), no
+  // elements yet, every DESIGN attribute at 0 and the neutral
+  // cultivation-speed factor 1 (today's rates, unchanged for old saves).
+  assert.equal(GameState.spiritRoot.id, 'unawakened');
+  assert.equal(GameState.spiritRoot.tier, -1);
+  assert.deepEqual(GameState.spiritRoot.elements, []);
+  assert.equal(GameState.spiritRoot.purity, 0);
+  assert.equal(GameState.spiritRoot.stability, 0);
+  assert.equal(GameState.spiritRoot.growth, 0);
+  assert.equal(GameState.spiritRoot.mutation, 0);
+  assert.equal(GameState.spiritRoot.compatibility, 0);
+  assert.equal(GameState.spiritRoot.speedMultiplier, 1);
+  assert.equal(GameState.cultivation.spiritRootMultiplier, 1);
   // Master's parting gift — fresh-state spirit-stone endowment (50 stones).
   // The other resources still start at zero (no equivalent endowment for
   // herbs/jade/pills yet; those arrive with the Phase-4 alchemical market).
@@ -178,4 +207,39 @@ test('default settings favour offline progress and stay silent by default', () =
   assert.equal(GameState.settings.sound, false);
   assert.equal(GameState.settings.notifications, false);
   assert.equal(GameState.settings.notationStyle, null);
+});
+
+test('a legacy save without the spirit-root keys keeps canonical fresh values after the standard restore merge', () => {
+  // Saves written before the SpiritRootSystem carry no `spiritRoot` slice and
+  // no cultivation.spiritRootMultiplier. Game.restore() applies a save via
+  // deepMerge(GameState, snapshot), so keys the old save does not carry are
+  // left at their current fresh defaults — the same guarantee that keeps the
+  // tribulations slice working for pre-tribulations saves. The old save's own
+  // values still land; the new keys land at the neutral unawakened root.
+  const state = structuredClone(GameState);
+  const legacySave = structuredClone(GameState);
+  delete legacySave.spiritRoot;
+  delete legacySave.cultivation.spiritRootMultiplier;
+  legacySave.player.name = 'Ren';
+  legacySave.resources.spiritStones = 42;
+
+  deepMerge(state, legacySave);
+
+  // Applied old-save values.
+  assert.equal(state.player.name, 'Ren');
+  assert.equal(state.resources.spiritStones, 42);
+  // Missing spirit-root keys keep the canonical fresh values.
+  assert.deepEqual(state.spiritRoot, {
+    id: 'unawakened',
+    name: 'Unawakened',
+    tier: -1,
+    elements: [],
+    purity: 0,
+    stability: 0,
+    growth: 0,
+    mutation: 0,
+    compatibility: 0,
+    speedMultiplier: 1,
+  });
+  assert.equal(state.cultivation.spiritRootMultiplier, 1);
 });
