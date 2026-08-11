@@ -16,8 +16,9 @@
  * attempt (realm advances via RealmSystem, progress resets, max/cost re-sync
  * to the new realm, statistics.breakthroughsTotal increments, exact
  * 'realm:breakthrough' payload, RealmSystem's own 'realm:changed' still
- * fires), failed attempts (progressLoss applied, realm unchanged), cost and
- * bottleneck consumption on accepted attempts, the weighted roll honoring an
+ * fires), failed attempts (progressLoss applied, realm unchanged), an
+ * accepted attempt does NOT consume cost or bottleneck items (P1 —
+ * informational only), the weighted roll honoring an
  * injected random source, deterministic progress accrual via fake
  * 'loop:update' emissions (rate × delta, clamp, top-realm skip, zero-rate
  * skip, destroy()), the no-dataManager neutral degradation (count 0, no
@@ -415,37 +416,33 @@ test('a heavy failure loses half the progress and can never drop below zero', ()
   assert.equal(state.cultivation.realmProgress, 0);
 });
 
-test('attempt() blocks on unaffordable cost and unsatisfied bottleneck items', () => {
+test('attempt() does NOT block on unaffordable cost or unsatisfied bottleneck items (informational only, P1)', () => {
   const state = structuredClone(GameState);
   const { breakthroughs, realms, resources, inventory } = makeSystems({ state });
   realms.setRealm('qi-gathering');
   state.cultivation.realmProgress = 1500;
 
-  // No stones (drain the fresh 50) and no pill → the cost gate blocks first.
+  // No stones (drain the fresh 50) and no pill — cost/items used to block
+  // but are now INFORMATIONAL ONLY (P1 playtest fix). With default
+  // random () => 0 the roll lands on 'perfect'.
   resources.spend('spiritStones', 50);
-  assert.deepEqual(breakthroughs.attempt(), {
-    outcome: null,
-    advanced: false,
-    reason: 'cost',
-  });
+  const result = breakthroughs.attempt();
 
-  // Stones present, pill missing → the items gate blocks.
-  resources.add('spiritStones', 50);
-  assert.deepEqual(breakthroughs.attempt(), {
-    outcome: null,
-    advanced: false,
-    reason: 'items',
-  });
+  // The attempt proceeded to the roll (no 'cost' / 'items' block).
+  assert.equal(result.reason, undefined);
+  assert.equal(result.outcome, 'perfect');
+  assert.equal(result.advanced, true);
 
-  // Nothing was consumed by the blocked attempts.
-  assert.equal(resources.get('spiritStones'), 50);
+  // Nothing was spent or consumed: stones still 0, pill still 0,
+  // statistics counter unchanged (this single attempt advanced the ladder,
+  // so the counter is 1 — but the wallet/inventory stayed put).
+  assert.equal(resources.get('spiritStones'), 0);
   assert.equal(inventory.count('qi-condensation-pill'), 0);
-  assert.equal(state.statistics.breakthroughsTotal, 0);
-  assert.equal(state.cultivation.realm, 'Qi Gathering');
-  assert.equal(breakthroughs.canAttempt(), false);
+  assert.equal(state.statistics.breakthroughsTotal, 1);
+  assert.equal(state.cultivation.realm, 'Foundation Establishment');
 });
 
-test('an accepted attempt consumes the cost and bottleneck items', () => {
+test('an accepted attempt does NOT consume cost or bottleneck items (informational only)', () => {
   const state = structuredClone(GameState);
   const { breakthroughs, realms, resources, inventory } = makeSystems({
     state,
@@ -459,9 +456,10 @@ test('an accepted attempt consumes the cost and bottleneck items', () => {
   const result = breakthroughs.attempt();
 
   assert.deepEqual(result, { outcome: 'qi-deviation', advanced: false });
-  // Cost + bottleneck fully consumed by the accepted attempt.
-  assert.equal(resources.get('spiritStones'), 0);
-  assert.equal(inventory.count('qi-condensation-pill'), 0);
+  // Cost + bottleneck are INFORMATIONAL ONLY (P1 playtest fix) — the wallet
+  // still holds the fresh 50-stone endowment, the pill stack is untouched.
+  assert.equal(resources.get('spiritStones'), 50);
+  assert.equal(inventory.count('qi-condensation-pill'), 1);
   // Loss = 1 × realmProgressMax (1500) → progress wiped.
   assert.equal(state.cultivation.realmProgress, 0);
   assert.equal(state.cultivation.realm, 'Qi Gathering');
@@ -512,8 +510,8 @@ test('attempt() is blocked by a pending tribulation gate (no mutation, no spend,
   assert.deepEqual(state, before); // no mutation of any kind
   assert.deepEqual(events, []);
   assert.equal(state.statistics.breakthroughsTotal, 0);
-  // The cost gate was passed but nothing was spent (the wallet still holds
-  // the fresh 50-stone endowment).
+  // There is no cost gate (P1 — informational only); the wallet still holds
+  // the fresh 50-stone endowment.
   assert.equal(state.resources.spiritStones, 50);
 });
 
@@ -747,20 +745,17 @@ test('hostile breakthrough definitions coerce to safe defaults', () => {
   assert.deepEqual(breakthroughs.requirements().cost, { spiritStones: 0 });
   assert.equal(breakthroughs.requirements().bottleneckMet, false);
 
-  // Without the herbs the attempt is blocked (items gate) — no mutation.
+  // Without the herbs the attempt is NOT blocked — cost/bottleneck are
+  // INFORMATIONAL ONLY (P1 playtest fix). With default random () => 0 the
+  // roll lands on 'success' and advances to qi-gathering (the no-herbs
+  // success path covers what the old "with herbs" re-attempt tested, so
+  // the re-attempt is no longer needed and would now hit 'no-definition'
+  // for the post-advance realm — this hostile dataManager has no
+  // qi-gathering entry by design).
   state.cultivation.realmProgress = 1000;
-  assert.deepEqual(breakthroughs.attempt(), {
-    outcome: null,
-    advanced: false,
-    reason: 'items',
-  });
-  assert.equal(state.cultivation.realm, 'Mortal');
-
-  // With the herbs the coerced entry accepts: all results were unusable →
-  // default table [{success 70},{failure 30}]; random 0 → success advances.
-  inventory.add('spirit-herb', 2);
   const result = breakthroughs.attempt();
-  assert.deepEqual(result, { outcome: 'success', advanced: true });
+  assert.equal(result.reason, undefined);
+  assert.equal(result.advanced, true);
   assert.equal(state.cultivation.realm, 'Qi Gathering');
   assert.equal(state.statistics.breakthroughsTotal, 1);
 });

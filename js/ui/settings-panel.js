@@ -42,7 +42,7 @@
  *     id, prototype-alias id, empty string, no notation dependency, panel
  *     has no [data-settings-select="notationStyle"]
  *   - applyReset: missing saveManager, unusable config.notation.styles,
- *     panel has no [data-settings-reset]
+ *     panel has no [data-settings-reset], user declined the confirm dialog
  *
  * The module imports GameState-derived dependencies only through the
  * constructor (state, notation, saveManager) — never the singletons — so the
@@ -69,6 +69,7 @@
 
 import { EventBus } from '../core/event-bus.js';
 import { createGameState } from '../core/game-state.js';
+import { showConfirm } from './modal.js';
 
 /** CSS selector resolving the Settings game-panel article in the root. */
 const PANEL_SELECTOR = '[data-settings-panel]';
@@ -81,6 +82,15 @@ const RESET_EVENT = 'settings:reset';
 
 /** Event emitted after every successful mutation, including applyReset. */
 const REFRESH_EVENT = 'ui:refresh';
+
+/**
+ * Human-readable copy the destructive reset posts to the notification queue
+ * on success. Centralized so the E2E spec, the panel init and any future
+ * callers stay aligned. (#1)
+ *
+ * @type {string}
+ */
+const RESET_SUCCESS_MESSAGE = 'Save wiped. A new path begins.';
 
 /**
  * Whitelist of settings.<leafKey> paths the toggles may flip. Stored on a
@@ -121,6 +131,17 @@ const NOOP_HANDLE = {
  * @param {object|null} [options.config=null] — parsed contents of
  *        data/game-config.json; the notation <select> is populated from
  *        config.notation.styles (style ids + labels).
+ * @param {object|null} [options.notifications=null] — NotificationManager (or
+ *        a lookalike with add(message, { type })); OPTIONAL — when present,
+ *        applyReset posts a 'success' notification after the wipe so the
+ *        player gets a visible confirmation (#1). Absent → no notification
+ *        is posted (tests / stripped builds stay quiet). Forward-compatible
+ *        signature for the P2 notification pipeline.
+ * @param {(message: string) => boolean} [options.confirm] — destructive
+ *        action gate (defaults to window.confirm when available). When the
+ *        user cancels, applyReset aborts BEFORE any state mutation, storage
+ *        clear or event emission (#1). A test injects a stub to drive the
+ *        accept / dismiss paths deterministically.
  * @param {object} [options.root=document] — DOM scope for querySelector
  *        (resolves the panel) and addEventListener (the delegated click).
  * @returns {{ destroy(): void, applyToggle(key: string): boolean,
@@ -136,6 +157,8 @@ export function initSettingsPanel({
   notation = null,
   saveManager = null,
   config = null,
+  notifications = null,
+  confirm = defaultConfirm,
   root = document,
 } = {}) {
   if (typeof root.querySelector !== 'function') {
@@ -297,20 +320,47 @@ export function initSettingsPanel({
   }
 
   /**
-   * Reset the save: clear the storage, replace the state slice with a deep
-   * clone of createGameState(), then emit settings:reset, game:restored and
-   * ui:refresh in that order. Missing saveManager, unusable config.notation
-   * block, or missing [data-settings-reset] attribute each warn ONCE per
-   * instance and return false (no mutation, no emit).
+   * Reset the save: confirm with the user, clear the storage, replace the
+   * state slice with a deep clone of createGameState(), then emit
+   * settings:reset, game:restored and ui:refresh in that order, and finally
+   * post a 'success' notification when one was injected.
+   *
+   * Guard order is canonical: user confirm first (abort cancels everything),
+   * then dependency checks, then the destructive path. The destructive path
+   * only runs after a confirmed accept; on decline applyReset returns false
+   * with NO state mutation, NO storage clear, NO event emission (#1).
+   *
+   * Missing saveManager, unusable config.notation block, or missing
+   * [data-settings-reset] attribute each warn ONCE per instance and return
+   * false (no mutation, no emit). A non-callable injected `confirm` is
+   * silently treated as cancel (defensive — never throw on a malformed
+   * injection in production).
    *
    * State replacement is in-place (the original `state` object's contents are
    * overwritten) so callers that hold the reference keep observing the
    * fresh slice. The fresh slice is structuredClone()d so a second applyReset
    * is not a no-op against an already-mutated seed.
    *
-   * @returns {boolean} true when the save was cleared and the slice replaced.
+   * Async because the default confirm is the in-game modal (a Promise).
+   * Injected sync stubs still work — `Boolean(await stub())` resolves to
+   * the stub's boolean — so the existing test suite (which injects sync
+   * stubs to drive the accept/decline paths deterministically) keeps
+   * passing without any change to the assertions (#1).
+   *
+   * @returns {Promise<boolean>} true when the save was cleared and the
+   *          slice replaced; false on decline, missing deps, or a hostile
+   *          injection.
    */
-  function applyReset() {
+  async function applyReset() {
+    // Confirm the destructive action (#1) BEFORE touching anything. A
+    // declined dialog aborts silently — no state mutation, no storage clear,
+    // no events. A non-callable injected confirm (a hostile / malformed
+    // injection) is treated as decline so production never throws.
+    const confirmed = typeof confirm === 'function'
+      ? Boolean(await confirm('Reset your save? All progress will be lost.'))
+      : false;
+    if (!confirmed) return false;
+
     if (!saveManager || typeof saveManager.clear !== 'function') {
       if (!warnedResetNoSave) {
         warnedResetNoSave = true;
@@ -357,6 +407,21 @@ export function initSettingsPanel({
     eventBus.emit(RESET_EVENT);
     eventBus.emit('game:restored');
     eventBus.emit(REFRESH_EVENT);
+
+    // Success notification (#1) — only when a manager was injected, so a
+    // test or stripped build without notifications never throws. Forward-
+    // compatible signature: notifications.add(message, { type }) matches
+    // the P2 pipeline; the defensive shape check keeps a hostile lookalike
+    // from poisoning the queue.
+    if (
+      notifications &&
+      typeof notifications.add === 'function' &&
+      typeof RESET_SUCCESS_MESSAGE === 'string' &&
+      RESET_SUCCESS_MESSAGE.length > 0
+    ) {
+      notifications.add(RESET_SUCCESS_MESSAGE, { type: 'success' });
+    }
+
     return true;
   }
 
@@ -437,6 +502,28 @@ export function initSettingsPanel({
     applyNotationStyle,
     applyReset,
   };
+}
+
+/**
+ * The default destructive-action confirm — the in-game modal (js/ui/modal.js).
+ * Title and labels are pinned to the Settings → Reset save context so the
+ * E2E spec, the panel init and any future caller stay aligned (#1). The
+ * modal handles its own a11y (focus trap, ESC, backdrop click, Enter) and
+ * resolves to a boolean — applyReset awaits it.
+ *
+ * @param {string} message — body text shown to the user (the panel passes
+ *        the destructive prompt; showConfirm clamps it defensively).
+ * @returns {Promise<boolean>} true when the user accepts the destructive
+ *          action; false on cancel, ESC, backdrop click, or missing DOM.
+ */
+function defaultConfirm(message) {
+  return showConfirm({
+    title: 'Reset Save',
+    message,
+    confirmLabel: 'Reset',
+    cancelLabel: 'Cancel',
+    danger: true,
+  });
 }
 
 /**
@@ -540,7 +627,7 @@ function pickDefaultStyleId(config, styleIds) {
  * aria-checked attribute. Runs once on init so a screen reader announces
  * the right state before any click; subsequent applies also re-sync the
  * toggled element via the click handler (defense in depth — the
-   * data-bind-driven switch--on class is the renderer's job).
+ * data-bind-driven switch--on class is the renderer's job).
  *
  * @param {Element} panel — the Settings panel container.
  * @param {object|null} state — game state.

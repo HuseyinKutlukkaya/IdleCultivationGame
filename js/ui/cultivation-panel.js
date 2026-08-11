@@ -7,13 +7,17 @@
  *   - a character readout (player.spiritRoot + player.meridians, read fresh
  *     from state on every render),
  *   - a "Breakthrough" button enabled exactly when
- *     breakthroughs.canAttempt() is true and, when disabled, a reason line
- *     derived from breakthroughs.requirements() (progress / cost / items /
- *     tribulation / max-realm / no-definition),
+ *     breakthroughs.canAttempt() is true and, when disabled, a readiness
+ *     reason line derived from breakthroughs.requirements() — only the four
+ *     gating reasons (progress / tribulation / max-realm / no-definition),
+ *     never the informational cost/items flags,
  *   - a "Face Tribulation" button ONLY when the current realm imposes a
  *     tribulation (tribulations.requirements().type non-null), enabled while
  *     the gate is pending (canFace()),
- *   - a feedback line reporting the last attempt()/face() result.
+ *   - a feedback line reporting the last attempt()/face() result — including
+ *     a BLOCKED attempt (instant feedback #4: a player clicking the button
+ *     against a closed gate now sees WHY it stayed closed, instead of a
+ *     silent dead button).
  *
  * The panel never mutates gameplay state: clicks flow through the injected
  * system primitives — breakthroughs.attempt() and tribulations.face() —
@@ -23,11 +27,16 @@
  * innerHTML.
  *
  * Wiring model: ONE delegated `click` listener on the supplied root handles
- * every `[data-cultivation-breakthrough]` / `[data-cultivation-face]` element
- * via `event.target.closest(...)` — a single delegated listener keeps the
- * touch cheap and the destroy() surface trivial. The body of the panel is
- * rebuilt on every render() (mirroring the upgrades panel), so the DOM
- * contract attributes below are created by this module, not hardcoded.
+ * every `[data-cultivation-breakthrough]` / `[data-cultivation-face]` /
+ * `[data-cultivation-progress-action]` element via `event.target.closest(...)`
+ * — a single delegated listener keeps the touch cheap and the destroy()
+ * surface trivial. The body of the panel is rebuilt on every render()
+ * (mirroring the upgrades panel), so the DOM contract attributes below are
+ * created by this module, not hardcoded. The progress bar itself lives in
+ * the Cultivation Realm panel (not the Cultivation panel) — the panel
+ * reaches outside its own body to query `[data-cultivation-progress-action]`
+ * on the supplied root and toggles its `.progress--actionable` class + the
+ * adjacent `.progress-hint` visibility on every render.
  *
  * Event contract (every event triggers a re-render; the panel only READS
  * state through the systems — the systems own the writes):
@@ -39,7 +48,8 @@
  *   'tribulation:finished'  — a faced tribulation opens/closes the gate;
  *                             re-render reflects the fresh state.tribulations.
  *   'resource:changed'      — a wallet change anywhere re-renders so the
- *                             cost gate (button disabled state) follows.
+ *                             button's enabled state follows the latest
+ *                             requirements() snapshot.
  *   'ui:refresh'            — explicit post-mutation hook (also emitted by
  *                             applyBreakthrough/applyFace on success).
  *   'loop:uiRefresh'        — the game loop's periodic pulse. The panel
@@ -56,19 +66,30 @@
  *     instance and returns false; the button renders disabled
  *   - missing tribulations dependency → applyFace warns ONCE per instance and
  *     returns false; no tribulation block renders
- *   - a click that lands outside both buttons is a no-op
+ *   - a click that lands outside any handled selector is a no-op
+ *   - the progress bar / hint lookup is optional (the panel degrades when
+ *     absent — no throw, no class toggle)
  *
  * DOM contracts (attributes this module reads/writes):
- *   [data-cultivation-panel]          on the Cultivation game-panel article
- *   [data-cultivation-body]           on the body container the panel fills
- *   [data-cultivation-character]      character readout line (<p>)
- *   [data-cultivation-breakthrough]   the Breakthrough <button>
- *   [data-cultivation-reason]         cost / gate-reason line (<p>)
- *   [data-cultivation-tribulation]    tribulation block (<div>, only when the
- *                                     current realm imposes a tribulation)
- *   [data-cultivation-tribulation-name] tribulation type line (<p>)
- *   [data-cultivation-face]           the Face Tribulation <button>
- *   [data-cultivation-feedback]       last-attempt feedback line (<p>)
+ *   [data-cultivation-panel]               on the Cultivation game-panel article
+ *   [data-cultivation-body]                on the body container the panel fills
+ *   [data-cultivation-character]           character readout line (<p>)
+ *   [data-cultivation-breakthrough]        the Breakthrough <button>
+ *   [data-cultivation-reason]              gate / readiness reason line (<p>)
+ *   [data-cultivation-tribulation]         tribulation block (<div>, only when
+ *                                          the current realm imposes a tribulation)
+ *   [data-cultivation-tribulation-name]    tribulation type line (<p>)
+ *   [data-cultivation-face]                the Face Tribulation <button>
+ *   [data-cultivation-feedback]            last-attempt feedback line (<p>)
+ *   [data-cultivation-progress-action]     on the Cultivation Realm progress bar;
+ *                                          outside the panel's own body —
+ *                                          clicking it calls applyBreakthrough()
+ *   [data-cultivation-progress-hint]       on the <small> hint line next to the
+ *                                          progress bar; hidden when the gate
+ *                                          is not actionable
+ *   .progress--actionable                  class toggled on the bar when
+ *                                          requirements().canAttempt is true
+ *                                          (pointer cursor + subtle glow)
  *
  * Pure presentation — reads GameState (through the injected `state`) and the
  * injected systems' read-only requirements() APIs, calls the injected
@@ -93,6 +114,20 @@ const BREAKTHROUGH_SELECTOR = '[data-cultivation-breakthrough]';
 /** CSS selector for the Face Tribulation button (delegated click anchor). */
 const FACE_SELECTOR = '[data-cultivation-face]';
 
+/**
+ * CSS selector for the Cultivation Realm progress bar (outside this panel's
+ * own body). The bar is the new actionable entry point: clicking it routes
+ * to applyBreakthrough() exactly like the Breakthrough button, and the
+ * `.progress--actionable` class is toggled on it on every render.
+ */
+const PROGRESS_ACTION_SELECTOR = '[data-cultivation-progress-action]';
+
+/** CSS selector for the small hint line next to the progress bar. */
+const PROGRESS_HINT_SELECTOR = '[data-cultivation-progress-hint]';
+
+/** Class toggled on the progress bar when the gate is actionable. */
+const ACTIONABLE_CLASS = 'progress--actionable';
+
 /** Event emitted to ask the Renderer to re-flush after a successful action. */
 const REFRESH_EVENT = 'ui:refresh';
 
@@ -109,6 +144,19 @@ const SUBSCRIBED_EVENTS = [
   REFRESH_EVENT,
   'loop:uiRefresh',
 ];
+
+/**
+ * Readable text for a blocked attempt result — the player's click landed
+ * against a closed gate, so the panel surfaces the gate reason inline
+ * (instant feedback #4: no silent dead button). Keys match the canonical
+ * reason ids returned by BreakthroughSystem.attempt().
+ */
+const BLOCKED_FEEDBACK = {
+  progress: 'Progress incomplete',
+  tribulation: 'Face the tribulation first',
+  'max-realm': 'Already at peak realm',
+  'no-definition': 'No path forward',
+};
 
 /** Shared no-op handle for every skip path (nothing to tear down). */
 const NOOP_HANDLE = {
@@ -145,7 +193,8 @@ const NOOP_HANDLE = {
  * @param {object|null} [options.notation=null] — optional NotationFormatter
  *        (.format(value, decimals)); absent → Intl.NumberFormat.
  * @param {object} [options.root=document] — DOM scope for querySelector
- *        (resolves the panel) and addEventListener (the delegated click).
+ *        (resolves the panel + the cross-panel progress bar) and
+ *        addEventListener (the delegated click).
  * @returns {{ applyBreakthrough(): boolean, applyFace(): boolean,
  *            render(): void, destroy(): void }} the panel handle.
  *          applyBreakthrough()/applyFace() return true when the injected
@@ -201,6 +250,16 @@ export function initCultivationPanel({
   /** @type {string} text of the last action result (persists across renders). */
   let feedbackText = '';
 
+  /** Stable DOM references populated by mount() and updated in place. */
+  let characterEl = null;
+  let breakthroughBtnEl = null;
+  let reasonEl = null;
+  let tribulationBlockEl = null;
+  let tribulationNameEl = null;
+  let faceBtnEl = null;
+  let feedbackEl = null;
+
+
   /**
    * Format a non-negative integer for display (cost, progress). Uses the
    * injected notation formatter when available; otherwise Intl.NumberFormat
@@ -237,18 +296,21 @@ export function initCultivationPanel({
   }
 
   /**
-   * Resolve WHICH gate blocks the breakthrough when canAttempt is false, in
-   * the same order the BreakthroughSystem's attempt() checks them. The
-   * no-definition cases (no current realm, or state.cultivation.breakthroughCost
-   * null — the system's own marker for "no entry for the current realm") are
-   * detected first; every remaining false gate falls through to 'max-realm'
-   * (all gates met but the ladder is at its top — or the rare hostile-entry
-   * case).
+   * Resolve WHICH gate blocks the breakthrough when canAttempt is false. The
+   * panel surfaces only the four CANONICAL gating reasons — progress /
+   * tribulation / max-realm / no-definition — even though requirements()
+   * still reports the informational cost / items flags (the cost no longer
+   * gates; P1 playtest fix, user decision 2026-08-11). The no-definition
+   * case (no current realm, or state.cultivation.breakthroughCost null —
+   * the system's own marker for "no entry for the current realm") is
+   * detected first; progress second; the pending tribulation third; every
+   * remaining false gate falls through to 'max-realm' (all gates met but
+   * the ladder is at its top — or the rare hostile-entry case).
    *
    * @param {object|null} req — requirements() snapshot (null when no system).
    * @param {object} gameState — the game state (cultivation slice).
    * @returns {string} the blocking gate id: 'no-definition' | 'progress' |
-   *          'cost' | 'items' | 'tribulation' | 'max-realm'.
+   *          'tribulation' | 'max-realm'.
    */
   function resolveGate(req, gameState) {
     const noDefinition =
@@ -258,31 +320,46 @@ export function initCultivationPanel({
         gameState.cultivation.breakthroughCost === null);
     if (noDefinition) return 'no-definition';
     if (!req.progressMet) return 'progress';
-    if (!req.costMet) return 'cost';
-    if (!req.bottleneckMet) return 'items';
     if (req.tribulationRequired && !req.tribulationMet) return 'tribulation';
     return 'max-realm';
   }
 
   /**
    * Human-readable text for each blocking gate id. Placeholder, lore-light
-   * wording; the progress gate is the only one carrying numbers.
+   * wording; the progress gate is the only one carrying numbers. The
+   * informational cost / items branches are GONE — the panel surfaces only
+   * the four canonical gating reasons (#5).
    */
   const GATE_TEXT = {
     'no-definition': 'No path forward',
     progress: (req) =>
       `Progress required: ${formatNumber(req.progress)} / ${formatNumber(req.requiredProgress)}`,
-    cost: 'Cost not met',
-    items: 'Missing items',
     tribulation: 'Face the tribulation first',
     'max-realm': 'Peak realm reached',
   };
 
   /**
+   * Text shown when the breakthrough action IS available — the readiness
+   * line. Previously this was the misleading "Cost: N stones" copy; the cost
+   * no longer charges on success, so the line is now a literal readiness
+   * label so the player knows the button is live.
+   *
+   * @type {string}
+   */
+  const READY_TEXT = 'Ready — breakthrough available';
+
+  /**
+   * Text shown when no BreakthroughSystem was injected — the button is
+   * permanently disabled with no system behind it.
+   *
+   * @type {string}
+   */
+  const UNAVAILABLE_TEXT = 'Breakthrough unavailable';
+
+  /**
    * Describe the breakthrough action for the current render: whether the
-   * button is enabled, plus the text of the reason/cost line. When enabled
-   * the line labels the action with its cost ("Cost: N stones", "Cost: —"
-   * when no entry); when disabled it explains the blocking gate.
+   * button is enabled, plus the text of the reason line. When enabled the
+   * line is the readiness label; when disabled it explains the blocking gate.
    *
    * @param {object|null} req — requirements() snapshot (null → no system).
    * @param {object} gameState — the game state.
@@ -291,16 +368,10 @@ export function initCultivationPanel({
   function describeBreakthrough(req, gameState) {
     if (!req) {
       // No BreakthroughSystem injected — the action is unavailable.
-      return { disabled: true, reason: 'Cost: —' };
+      return { disabled: true, reason: UNAVAILABLE_TEXT };
     }
     if (req.canAttempt) {
-      const cost = Number.isFinite(req.cost && req.cost.spiritStones)
-        ? req.cost.spiritStones
-        : null;
-      return {
-        disabled: false,
-        reason: `Cost: ${cost === null ? '—' : `${formatNumber(cost)} stones`}`,
-      };
+      return { disabled: false, reason: READY_TEXT };
     }
     const gate = resolveGate(req, gameState);
     const text = GATE_TEXT[gate];
@@ -333,126 +404,119 @@ export function initCultivationPanel({
   }
 
   /**
-   * Append the character readout line to the body.
+   * Toggle the progress bar's `.progress--actionable` class + the adjacent
+   * hint visibility from the freshest requirements() snapshot. The bar lives
+   * OUTSIDE this panel's own body (in the Cultivation Realm panel) so the
+   * panel reaches outside via root.querySelector. Both lookups are optional
+   * — a stripped test build or a markup change gracefully degrades to a
+   * no-op (the Breakthrough button still works; the bar is just not
+   * actionable-styled). Reduced-motion users still get the cursor + glow;
+   * the glow transition is gated by the global @media rule below.
    *
-   * @param {object} bodyEl — the body container.
+   * @param {object|null} req — requirements() snapshot.
    * @returns {void}
    */
-  function appendCharacter(bodyEl) {
-    const node = makeNode(
-      'p',
-      ['cultivation__character'],
-      { 'data-cultivation-character': '' },
-      characterText(state)
-    );
-    if (node && typeof bodyEl.appendChild === 'function') {
-      bodyEl.appendChild(node);
-    }
-  }
-
-  /**
-   * Append the Breakthrough button + reason/cost line to the body.
-   *
-   * @param {object} bodyEl — the body container.
-   * @returns {void}
-   */
-  function appendBreakthrough(bodyEl) {
-    const req =
-      breakthroughs && typeof breakthroughs.requirements === 'function'
-        ? breakthroughs.requirements()
+  function updateProgressActionable(req) {
+    const bar =
+      typeof root.querySelector === 'function'
+        ? root.querySelector(PROGRESS_ACTION_SELECTOR)
         : null;
-    const desc = describeBreakthrough(req, state);
+    if (!bar) return;
 
-    const button = makeNode(
-      'button',
-      ['btn', 'btn--primary', 'cultivation__action'],
-      { type: 'button', 'data-cultivation-breakthrough': '' },
-      'Breakthrough'
-    );
-    if (!button) return;
-    if (desc.disabled) button.setAttribute('disabled', 'true');
-    if (typeof bodyEl.appendChild === 'function') bodyEl.appendChild(button);
-
-    const reason = makeNode(
-      'p',
-      ['cultivation__reason'],
-      { 'data-cultivation-reason': '' },
-      desc.reason
-    );
-    if (reason && typeof bodyEl.appendChild === 'function') {
-      bodyEl.appendChild(reason);
+    const actionable = Boolean(req && req.canAttempt);
+    if (bar.classList && typeof bar.classList.toggle === 'function') {
+      bar.classList.toggle(ACTIONABLE_CLASS, actionable);
+    } else if (typeof bar.setAttribute === 'function') {
+      // Defensive fallback for a fake DOM that lacks classList.toggle.
+      if (actionable) bar.setAttribute('class', ACTIONABLE_CLASS);
+      else bar.setAttribute('class', '');
     }
-  }
 
-  /**
-   * Append the tribulation block (name + Face Tribulation button) to the body
-   * — only when the current realm imposes a tribulation
-   * (tribulations.requirements().type non-null). The face button is enabled
-   * exactly while the gate is pending (canFace()).
-   *
-   * @param {object} bodyEl — the body container.
-   * @returns {void}
-   */
-  function appendTribulation(bodyEl) {
-    const req =
-      tribulations && typeof tribulations.requirements === 'function'
-        ? tribulations.requirements()
+    // The hint is a sibling of the bar in the Cultivation Realm panel
+    // (see index.html). Sibling lookup keeps the panel agnostic of the
+    // exact layout — a future markup reshuffle that moves the hint
+    // elsewhere just makes this branch a no-op.
+    const parent =
+      bar.parentElement ||
+      (typeof bar.parentNode === 'object' ? bar.parentNode : null);
+    const hint =
+      parent && typeof parent.querySelector === 'function'
+        ? parent.querySelector(PROGRESS_HINT_SELECTOR)
         : null;
-    if (!req || req.type === null || typeof req.type !== 'string') return;
-
-    const block = makeNode(
-      'div',
-      ['cultivation__tribulation'],
-      { 'data-cultivation-tribulation': '' },
-      ''
-    );
-    if (!block) return;
-
-    const name = makeNode(
-      'p',
-      ['cultivation__tribulation-name'],
-      { 'data-cultivation-tribulation-name': '' },
-      `Tribulation: ${req.type}`
-    );
-    if (name && typeof block.appendChild === 'function') block.appendChild(name);
-
-    const face = makeNode(
-      'button',
-      ['btn', 'btn--ghost', 'cultivation__action'],
-      { type: 'button', 'data-cultivation-face': '' },
-      'Face Tribulation'
-    );
-    if (face) {
-      if (!req.canFace) face.setAttribute('disabled', 'true');
-      if (typeof block.appendChild === 'function') block.appendChild(face);
+    if (hint && 'hidden' in hint) {
+      hint.hidden = !actionable;
     }
-
-    if (typeof bodyEl.appendChild === 'function') bodyEl.appendChild(block);
   }
 
   /**
-   * Re-render the panel body. Cheap (a handful of nodes); called on init,
-   * after every accepted action and on every subscribed event.
+   * Build the panel's static DOM structure once. Subsequent state changes use
+   * update() so action nodes retain their identity while a click is in flight.
    *
    * @returns {void}
    */
-  function render() {
+  function mount() {
     if (typeof body.replaceChildren !== 'function') return;
     body.replaceChildren();
 
-    appendCharacter(body);
-    appendBreakthrough(body);
-    appendTribulation(body);
+    characterEl = makeNode('p', ['cultivation__character'], { 'data-cultivation-character': '' }, '');
+    breakthroughBtnEl = makeNode('button', ['btn', 'btn--primary', 'cultivation__action'], { type: 'button', 'data-cultivation-breakthrough': '' }, 'Breakthrough');
+    reasonEl = makeNode('p', ['cultivation__reason'], { 'data-cultivation-reason': '' }, '');
+    tribulationBlockEl = makeNode('div', ['cultivation__tribulation'], { 'data-cultivation-tribulation': '', hidden: 'true' }, '');
+    tribulationNameEl = makeNode('p', ['cultivation__tribulation-name'], { 'data-cultivation-tribulation-name': '' }, '');
+    faceBtnEl = makeNode('button', ['btn', 'btn--ghost', 'cultivation__action'], { type: 'button', 'data-cultivation-face': '' }, 'Face Tribulation');
+    feedbackEl = makeNode('p', ['cultivation__feedback'], { 'data-cultivation-feedback': '' }, '');
 
-    const feedback = makeNode(
-      'p',
-      ['cultivation__feedback'],
-      { 'data-cultivation-feedback': '' },
-      feedbackText
-    );
-    if (feedback && typeof body.appendChild === 'function') {
-      body.appendChild(feedback);
+    if (tribulationBlockEl) {
+      if (tribulationNameEl) tribulationBlockEl.appendChild(tribulationNameEl);
+      if (faceBtnEl) tribulationBlockEl.appendChild(faceBtnEl);
     }
+    for (const node of [characterEl, breakthroughBtnEl, reasonEl, tribulationBlockEl, feedbackEl]) {
+      if (node) body.appendChild(node);
+    }
+  }
+
+  /** Update existing panel nodes from the latest state snapshots. */
+  function update() {
+    if (!characterEl) return;
+    characterEl.textContent = characterText(state);
+
+    const req = breakthroughs && typeof breakthroughs.requirements === 'function'
+      ? breakthroughs.requirements()
+      : null;
+    const desc = describeBreakthrough(req, state);
+    if (breakthroughBtnEl) {
+      if (desc.disabled) breakthroughBtnEl.setAttribute('disabled', 'true');
+      else if (typeof breakthroughBtnEl.removeAttribute === 'function') breakthroughBtnEl.removeAttribute('disabled');
+      else if (breakthroughBtnEl.attrs) delete breakthroughBtnEl.attrs.disabled;
+    }
+    if (reasonEl) reasonEl.textContent = desc.reason;
+
+    const tribReq = tribulations && typeof tribulations.requirements === 'function'
+      ? tribulations.requirements()
+      : null;
+    const gated = Boolean(tribReq && typeof tribReq.type === 'string');
+    if (tribulationBlockEl) {
+      tribulationBlockEl.hidden = !gated;
+      if (gated) {
+        if (typeof tribulationBlockEl.removeAttribute === 'function') tribulationBlockEl.removeAttribute('hidden');
+        if (tribulationNameEl) tribulationNameEl.textContent = `Tribulation: ${tribReq.type}`;
+      } else tribulationBlockEl.setAttribute('hidden', 'true');
+    }
+    if (faceBtnEl) {
+      const canFace = gated && tribulations && typeof tribulations.canFace === 'function'
+        ? tribulations.canFace()
+        : Boolean(gated && tribReq.canFace);
+      if (!canFace) faceBtnEl.setAttribute('disabled', 'true');
+      else if (typeof faceBtnEl.removeAttribute === 'function') faceBtnEl.removeAttribute('disabled');
+      else if (faceBtnEl.attrs) delete faceBtnEl.attrs.disabled;
+    }
+    if (feedbackEl) feedbackEl.textContent = feedbackText;
+    updateProgressActionable(req);
+  }
+
+  /** Public compatibility alias for update(). */
+  function render() {
+    update();
   }
 
   /**
@@ -460,6 +524,13 @@ export function initCultivationPanel({
    * acceptance (true when outcome is non-null). On success the panel renders
    * the result in the feedback line and emits 'ui:refresh' so the rest of the
    * DOM (realm bindings, resources) flushes in lock-step.
+   *
+   * Instant feedback (#4): when the system REJECTS the attempt
+   * ({ outcome: null, advanced: false, reason }), the panel surfaces the
+   * reason inline so a player clicking the (visually-live) button gets an
+   * explanation instead of a silent dead click. Cost / items no longer gate
+   * (P1) so those branches cannot appear; only the four canonical reasons
+   * (progress / tribulation / max-realm / no-definition) are possible.
    *
    * @returns {boolean} true when the attempt was accepted.
    */
@@ -474,7 +545,23 @@ export function initCultivationPanel({
       return false;
     }
     const result = breakthroughs.attempt();
-    if (!result || result.outcome === null) return false;
+    if (!result || result.outcome === null) {
+      // Blocked attempt: surface the reason inline so the click is not a
+      // silent dead button. Unknown reasons get a generic fallback so the
+      // panel never renders "undefined" or empty text.
+      const reason = result && typeof result.reason === 'string' ? result.reason : null;
+      const text =
+        (reason && BLOCKED_FEEDBACK[reason]) || 'Breakthrough unavailable';
+      if (feedbackText !== text) {
+        feedbackText = text;
+        update();
+      } else {
+        // Same feedback as last time — skip the rerender so a repeated
+        // click on the same blocked gate is silent (not a console-spammy
+        // flicker). render() is preserved for the first miss.
+      }
+      return false;
+    }
     if (result.advanced) {
       const realm =
         state &&
@@ -486,7 +573,7 @@ export function initCultivationPanel({
     } else {
       feedbackText = 'Breakthrough failed.';
     }
-    render();
+    update();
     eventBus.emit(REFRESH_EVENT);
     return true;
   }
@@ -515,15 +602,15 @@ export function initCultivationPanel({
     feedbackText = result.survived
       ? 'Tribulation survived!'
       : 'The tribulation overwhelms you.';
-    render();
+    update();
     eventBus.emit(REFRESH_EVENT);
     return true;
   }
 
   /**
-   * Delegated click handler. Routes clicks on either action button to the
-   * matching apply method via event.target.closest(...); other clicks are
-   * ignored.
+   * Delegated click handler. Routes clicks on any of the three action
+   * anchors to the matching apply method via event.target.closest(...);
+   * other clicks are ignored.
    *
    * @param {Event} event — DOM click event (real or fake).
    * @returns {void}
@@ -537,22 +624,28 @@ export function initCultivationPanel({
     }
     if (target.closest(FACE_SELECTOR)) {
       applyFace();
+      return;
+    }
+    if (target.closest(PROGRESS_ACTION_SELECTOR)) {
+      // Click on the progress bar is the new actionable entry point
+      // (#3): the bar reaches the same breakthrough path the dedicated
+      // button does. When the gate is closed the click still surfaces the
+      // blocking reason via the standard applyBreakthrough path.
+      applyBreakthrough();
     }
   }
 
   // Every subscribed event re-renders from the systems + state (the same
   // handler identity is reused so destroy() can unsubscribe all of them).
-  const onAnyEvent = () => render();
+  const onAnyEvent = () => update();
 
   root.addEventListener('click', onRootClick);
   for (const name of SUBSCRIBED_EVENTS) {
     eventBus.subscribe(name, onAnyEvent);
   }
 
-  // Initial render — the panel shows the fresh-state readout, the disabled
-  // breakthrough button (fresh Mortal realm: zero progress) and, when the
-  // realm imposes one, the tribulation gate.
-  render();
+  mount();
+  update();
 
   return {
     applyBreakthrough,

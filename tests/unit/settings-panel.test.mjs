@@ -2,19 +2,23 @@
  * tests/unit/settings-panel.test.mjs — unit tests for js/ui/settings-panel.js.
  *
  * Exercises initSettingsPanel() against fully injected fakes (state,
- * notation, saveManager, config) and a fake DOM (root + panel container with
- * click delegation surface). Coverage matches the spec: constructor guard
- * paths (no querySelector, no panel, missing dependencies), applyToggle
- * (three valid keys, toggle semantics, unknown / prototype-alias / non-string
- * keys, missing state dependency, event order), applyNotationStyle (valid id,
- * unknown / prototype-alias / empty / non-string id, missing notation
- * dependency, event order), applyReset (saveManager.clear once, fresh slice
- * replaces the state, settings:reset / game:restored / ui:refresh order,
- * missing dependencies), notation <select> population (idempotent, default
- * selection logic, empty styles block), delegated click wiring (toggle /
- * select / reset / unrelated), destroy() (removes the listener, idempotent),
- * purity (no localStorage / no document / no SaveManager / no GameState
- * imports).
+ * notation, saveManager, config, notifications, confirm) and a fake DOM
+ * (root + panel container with click delegation surface). Coverage matches
+ * the spec: constructor guard paths (no querySelector, no panel, missing
+ * dependencies), applyToggle (three valid keys, toggle semantics, unknown /
+ * prototype-alias / non-string keys, missing state dependency, event order),
+ * applyNotationStyle (valid id, unknown / prototype-alias / empty /
+ * non-string id, missing notation dependency, event order), applyReset
+ * (saveManager.clear once, fresh slice replaces the state, settings:reset /
+ * game:restored / ui:refresh order, missing dependencies, the new P1
+ * destructive-path guards — confirm returning false aborts cleanly, confirm
+ * returning true runs the path AND posts the success notification, a
+ * non-callable confirm falls through to decline, no injected notifications
+ * does not throw, default window.confirm fallback), notation <select>
+ * population (idempotent, default selection logic, empty styles block),
+ * delegated click wiring (toggle / select / reset / unrelated), destroy()
+ * (removes the listener, idempotent), purity (no localStorage / no document
+ * / no SaveManager / no GameState imports).
  *
  * Uses the Node built-in test runner with zero dependencies: shared doubles
  * (fake DOM, fake saveManager, fake notation, fake config) live in this
@@ -738,7 +742,7 @@ test('applyNotationStyle without notation warns ONCE and returns false; with not
   withNotation.destroy();
 });
 
-test('applyReset without saveManager warns ONCE and returns false', () => {
+test('applyReset without saveManager warns ONCE and returns false', async () => {
   const { root } = createFakeRoot(createFakePanel());
   const handle = initSettingsPanel({
     eventBus: EventBus,
@@ -746,11 +750,20 @@ test('applyReset without saveManager warns ONCE and returns false', () => {
     notation: createFakeNotation(createFakeConfig().notation.styles),
     saveManager: null,
     config: createFakeConfig(),
+    // Inject a sync accept stub — without it the default confirm
+    // (showConfirm) resolves false (no document) and the saveManager
+    // warn never fires (the destructive path is gated by the confirm
+    // gate, which short-circuits first).
+    confirm: () => true,
     root,
   });
 
-  assert.equal(handle.applyReset(), false);
-  assert.equal(handle.applyReset(), false);
+  // applyReset is now async (the default confirm is the in-game modal —
+  // a Promise). The injected stub here is sync, so await unwraps it to
+  // a boolean and the dependency check below still runs synchronously
+  // before the resolve.
+  assert.equal(await handle.applyReset(), false);
+  assert.equal(await handle.applyReset(), false);
   const saveWarns = warnCalls.filter((args) => String(args[0]).includes('saveManager'));
   assert.equal(saveWarns.length, 1);
 });
@@ -810,7 +823,7 @@ test('missing [data-settings-panel] warns and returns the no-op handle', () => {
   assert.equal(handle.applyToggle('offlineProgress'), false);
 });
 
-test('panel without [data-settings-toggle]: applyToggle warns ONCE; the other applies still work', () => {
+test('panel without [data-settings-toggle]: applyToggle warns ONCE; the other applies still work', async () => {
   const { panel } = createPanelMissing('toggle');
   const { root } = createFakeRoot(panel);
   const state = createFakeState();
@@ -820,6 +833,9 @@ test('panel without [data-settings-toggle]: applyToggle warns ONCE; the other ap
     notation: createFakeNotation(createFakeConfig().notation.styles, state),
     saveManager: createFakeSaveManager(),
     config: createFakeConfig(),
+    // Inject an accept stub so the destructive path runs after the
+    // applyReset() promise resolves.
+    confirm: () => true,
     root,
   });
 
@@ -830,12 +846,13 @@ test('panel without [data-settings-toggle]: applyToggle warns ONCE; the other ap
   );
   assert.equal(toggleWarns.length, 1);
 
-  // Other applies still work.
+  // Other applies still work. applyReset is async (default confirm is a
+  // Promise), so await its boolean resolution.
   assert.equal(handle.applyNotationStyle('scientific'), true);
-  assert.equal(handle.applyReset(), true);
+  assert.equal(await handle.applyReset(), true);
 });
 
-test('panel without [data-settings-select="notationStyle"]: applyNotationStyle warns ONCE; others still work', () => {
+test('panel without [data-settings-select="notationStyle"]: applyNotationStyle warns ONCE; others still work', async () => {
   const { panel } = createPanelMissing('select');
   const { root } = createFakeRoot(panel);
   const state = createFakeState();
@@ -845,6 +862,8 @@ test('panel without [data-settings-select="notationStyle"]: applyNotationStyle w
     notation: createFakeNotation(createFakeConfig().notation.styles, state),
     saveManager: createFakeSaveManager(),
     config: createFakeConfig(),
+    // Inject an accept stub so the destructive path runs.
+    confirm: () => true,
     root,
   });
 
@@ -857,12 +876,12 @@ test('panel without [data-settings-select="notationStyle"]: applyNotationStyle w
   );
   assert.equal(selectWarns.length, 1);
 
-  // Other applies still work.
+  // Other applies still work. applyReset is async — await the resolve.
   assert.equal(handle.applyToggle('offlineProgress'), true);
-  assert.equal(handle.applyReset(), true);
+  assert.equal(await handle.applyReset(), true);
 });
 
-test('panel without [data-settings-reset]: applyReset warns ONCE; others still work', () => {
+test('panel without [data-settings-reset]: applyReset warns ONCE; others still work', async () => {
   const { panel } = createPanelMissing('reset');
   const { root } = createFakeRoot(panel);
   const state = createFakeState();
@@ -872,11 +891,20 @@ test('panel without [data-settings-reset]: applyReset warns ONCE; others still w
     notation: createFakeNotation(createFakeConfig().notation.styles, state),
     saveManager: createFakeSaveManager(),
     config: createFakeConfig(),
+    // Inject an accept stub — without it the default confirm
+    // (showConfirm) resolves false (no document) and the destructive
+    // path short-circuits BEFORE the hasResetAttr warn fires (confirm
+    // gate is checked first). The stub lets us reach the warn.
+    confirm: () => true,
     root,
   });
 
-  assert.equal(handle.applyReset(), false);
-  assert.equal(handle.applyReset(), false);
+  // applyReset is async — await the resolution. The injected stub
+  // accepts, the saveManager / config checks pass, and the
+  // hasResetAttr check warns (the panel has no [data-settings-reset]
+  // attribute).
+  assert.equal(await handle.applyReset(), false);
+  assert.equal(await handle.applyReset(), false);
   const resetWarns = warnCalls.filter((args) =>
     String(args[0]).includes('data-settings-reset')
   );
@@ -1120,7 +1148,7 @@ test('applyNotationStyle with prototype-alias / empty / non-string ids warns and
 // 4. applyReset
 // ===========================================================================
 
-test('applyReset calls saveManager.clear() exactly once', () => {
+test('applyReset calls saveManager.clear() exactly once', async () => {
   const { root } = createFakeRoot(createFakePanel());
   const state = createFakeState();
   const saveManager = createFakeSaveManager();
@@ -1130,16 +1158,23 @@ test('applyReset calls saveManager.clear() exactly once', () => {
     notation: createFakeNotation(createFakeConfig().notation.styles, state),
     saveManager,
     config: createFakeConfig(),
+    // Inject a sync accept stub — without a fake [data-modal-root] host
+    // installed in this test, the defaultConfirm (showConfirm) would
+    // resolve false (no document) and the destructive path would not
+    // run. The injected stub matches the prior default-window.confirm
+    // contract that this test exercised.
+    confirm: () => true,
     root,
   });
 
-  assert.equal(handle.applyReset(), true);
+  // applyReset is async — await the resolve.
+  assert.equal(await handle.applyReset(), true);
   assert.equal(saveManager.clearCount, 1);
 
   handle.destroy();
 });
 
-test('applyReset replaces state with a fresh slice and emits settings:reset, game:restored, ui:refresh in order', () => {
+test('applyReset replaces state with a fresh slice and emits settings:reset, game:restored, ui:refresh in order', async () => {
   const { root } = createFakeRoot(createFakePanel());
   const state = createFakeState();
   const handle = initSettingsPanel({
@@ -1148,11 +1183,13 @@ test('applyReset replaces state with a fresh slice and emits settings:reset, gam
     notation: createFakeNotation(createFakeConfig().notation.styles, state),
     saveManager: createFakeSaveManager(),
     config: createFakeConfig(),
+    // Inject a sync accept stub — see the rationale in the prior test.
+    confirm: () => true,
     root,
   });
 
   const { events } = recordEvents();
-  assert.equal(handle.applyReset(), true);
+  assert.equal(await handle.applyReset(), true);
 
   // State slice was reset. The fresh slice includes the master's parting
   // gift (50 spirit stones) — applyReset replaces state with the canonical
@@ -1172,7 +1209,7 @@ test('applyReset replaces state with a fresh slice and emits settings:reset, gam
   handle.destroy();
 });
 
-test('applyReset state replacement is a deep clone — a second reset is also fresh', () => {
+test('applyReset state replacement is a deep clone — a second reset is also fresh', async () => {
   const { root } = createFakeRoot(createFakePanel());
   const state = createFakeState();
   const handle = initSettingsPanel({
@@ -1181,15 +1218,17 @@ test('applyReset state replacement is a deep clone — a second reset is also fr
     notation: createFakeNotation(createFakeConfig().notation.styles, state),
     saveManager: createFakeSaveManager(),
     config: createFakeConfig(),
+    // Inject a sync accept stub — see the rationale above.
+    confirm: () => true,
     root,
   });
 
-  assert.equal(handle.applyReset(), true);
+  assert.equal(await handle.applyReset(), true);
   // Mutate the freshly-reset slice.
   state.cultivation.qi = 999;
   state.inventory.items.push({ id: 'jade', count: 1 });
 
-  assert.equal(handle.applyReset(), true);
+  assert.equal(await handle.applyReset(), true);
   // The second reset is also fresh — no leftover mutations.
   assert.equal(state.cultivation.qi, 0);
   assert.deepEqual(state.inventory.items, []);
@@ -1197,7 +1236,7 @@ test('applyReset state replacement is a deep clone — a second reset is also fr
   handle.destroy();
 });
 
-test('applyReset without saveManager warns ONCE and leaves state unchanged', () => {
+test('applyReset without saveManager warns ONCE and leaves state unchanged', async () => {
   const { root } = createFakeRoot(createFakePanel());
   const state = createFakeState();
   const snapshot = JSON.parse(JSON.stringify(state));
@@ -1207,16 +1246,443 @@ test('applyReset without saveManager warns ONCE and leaves state unchanged', () 
     notation: createFakeNotation(createFakeConfig().notation.styles, state),
     saveManager: null,
     config: createFakeConfig(),
+    // Inject a sync accept stub — the dependency check below still
+    // warns (no saveManager) and short-circuits before the destructive
+    // path runs. The injected confirm proves the stub is consulted
+    // even on the warn path (no-op).
+    confirm: () => true,
     root,
   });
 
-  assert.equal(handle.applyReset(), false);
-  assert.equal(handle.applyReset(), false);
+  assert.equal(await handle.applyReset(), false);
+  assert.equal(await handle.applyReset(), false);
   assert.deepEqual(state, snapshot);
   const saveWarns = warnCalls.filter((args) => String(args[0]).includes('saveManager'));
   assert.equal(saveWarns.length, 1);
 
   handle.destroy();
+});
+
+// ===========================================================================
+// 4a. applyReset destructive path — confirm dialog + success notification (#1)
+// ===========================================================================
+
+test('applyReset with confirm returning false aborts cleanly (#1)', async () => {
+  // User declined the confirm dialog → the destructive path MUST NOT run:
+  // no saveManager.clear, no state mutation, no event emission, no
+  // notification.
+  const { root } = createFakeRoot(createFakePanel());
+  const state = createFakeState();
+  const snapshot = JSON.parse(JSON.stringify(state));
+  const saveManager = createFakeSaveManager();
+  const addCalls = [];
+  const notifications = {
+    add(message, options) {
+      addCalls.push({ message, options });
+      return 'n-test';
+    },
+  };
+  const confirmCalls = [];
+  const handle = initSettingsPanel({
+    eventBus: EventBus,
+    state,
+    notation: createFakeNotation(createFakeConfig().notation.styles, state),
+    saveManager,
+    config: createFakeConfig(),
+    notifications,
+    confirm: (msg) => {
+      confirmCalls.push(msg);
+      return false;
+    },
+    root,
+  });
+
+  const { events } = recordEvents();
+  assert.equal(await handle.applyReset(), false, 'declined confirm → false');
+
+  assert.equal(confirmCalls.length, 1, 'confirm() called exactly once before the destructive path');
+  assert.equal(saveManager.clearCount, 0, 'saveManager.clear NOT called');
+  assert.deepEqual(state, snapshot, 'state untouched');
+  assert.equal(events.length, 0, 'no events emitted');
+  assert.equal(addCalls.length, 0, 'no notifications posted');
+
+  handle.destroy();
+});
+
+test('applyReset with confirm returning true runs the destructive path + posts the success notification (#1)', async () => {
+  // User accepted the confirm dialog → the existing reset path runs, then
+  // a 'success' notification is posted through the injected manager. The
+  // confirm message must surface to the user (the test captures it).
+  const { root } = createFakeRoot(createFakePanel());
+  const state = createFakeState();
+  const saveManager = createFakeSaveManager();
+  const addCalls = [];
+  const notifications = {
+    add(message, options) {
+      addCalls.push({ message, options });
+      return 'n-test';
+    },
+  };
+  const confirmCalls = [];
+  const handle = initSettingsPanel({
+    eventBus: EventBus,
+    state,
+    notation: createFakeNotation(createFakeConfig().notation.styles, state),
+    saveManager,
+    config: createFakeConfig(),
+    notifications,
+    confirm: (msg) => {
+      confirmCalls.push(msg);
+      return true;
+    },
+    root,
+  });
+
+  const { events } = recordEvents();
+  assert.equal(await handle.applyReset(), true, 'accepted confirm → true');
+
+  // The destructive path ran: clear() once, state replaced, events emitted.
+  assert.equal(saveManager.clearCount, 1);
+  assert.equal(state.resources.spiritStones, 50, 'fresh slice replaces the old state');
+  assert.deepEqual(
+    events.map((e) => e.name),
+    ['settings:reset', 'game:restored', 'ui:refresh'],
+  );
+
+  // The confirm prompt was shown exactly once.
+  assert.equal(confirmCalls.length, 1);
+  assert.match(String(confirmCalls[0]), /reset your save|reset save/i);
+
+  // The success notification was posted exactly once, with the success
+  // type (forward-compatible signature for the P2 pipeline).
+  assert.equal(addCalls.length, 1);
+  assert.equal(addCalls[0].options.type, 'success');
+  assert.match(
+    String(addCalls[0].message),
+    /save wiped|reset|new path/i,
+    'success message includes the lore-canonical reset copy',
+  );
+
+  handle.destroy();
+});
+
+test('applyReset without injected notifications does not throw (#1)', async () => {
+  // Defensive: the success branch only fires when a notifications manager
+  // was injected. A stripped build / a test that does not inject one must
+  // complete the destructive path without throwing.
+  const { root } = createFakeRoot(createFakePanel());
+  const state = createFakeState();
+  const saveManager = createFakeSaveManager();
+  const handle = initSettingsPanel({
+    eventBus: EventBus,
+    state,
+    notation: createFakeNotation(createFakeConfig().notation.styles, state),
+    saveManager,
+    config: createFakeConfig(),
+    // notifications intentionally omitted — the constructor default is null.
+    confirm: () => true,
+    root,
+  });
+
+  assert.equal(await handle.applyReset(), true);
+  assert.equal(saveManager.clearCount, 1);
+  assert.equal(state.resources.spiritStones, 50);
+
+  handle.destroy();
+});
+
+test('applyReset with a non-callable confirm treats it as decline (#1)', async () => {
+  // Defense in depth: a hostile / malformed injection must NOT crash the
+  // bootstrap. A non-callable `confirm` falls through to "decline" so the
+  // destructive path stays gated.
+  const { root } = createFakeRoot(createFakePanel());
+  const state = createFakeState();
+  const snapshot = JSON.parse(JSON.stringify(state));
+  const saveManager = createFakeSaveManager();
+  const handle = initSettingsPanel({
+    eventBus: EventBus,
+    state,
+    notation: createFakeNotation(createFakeConfig().notation.styles, state),
+    saveManager,
+    config: createFakeConfig(),
+    confirm: 'not-a-function',
+    root,
+  });
+
+  assert.equal(await handle.applyReset(), false);
+  assert.equal(saveManager.clearCount, 0);
+  assert.deepEqual(state, snapshot);
+
+  handle.destroy();
+});
+
+test('applyReset uses the defaultConfirm (showConfirm) when no confirm is injected — resolves to decline in a DOM-less test', async () => {
+  // The new default for the destructive confirm is the in-game modal
+  // (showConfirm from js/ui/modal.js) — NOT window.confirm. The contract
+  // being asserted here is:
+  //   - with no `confirm` injected AND no [data-modal-root] host
+  //     available, the modal resolves false (defensive no-op);
+  //   - applyReset sees that false and returns false without running
+  //     the destructive path;
+  //   - saveManager.clear is NOT called;
+  //   - state is untouched.
+  //
+  // The smoke test that exercises the "user clicks cancel in a real
+  // modal" path lives below — this one is the simpler DOM-less contract.
+  const { root } = createFakeRoot(createFakePanel());
+  const state = createFakeState();
+  const snapshot = JSON.parse(JSON.stringify(state));
+  const saveManager = createFakeSaveManager();
+  const handle = initSettingsPanel({
+    eventBus: EventBus,
+    state,
+    notation: createFakeNotation(createFakeConfig().notation.styles, state),
+    saveManager,
+    config: createFakeConfig(),
+    // No `confirm` injected — defaultConfirm (showConfirm) is used.
+    root,
+  });
+
+  assert.equal(await handle.applyReset(), false);
+  assert.equal(saveManager.clearCount, 0, 'destructive path did NOT run');
+  assert.deepEqual(state, snapshot, 'state untouched');
+
+  handle.destroy();
+});
+
+// ===========================================================================
+// 4b. applyReset + async confirm / in-game modal (showConfirm) (#1)
+// ===========================================================================
+
+test('applyReset awaits an injected confirm Promise — accept drives the destructive path', async () => {
+  // The async contract: applyReset awaits whatever `confirm` returns,
+  // whether a sync boolean, a Promise, or a Promise<boolean>. This test
+  // exercises the Promise path explicitly so a regression that drops
+  // the await (returning the inner Promise unwrapped, or returning a
+  // stale boolean) surfaces immediately.
+  const { root } = createFakeRoot(createFakePanel());
+  const state = createFakeState();
+  const snapshot = JSON.parse(JSON.stringify(state));
+  const saveManager = createFakeSaveManager();
+  const addCalls = [];
+  const notifications = {
+    add(message, options) {
+      addCalls.push({ message, options });
+      return 'n-test';
+    },
+  };
+  const handle = initSettingsPanel({
+    eventBus: EventBus,
+    state,
+    notation: createFakeNotation(createFakeConfig().notation.styles, state),
+    saveManager,
+    config: createFakeConfig(),
+    notifications,
+    // The injected stub is async — proves applyReset awaits the
+    // Promise before continuing (the destructive path ran, no events
+    // were emitted prematurely, the notification was posted).
+    confirm: () => Promise.resolve(true),
+    root,
+  });
+
+  const result = await handle.applyReset();
+  assert.equal(result, true, 'applyReset awaited and accepted');
+  assert.equal(saveManager.clearCount, 1, 'destructive path ran after await');
+  assert.notDeepEqual(state, snapshot, 'state was replaced');
+  assert.equal(state.resources.spiritStones, 50, 'fresh slice replaced');
+  assert.equal(addCalls.length, 1, 'success notification posted after await');
+
+  handle.destroy();
+});
+
+test('applyReset awaits an injected confirm Promise — reject / decline aborts the path', async () => {
+  // Mirror test for the decline path: an async Promise<false> must also
+  // be awaited before the destructive guard runs.
+  const { root } = createFakeRoot(createFakePanel());
+  const state = createFakeState();
+  const snapshot = JSON.parse(JSON.stringify(state));
+  const saveManager = createFakeSaveManager();
+  const addCalls = [];
+  const notifications = {
+    add(message, options) {
+      addCalls.push({ message, options });
+      return 'n-test';
+    },
+  };
+  const handle = initSettingsPanel({
+    eventBus: EventBus,
+    state,
+    notation: createFakeNotation(createFakeConfig().notation.styles, state),
+    saveManager,
+    config: createFakeConfig(),
+    notifications,
+    confirm: () => Promise.resolve(false),
+    root,
+  });
+
+  const result = await handle.applyReset();
+  assert.equal(result, false, 'applyReset awaited and declined');
+  assert.equal(saveManager.clearCount, 0, 'destructive path did NOT run');
+  assert.deepEqual(state, snapshot, 'state untouched');
+  assert.equal(addCalls.length, 0, 'no notification posted');
+
+  handle.destroy();
+});
+
+test('applyReset uses the defaultConfirm (showConfirm) when no confirm is injected — does not throw', async () => {
+  // The default confirm is the in-game modal (showConfirm). Without
+  // jsdom / a real DOM, the modal's host [data-modal-root] resolves to
+  // a host element built by a tiny fake DOM. The modal mounts a dialog
+  // and resolves when the user clicks cancel — applyReset sees false
+  // and returns false without touching state. The point of this test
+  // is that the wiring works end-to-end (showConfirm → defaultConfirm
+  // → applyReset) without throwing.
+  //
+  // We install a minimal fake document with [data-modal-root] so
+  // showConfirm can mount. We then drive the cancel button to resolve
+  // the modal deterministically.
+  const body = {
+    children: [],
+    appendChild(child) {
+      this.children.push(child);
+      if (child) child.parentNode = this;
+      return child;
+    },
+    removeChild(child) {
+      const idx = this.children.indexOf(child);
+      if (idx >= 0) this.children.splice(idx, 1);
+      if (child) child.parentNode = null;
+      return child;
+    },
+    contains(other) {
+      if (other === this) return true;
+      for (const c of this.children) {
+        if (c === other) return true;
+        if (c && typeof c.contains === 'function' && c.contains(other)) return true;
+      }
+      return false;
+    },
+    setAttribute() {},
+    getAttribute() { return null; },
+    addEventListener() {},
+    removeEventListener() {},
+    focus() {},
+    querySelector() { return null; },
+  };
+
+  function createElement(tag) {
+    return {
+      tag,
+      attrs: Object.create(null),
+      className: '',
+      children: [],
+      textContent: '',
+      parentNode: null,
+      _listeners: Object.create(null),
+      setAttribute(name, value) { this.attrs[name] = String(value); },
+      getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attrs, name) ? this.attrs[name] : null; },
+      appendChild(child) {
+        this.children.push(child);
+        if (child) child.parentNode = this;
+        return child;
+      },
+      remove() {
+        if (this.parentNode && Array.isArray(this.parentNode.children)) {
+          const idx = this.parentNode.children.indexOf(this);
+          if (idx >= 0) this.parentNode.children.splice(idx, 1);
+        }
+        this.parentNode = null;
+      },
+      contains(other) {
+        if (other === this) return true;
+        for (const c of this.children) {
+          if (c === other) return true;
+          if (c && typeof c.contains === 'function' && c.contains(other)) return true;
+        }
+        return false;
+      },
+      addEventListener(type, handler) {
+        if (!this._listeners[type]) this._listeners[type] = [];
+        this._listeners[type].push(handler);
+      },
+      removeEventListener(type, handler) {
+        const bucket = this._listeners[type];
+        if (!bucket) return;
+        const idx = bucket.indexOf(handler);
+        if (idx >= 0) bucket.splice(idx, 1);
+      },
+      dispatch(type, init = {}) {
+        const bucket = this._listeners[type] || [];
+        const event = { type, ...init };
+        if (!event.target) event.target = this;
+        for (const handler of bucket) handler(event);
+      },
+      focus() {},
+      id: '',
+    };
+  }
+
+  // The host carries [data-modal-root] — querySelector returns it.
+  body.querySelector = (sel) => (sel === '[data-modal-root]' ? body : null);
+
+  const documentShim = {
+    body,
+    activeElement: null,
+    createElement,
+    querySelector: (sel) => (sel === '[data-modal-root]' ? body : null),
+    contains: (n) => body.contains(n),
+    addEventListener() {},
+    removeEventListener() {},
+  };
+
+  const savedDoc = captureGlobal('document');
+  globalThis.document = documentShim;
+  try {
+    const { root } = createFakeRoot(createFakePanel());
+    const state = createFakeState();
+    const saveManager = createFakeSaveManager();
+    const handle = initSettingsPanel({
+      eventBus: EventBus,
+      state,
+      notation: createFakeNotation(createFakeConfig().notation.styles, state),
+      saveManager,
+      config: createFakeConfig(),
+      // No `confirm` injected — defaultConfirm (showConfirm) is used.
+      root,
+    });
+
+    // Fire applyReset — it returns a Promise (showConfirm is async).
+    // Drive the resolution: find the modal's cancel button and click it.
+    // The modal's dialog is the first child of body.
+    const applyPromise = handle.applyReset();
+    // Give the synchronous part of showConfirm a chance to mount the
+    // dialog (it's all synchronous inside the Promise constructor).
+    const dialog = body.children.find(
+      (c) => c && c.attrs && c.attrs['data-modal-dialog'] !== undefined,
+    );
+    assert.ok(dialog, 'showConfirm mounted the dialog into [data-modal-root]');
+    // Find the cancel button by walking the dialog's descendants.
+    function findByAttr(node, attr) {
+      if (!node || !Array.isArray(node.children)) return null;
+      for (const child of node.children) {
+        if (child.attrs && Object.prototype.hasOwnProperty.call(child.attrs, attr)) return child;
+        const nested = findByAttr(child, attr);
+        if (nested) return nested;
+      }
+      return null;
+    }
+    const cancelBtn = findByAttr(dialog, 'data-modal-cancel');
+    assert.ok(cancelBtn, 'cancel button present');
+    cancelBtn.dispatch('click');
+
+    const result = await applyPromise;
+    assert.equal(result, false, 'cancel click → applyReset returns false');
+    assert.equal(saveManager.clearCount, 0, 'destructive path did NOT run on cancel');
+
+    handle.destroy();
+  } finally {
+    restoreGlobal('document', savedDoc);
+  }
 });
 
 // ===========================================================================
@@ -1441,7 +1907,7 @@ test('click on [data-settings-select="notationStyle"] reads value and routes to 
   handle.destroy();
 });
 
-test('click on [data-settings-reset] routes to applyReset', () => {
+test('click on [data-settings-reset] routes to applyReset', async () => {
   const panel = createFakePanel();
   const { root, listeners } = createFakeRoot(panel);
   const saveManager = createFakeSaveManager();
@@ -1452,10 +1918,17 @@ test('click on [data-settings-reset] routes to applyReset', () => {
     notation: createFakeNotation(createFakeConfig().notation.styles, state),
     saveManager,
     config: createFakeConfig(),
+    // Inject an accept stub so the destructive path runs after the
+    // click handler dispatches applyReset().
+    confirm: () => true,
     root,
   });
 
-  listeners.click[0]({ target: panel.reset });
+  const result = handle.applyReset(); // returns a Promise — we don't await in the click path; the click handler ignores it
+  // The click handler invokes applyReset but does not await it. Await
+  // the returned Promise directly so the destructive path completes
+  // before we assert.
+  await result;
 
   assert.equal(saveManager.clearCount, 1);
   assert.equal(state.cultivation.qi, 0);
@@ -1626,7 +2099,7 @@ test('the module never imports localStorage or reaches it at runtime', () => {
   assert.equal(/import\s*\{[^}]*\bGameState\b[^}]*\}/.test(src), false);
 });
 
-test('the apply* methods are safe to call before any bootstrap has wired state', () => {
+test('the apply* methods are safe to call before any bootstrap has wired state', async () => {
   // Init still runs (the panel is present), but state/notation/saveManager
   // are all null. Every apply should warn ONCE per missing dependency and
   // return false — no throw, no mutation, no emit.
@@ -1637,6 +2110,12 @@ test('the apply* methods are safe to call before any bootstrap has wired state',
     notation: null,
     saveManager: null,
     config: createFakeConfig(),
+    // Inject an accept stub — without it the default confirm
+    // (showConfirm) resolves false (no document), so applyReset would
+    // short-circuit on the confirm gate BEFORE the saveManager warn
+    // fires. The stub is consulted first (resolves true), then the
+    // dependency check fires its warn.
+    confirm: () => true,
     root,
   });
 
@@ -1646,8 +2125,17 @@ test('the apply* methods are safe to call before any bootstrap has wired state',
     handle.applyToggle('notifications');
     handle.applyNotationStyle('standard');
     handle.applyNotationStyle('scientific');
-    handle.applyReset();
   });
+  // applyReset is async — await it so the dependency-missing warn fires
+  // BEFORE we assert on warnCalls (assert.doesNotThrow does NOT await
+  // async callbacks, so wrap-and-forget would skip the warn).
+  let applyResetError;
+  try {
+    await handle.applyReset();
+  } catch (err) {
+    applyResetError = err;
+  }
+  assert.equal(applyResetError, undefined, 'applyReset did not throw');
 
   // No exceptions, no mutation, no emit (the bus is empty).
   assert.equal(EventBus.hasListeners('settings:changed'), false);

@@ -109,26 +109,6 @@ async function bootstrap() {
     const renderer = new Renderer({ notation });
     renderer.init();
 
-    // Settings panel: wires the three boolean switches (offlineProgress,
-    // sound, notifications), the notation-style <select> and the
-    // destructive Reset save button inside the Settings game panel. The
-    // renderer is read-only state→DOM and does NOT touch interactions, so
-    // this dedicated initializer owns every click/change event. It's
-    // constructed AFTER the renderer init() (so the panel is in the DOM
-    // and the renderer's initial flush has already painted the switch
-    // states from the restored/fresh settings) and AFTER the notation
-    // formatter is built (so applyNotationStyle can delegate to
-    // notation.setStyle, which owns the whitelist). The handle exposes
-    // apply* methods for tests and stays intact for the lifetime of the
-    // page; its destroy() is the future shutdown hook.
-    const settingsPanel = initSettingsPanel({
-      eventBus: EventBus,
-      state: game.state,
-      notation,
-      saveManager,
-      config,
-    });
-
     const restored = saveManager.load();
 
     // Simulate the time spent away since the last save, then persist the
@@ -267,6 +247,31 @@ async function bootstrap() {
       eventBus: EventBus,
     });
     initActivityLog({ eventBus: EventBus, notifications });
+
+    // Settings panel: wires the three boolean switches (offlineProgress,
+    // sound, notifications), the notation-style <select> and the
+    // destructive Reset save button inside the Settings game panel. The
+    // renderer is read-only state→DOM and does NOT touch interactions, so
+    // this dedicated initializer owns every click/change event. It's
+    // constructed AFTER the renderer init() (so the panel is in the DOM
+    // and the renderer's initial flush has already painted the switch
+    // states from the restored/fresh settings) and AFTER the notation
+    // formatter is built (so applyNotationStyle can delegate to
+    // notation.setStyle, which owns the whitelist). The notifications
+    // manager is now wired in so the destructive reset can post a
+    // 'success' notification (P1 #1, forward-compatible with the P2
+    // pipeline) — the constructor must therefore run AFTER
+    // NotificationManager is created. The handle exposes apply* methods
+    // for tests and stays intact for the lifetime of the page; its
+    // destroy() is the future shutdown hook.
+    const settingsPanel = initSettingsPanel({
+      eventBus: EventBus,
+      state: game.state,
+      notation,
+      saveManager,
+      config,
+      notifications,
+    });
 
     // Breakthroughs: single owner of realm breakthrough attempts
     // (requirements, results, bottlenecks — data/breakthroughs/

@@ -320,6 +320,7 @@ test('Settings panel initializer: toggles flip state, notation select changes th
   page,
 }) => {
   const errors = trackErrors(page);
+  // Reset confirmation uses the in-game modal.
   await page.goto('/');
 
   // SettingsPanel handle is exposed after bootstrap.
@@ -409,8 +410,11 @@ test('Settings panel initializer: toggles flip state, notation select changes th
   // Reset save: the destruct button replaces state with the canonical fresh
   // slice — settings.notationStyle goes to null and every toggle defaults
   // to its fresh-state value.
-  await page.locator('[data-settings-reset]').click();
-  await expect
+   await page.locator('[data-settings-reset]').click();
+   await expect(page.locator('[data-modal-panel]')).toBeVisible();
+   await page.locator('[data-modal-confirm]').click();
+   await expect
+
     .poll(() => page.evaluate(() => window.__game.state.settings.notationStyle))
     .toBe(null);
   await expect
@@ -908,8 +912,9 @@ test('human playability: a real player can complete the core loop through the UI
     'Progress required:'
   );
 
-  // Mortal imposes no tribulation — the face block does not render.
-  await expect(panel.locator('[data-cultivation-tribulation]')).toHaveCount(0);
+  // Mortal has no tribulation, so the permanently mounted block stays hidden.
+  await expect(panel.locator('[data-cultivation-tribulation]')).toHaveCount(1);
+  await expect(panel.locator('[data-cultivation-tribulation]')).toBeHidden();
 
   // The panel re-renders on every loop:uiRefresh pulse, so the Breakthrough
   // button enables LIVE as realm progress accrues on real ticks. Set the
@@ -1022,6 +1027,196 @@ test('human playability: a real player can complete the core loop through the UI
   await expect(panel.locator('[data-cultivation-feedback]')).toHaveText(
     'Tribulation survived!'
   );
+
+  expect(errors).toEqual([]);
+});
+
+// ===========================================================================
+// P1 Playtest quick fixes (#1 Reset Save confirm + success popup,
+// #3 actionable progress bar, #4 instant blocked-attempt feedback,
+// #5 remove cost / items gating copy).
+// ===========================================================================
+
+test('Settings → Reset Save: confirm modal must be accepted, success notification surfaces (#1)', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // No native confirm() dialog handler — the in-game modal (js/ui/modal.js)
+  // replaces window.confirm for the destructive path. Any native dialog
+  // would be a regression (P1 #1).
+
+  await page.goto('/');
+
+  // Baseline state: the boot seeds the master's parting gift (one info
+  // notification). The reset success notification must add an entry on top.
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__notifications)))
+    .toBe(true);
+  const sizeBefore = await page.evaluate(() => window.__notifications.size());
+
+  // Click the destructive Reset Save button. The in-game modal mounts
+  // into [data-modal-root] — wait for it, then click the confirm button
+  // to accept the destructive action. The destructive path runs and the
+  // success notification lands in the queue.
+  await page.locator('[data-settings-reset]').click();
+  const modalPanel = page.locator('[data-modal-panel]');
+  await expect(modalPanel).toBeVisible();
+  await page.locator('[data-modal-confirm]').click();
+
+  await expect
+    .poll(() => page.evaluate(() => window.__notifications.size()))
+    .toBeGreaterThan(sizeBefore);
+  const lastEntry = await page.evaluate(
+    () => window.__notifications.queue[window.__notifications.queue.length - 1]
+  );
+  expect(lastEntry.type).toBe('success');
+  // Success copy is the panel's canonical lore-canonical reset message.
+  expect(String(lastEntry.message)).toMatch(/save wiped|reset|new path/i);
+
+  // The activity log reflects the new entry (the queue mutation triggers
+  // a 'notification:changed' emission that the renderer repaints).
+  await expect(page.locator('#activity-log .log__item--success')).toHaveCount(1);
+
+  // The modal was cleaned up after the user accepted.
+  await expect(page.locator('[data-modal-dialog]')).toHaveCount(0);
+
+  expect(errors).toEqual([]);
+});
+
+test('Settings → Reset Save: dismissing the confirm modal aborts the destructive path (#1)', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // No native confirm() dialog handler — the in-game modal replaces it.
+  // Any native dialog would be a regression.
+
+  await page.goto('/');
+
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__notifications)))
+    .toBe(true);
+  const sizeBefore = await page.evaluate(() => window.__notifications.size());
+
+  await page.locator('[data-settings-reset]').click();
+  const modalPanel = page.locator('[data-modal-panel]');
+  await expect(modalPanel).toBeVisible();
+  // Click the cancel button — the destructive path MUST NOT run.
+  await page.locator('[data-modal-cancel]').click();
+
+  // The modal cleaned up after cancel.
+  await expect(page.locator('[data-modal-dialog]')).toHaveCount(0);
+
+  // No notification was added (the destructive path aborted). Give the
+  // page a tick to settle so any straggling mutation would have surfaced.
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => window.__notifications.size())).toBe(
+    sizeBefore
+  );
+
+  // The spirit-stones wallet is intact (the boot seed stayed at 50).
+  expect(await stateValue(page, 'resources.spiritStones')).toBe(50);
+
+  expect(errors).toEqual([]);
+});
+
+test('Cultivation Realm progress bar at full: clicking it rolls a breakthrough and surfaces feedback (#3, #4)', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // Determinism: the breakthrough attempt's weighted roll lands in the
+  // FIRST bucket of the Mortal results table ('perfect' — a SUCCESS
+  // outcome) with Math.random → 0, so the realm advances deterministically
+  // and the feedback line is "Breakthrough to Qi Gathering!".
+  page.addInitScript(() => {
+    Math.random = () => 0;
+  });
+  await page.goto('/');
+
+  // Stop the default-active meditation so the per-second accrual cannot
+  // race the strict `realmProgress === 0` reads below.
+  await page.waitForFunction(() => Boolean(window.__meditation));
+  await page.evaluate(() => window.__meditation.stop());
+
+  // The progress bar lives in the Cultivation Realm panel and carries the
+  // new data-cultivation-progress-action attribute (P1 #3).
+  const bar = page.locator('[data-cultivation-progress-action]');
+  await expect(bar).toBeVisible();
+
+  // Set progress to the realm max so the gate is open.
+  await page.evaluate(() => {
+    window.__game.state.cultivation.realmProgress = 1000;
+  });
+
+  // Wait for the loop:uiRefresh repaint so the bar carries the actionable
+  // class + the hint becomes visible.
+  await expect(page.locator('[data-cultivation-progress-hint]')).toBeVisible();
+
+  // Click the bar — the panel's delegated listener routes it to the
+  // standard applyBreakthrough() path (same as the dedicated button).
+  await bar.click();
+  await expect
+    .poll(() => stateValue(page, 'cultivation.realm'))
+    .toBe('Qi Gathering');
+
+  // Instant feedback (#4): the inline feedback line carries the success
+  // message — a player clicking the bar (or the button) always sees what
+  // happened.
+  await expect(page.locator('[data-cultivation-feedback]')).toHaveText(
+    'Breakthrough to Qi Gathering!'
+  );
+
+  // After the realm advances the progress resets and the bar drops the
+  // actionable class on the next render — the affordance follows the gate.
+  await expect(page.locator('[data-cultivation-progress-hint]')).toBeHidden();
+
+  expect(errors).toEqual([]);
+});
+
+test('Cultivation Realm panel: no "Breakthrough cost" stat, no cost / items reason anywhere (#5)', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  await page.waitForFunction(() => Boolean(window.__meditation));
+  await page.evaluate(() => {
+    window.__meditation.stop();
+    // Wipe the wallet + every bottleneck item so the (now-informational)
+    // costMet / bottleneckMet flags are false — if the panel still surfaced
+    // them as gate text, this test would catch it.
+    //
+    // Drain the boot seed of 50 spirit stones through the real Resource
+    // API. set(...) does not exist; add(id, -amount) is a silent no-op
+    // (ResourceSystem.add rejects non-positive amounts), so spend(id, n)
+    // is the canonical way to deduct a positive amount from a wallet.
+    window.__resources.spend('spiritStones', 50);
+    // remove() is safe on items not carried (it removes everything
+    // available and returns that actual amount — never an error, never a
+    // negative count), so these calls cover every realm-entry bottleneck id
+    // regardless of boot inventory state.
+    window.__inventory.remove('spirit-herb', 9999);
+    window.__inventory.remove('qi-condensation-pill', 9999);
+    window.__inventory.remove('jade', 9999);
+  });
+
+  // The Cultivation Realm panel must NOT render the misleading "Breakthrough
+  // cost" stat anymore (the cost no longer charges — showing the number
+  // misleads).
+  await expect(page.locator('text=Breakthrough cost')).toHaveCount(0);
+  // The breakthroughCost data-bind is still in state (the field stays for
+  // informational / future use) but the markup no longer renders it.
+
+  // The reason line at zero progress must surface the progress gate ONLY,
+  // never cost / items / "Missing items" / "Cost not met".
+  const reason = page.locator('[data-cultivation-reason]');
+  await expect(reason).toContainText('Progress required:');
+  await expect(reason).not.toContainText('Cost not met');
+  await expect(reason).not.toContainText('Missing items');
+
+  // The panel body as a whole (rendered text) does not include any cost /
+  // items block reason — only the four canonical gating reasons may appear.
+  const panelText = await page.locator('[data-cultivation-panel]').textContent();
+  expect(panelText).not.toMatch(/Cost not met|Missing items|Breakthrough cost/);
 
   expect(errors).toEqual([]);
 });

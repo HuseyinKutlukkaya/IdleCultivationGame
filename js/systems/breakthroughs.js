@@ -15,16 +15,22 @@
  * statistics.breakthroughsTotal; a FAILURE outcome (failure, heavy-failure,
  * qi-deviation) subtracts progressLoss × realmProgressMax (never below 0)
  * and leaves the realm unchanged. Requirements gate the attempt: progress
- * met, cost affordable, bottleneck items carried, and (when the current
- * realm imposes one) the tribulation survived. The tribulation gate is read
- * from the SHARED state.tribulations slice, which the TribulationSystem
+ * met and (when the current realm imposes one) the tribulation survived —
+ * in that order (progress → tribulation). The tribulation gate is read from
+ * the SHARED state.tribulations slice, which the TribulationSystem
  * (js/systems/tribulations.js) owns and writes on every realm change and
  * face() — this system only READS it (via the _tribulationGate helper), so
  * a realm that imposes a pending tribulation blocks attempt() with reason
  * 'tribulation' until the player faces and survives it. Old saves without
- * the slice degrade to gate-open. The cost is spent through
- * ResourceSystem.spend and the bottleneck removed through
- * InventorySystem.remove — this system never writes state.resources or
+ * the slice degrade to gate-open.
+ *
+ * The stone cost and item bottleneck are INFORMATIONAL ONLY (P1 playtest
+ * quick fix — user decision 2026-08-11): they no longer gate the attempt
+ * and nothing is spent or consumed on success. The data fields, the
+ * coercion paths, the requirements() shape (cost / costMet / bottleneck /
+ * bottleneckMet) and the injected ResourceSystem / InventorySystem reads
+ * all stay intact for reuse — the item (bottleneck) gates return when the
+ * Phase-4 item sources land. This system never writes state.resources or
  * state.inventory directly (same dependency-injection pattern as
  * UpgradeSystem receiving resourceSystem: no direct System→System imports).
  *
@@ -40,7 +46,9 @@
  * cultivation.breakthroughCost, statistics.breakthroughsTotal. The max and
  * cost are SYNCED from the CURRENT realm's entry on construction (boot) and
  * after every accepted attempt; breakthroughCost is the entry's
- * cost.spiritStones (null when no entry). The tribulation gate is NOT owned
+ * cost.spiritStones (null when no entry). The sync is KEPT even though the
+ * cost is informational-only (P1) — the renderer/state field contract is
+ * unchanged. The tribulation gate is NOT owned
  * here — state.tribulations is read-only for this system (the
  * TribulationSystem writes it; a missing slice degrades to gate-open). All
  * paths are part of the canonical GameState (see core/game-state.js).
@@ -88,9 +96,10 @@
  * Future expansion (see DESIGN.md/PLANS.md): combined tribulations (a realm
  * imposing several types at once), physiques and spirit roots stack
  * additional requirement gates and success modifiers into the entry
- * coercion + roll; bottleneck items become real drops once the Phase-4 item
- * producers land; death (DESIGN.md 'future optional') adds a new canonical
- * outcome + a consequence branch in attempt().
+ * coercion + roll; bottleneck items become real drops AND rejoin the gates
+ * once the Phase-4 item producers land (the informational fields already
+ * keep the data paths warm); death (DESIGN.md 'future optional') adds a new
+ * canonical outcome + a consequence branch in attempt().
  */
 
 import { EventBus } from '../core/event-bus.js';
@@ -137,11 +146,16 @@ export class BreakthroughSystem {
    *        realm ladder. When absent the current realm cannot resolve and
    *        attempt() rejects 'no-definition' (nothing is hardcoded).
    * @param {object|null} [options.resourceSystem=null] — ResourceSystem (or a
-   *        lookalike with spend(id, amount) / canAfford(id, amount)) owning
-   *        the wallet. The system NEVER writes state.resources directly.
+   *        lookalike with canAfford(id, amount)) owning the wallet. Read for
+   *        the INFORMATIONAL costMet reporting in requirements() only (P1 —
+   *        cost no longer gates); the system NEVER spends or writes
+   *        state.resources directly.
    * @param {object|null} [options.inventorySystem=null] — InventorySystem (or
-   *        a lookalike with remove(id, amount) / has(id, amount)) owning the
-   *        carried stacks. The system NEVER writes state.inventory directly.
+   *        a lookalike with has(id, amount)) owning the carried stacks. Read
+   *        for the INFORMATIONAL bottleneckMet reporting in requirements()
+   *        only (P1 — bottlenecks no longer gate until the Phase-4 item
+   *        sources land); the system NEVER removes or writes
+   *        state.inventory directly.
    * @param {object|null} [options.dataManager=null] — DataManager (or a
    *        lookalike with `getAll(collection)`) resolving the breakthrough
    *        tables from the 'breakthroughs' collection. When absent the table
@@ -237,11 +251,18 @@ export class BreakthroughSystem {
    * tribulationRequired / tribulationMet. The returned cost/bottleneck are
    * fresh copies — mutating them never leaks into the system.
    *
+   * Cost and bottleneck are INFORMATIONAL ONLY (P1 playtest fix, user
+   * decision 2026-08-11): costMet / bottleneckMet still report whether the
+   * wallet/inventory COULD cover the entry, but neither affects canAttempt
+   * (entry && !atTop && progressMet && tribulationMet). The data fields
+   * stay intact for reuse when item sources land (P4).
+   *
    * @returns {{ realmId: string|null, requiredProgress: number, progress: number,
    *            progressMet: boolean, cost: object, costMet: boolean,
    *            bottleneck: Array<{id: string, count: number}>, bottleneckMet: boolean,
    *            tribulationRequired: boolean, tribulationMet: boolean,
-   *            canAttempt: boolean }} the current requirement gates.
+   *            canAttempt: boolean }} the current requirement snapshot
+   *            (cost/bottleneck informational, not gates).
    */
   requirements() {
     this._ensureSlices();
@@ -255,6 +276,8 @@ export class BreakthroughSystem {
     const bottleneck = entry ? entry.bottleneck.map((item) => ({ ...item })) : [];
 
     const progressMet = progress >= requiredProgress;
+    // Informational only (P1 — user decision 2026-08-11): the affordability
+    // flags are still reported but never gate the attempt.
     const costMet = this._costMet(cost);
     const bottleneckMet = this._bottleneckMet(bottleneck);
     const tribulation = this._tribulationGate();
@@ -274,8 +297,6 @@ export class BreakthroughSystem {
         Boolean(entry) &&
         !this._atTopRealm() &&
         progressMet &&
-        costMet &&
-        bottleneckMet &&
         tribulation.met,
     };
   }
@@ -299,16 +320,18 @@ export class BreakthroughSystem {
    *     current realm (warned ONCE per system instance);
    *   - 'max-realm' — the current realm is the top of the ladder;
    *   - 'progress' — cultivation.realmProgress < the entry's requiredProgress;
-   *   - 'cost' — the wallet cannot cover the entry's cost;
-   *   - 'items' — the inventory does not carry the entry's bottleneck;
    *   - 'tribulation' — the current realm imposes a tribulation that is
    *     still pending (state.tribulations.pending true and survived false —
    *     written by the TribulationSystem on realm changes / face(); old
    *     saves without the slice degrade to gate-open).
    *
-   * Accepted: spend every positive cost entry via ResourceSystem.spend,
-   * remove every bottleneck via InventorySystem.remove, weighted-roll an
-   * outcome via the injected random source, then:
+   * The order above is canonical: entry → max-realm → progress → tribulation.
+   *
+   * Accepted: nothing is spent or consumed — the entry's stone cost and item
+   * bottleneck are INFORMATIONAL ONLY (P1 playtest fix, user decision
+   * 2026-08-11; the data fields and code paths stay intact for reuse when
+   * item sources land in P4). Weighted-roll an outcome via the injected
+   * random source, then:
    *   - SUCCESS outcome → RealmSystem.setRealm(next tier) (its own
    *     'realm:changed' fires — never suppressed), realmProgress = 0, the
    *     max/cost sync pulls the NEW realm's entry, statistics.
@@ -341,12 +364,6 @@ export class BreakthroughSystem {
     if (progress < entry.requiredProgress) {
       return { outcome: null, advanced: false, reason: 'progress' };
     }
-    if (!this._costMet(entry.cost)) {
-      return { outcome: null, advanced: false, reason: 'cost' };
-    }
-    if (!this._bottleneckMet(entry.bottleneck)) {
-      return { outcome: null, advanced: false, reason: 'items' };
-    }
 
     // The tribulation gate (read-only, after every other gate — the order of
     // the existing reasons is preserved): a pending tribulation on the
@@ -357,15 +374,10 @@ export class BreakthroughSystem {
       return { outcome: null, advanced: false, reason: 'tribulation' };
     }
 
-    // Accepted: consume the requirements first, then roll the outcome. The
-    // gates above already verified affordability/carriage, so a faithful
-    // resource/inventory system always completes the spend/removal (a
-    // hostile lookalike failing the spend aborts with 'cost' — the partial
-    // mutation is impossible with the shipped systems).
-    if (!this._spendCost(entry.cost)) {
-      return { outcome: null, advanced: false, reason: 'cost' };
-    }
-    this._removeBottleneck(entry.bottleneck);
+    // Accepted: nothing is spent or consumed — cost and bottleneck are
+    // INFORMATIONAL ONLY (P1 playtest fix, user decision 2026-08-11; the
+    // data fields and code paths stay intact for reuse when item sources
+    // land in P4). Roll the weighted outcome directly.
 
     const outcome = this._rollOutcome(entry.results);
     const advanced = SUCCESS_OUTCOMES.has(outcome.outcome);
@@ -611,45 +623,6 @@ export class BreakthroughSystem {
     const pending = slice.pending === true;
     const survived = slice.survived === true;
     return { required: pending, met: !pending || survived };
-  }
-
-  /**
-   * Spend every positive cost entry through the injected ResourceSystem.
-   * Returns false when any spend fails (insufficient balance on a hostile
-   * lookalike — the cost gate already verified affordability, so a faithful
-   * system never fails here). Zero/non-positive amounts are skipped (a
-   * zero-cost entry needs no wallet at all).
-   *
-   * @param {object} cost — coerced cost map ({ id: amount }).
-   * @returns {boolean} true when every positive amount was spent.
-   */
-  _spendCost(cost) {
-    if (!this._resourceSystem || typeof this._resourceSystem.spend !== 'function') {
-      return false;
-    }
-    for (const [id, amount] of Object.entries(cost)) {
-      if (amount <= 0) continue;
-      if (!this._resourceSystem.spend(id, amount)) return false;
-    }
-    return true;
-  }
-
-  /**
-   * Remove every bottleneck item through the injected InventorySystem. The
-   * items gate already verified carriage, so the removals drain the exact
-   * required counts (remove() is a no-op for anything not carried — a
-   * hostile lookalike cannot corrupt the stacks).
-   *
-   * @param {Array<{id: string, count: number}>} bottleneck — coerced list.
-   * @returns {void}
-   */
-  _removeBottleneck(bottleneck) {
-    if (!this._inventorySystem || typeof this._inventorySystem.remove !== 'function') {
-      return;
-    }
-    for (const item of bottleneck) {
-      this._inventorySystem.remove(item.id, item.count);
-    }
   }
 
   /**
