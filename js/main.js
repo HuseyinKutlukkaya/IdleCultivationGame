@@ -32,6 +32,7 @@ import { NotationFormatter } from './ui/notation.js';
 import { Renderer } from './ui/renderer.js';
 import { initActivityLog } from './ui/activity-log.js';
 import { initFooter } from './ui/footer.js';
+import { initPopupStack } from './ui/popup-stack.js';
 import { initScrollReveal } from './ui/reveal.js';
 import { initCultivationPanel } from './ui/cultivation-panel.js';
 import { initSettingsPanel } from './ui/settings-panel.js';
@@ -248,6 +249,80 @@ async function bootstrap() {
     });
     initActivityLog({ eventBus: EventBus, notifications });
 
+    // Popup stack: the visual half of the P2 Event Popup & Log Pipeline.
+    // Listens on the SAME 'notification:changed' event as the activity log
+    // and surfaces entries whose `popup: true` flag is set as transient
+    // top-right toasts (slide in, auto-dismiss after
+    // config.notifications.popupDurationMs, click to dismiss immediately,
+    // capped at config.notifications.popupMaxVisible). Constructed AFTER
+    // NotificationManager (it needs the queue) and AFTER the activity log
+    // (same bus event — order doesn't matter because both listeners are
+    // independent and EventBus dispatches synchronously to all of them).
+    // Passes `config` so it can read the popup tunables defensively
+    // (missing block → shipped defaults; present-but-invalid → warn once).
+    // The handle is exposed as window.__popupStack for debugging.
+    const popupStack = initPopupStack({
+      eventBus: EventBus,
+      notifications,
+      config,
+    });
+
+    // Realm-breakthrough → notification. The BreakthroughSystem already
+    // emits 'realm:breakthrough' on every accepted attempt (successes and
+    // failures); we translate that single stream into one popup + log entry
+    // here so gameplay systems stay free of notification concerns. The
+    // outcome strings are the canonical ids defined in
+    // js/systems/breakthroughs.js (SUCCESS_OUTCOMES / FAILURE_OUTCOMES).
+    // Subscribed BEFORE game.start() so the very first breakthrough (a
+    // fast-forward playtest lands one within the first second) is captured.
+    EventBus.subscribe('realm:breakthrough', (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      const realmName =
+        typeof payload.realmName === 'string' && payload.realmName !== ''
+          ? payload.realmName
+          : 'a new realm';
+      const outcome = typeof payload.outcome === 'string' ? payload.outcome : '';
+      const SUCCESS_OUTCOMES = new Set([
+        'perfect',
+        'great-success',
+        'success',
+        'barely-successful',
+      ]);
+      if (SUCCESS_OUTCOMES.has(outcome)) {
+        notifications.add(`Breakthrough to ${realmName}!`, {
+          type: 'achievement',
+          popup: true,
+        });
+      } else {
+        notifications.add(`Breakthrough failed — you remain at ${realmName}.`, {
+          type: 'warning',
+          popup: true,
+        });
+      }
+    });
+
+    // Tribulation → notification. The TribulationSystem already emits
+    // 'tribulation:finished' on every accepted face(); we translate that
+    // single stream into one popup + log entry here. Subscribed BEFORE
+    // game.start() for the same reason as realm:breakthrough above.
+    EventBus.subscribe('tribulation:finished', (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      const type =
+        typeof payload.type === 'string' && payload.type !== '' ? payload.type : 'tribulation';
+      const survived = payload.survived === true;
+      if (survived) {
+        notifications.add(`Tribulation survived — ${type}.`, {
+          type: 'achievement',
+          popup: true,
+        });
+      } else {
+        notifications.add(`The ${type} tribulation overwhelms you.`, {
+          type: 'error',
+          popup: true,
+        });
+      }
+    });
+
     // Settings panel: wires the three boolean switches (offlineProgress,
     // sound, notifications), the notation-style <select> and the
     // destructive Reset save button inside the Settings game panel. The
@@ -353,11 +428,13 @@ async function bootstrap() {
     // The notification is fire-once-per-game: a restored save has already
     // heard the story on its original boot. Capture-once is a soft guarantee
     // — a hostile restored save without the queued notification still gets
-    // its 50 stones (the gift is in state, not the queue).
+    // its 50 stones (the gift is in state, not the queue). `popup: true`
+    // surfaces it as a transient top-right toast (the popup-stack UI,
+    // js/ui/popup-stack.js, reads the flag off the emitted payload).
     if (!restored) {
       notifications.add(
         'Your shifu gave you his last pouch before setting off on his final tribulation. 50 spirit stones — spend them wisely.',
-        { type: 'info' }
+        { type: 'info', popup: true }
       );
     }
 
@@ -382,6 +459,7 @@ async function bootstrap() {
     window.__statistics = statistics;
     window.__notation = notation;
     window.__notifications = notifications;
+    window.__popupStack = popupStack;
     window.__settingsPanel = settingsPanel;
     window.__upgrades = upgrades;
     window.__breakthroughs = breakthroughs;

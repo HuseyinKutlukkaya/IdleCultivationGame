@@ -207,12 +207,20 @@ test('every notation style has a positive numeric threshold and string suffixes'
   }
 });
 
-test('notifications block declares the queue bound and its type catalog', () => {
+test('notifications block declares the queue bound, its type catalog and popup defaults', () => {
   const notifications = config.notifications;
   assert.ok(notifications, 'config.notifications block must exist');
   assert.ok(
     Number.isFinite(notifications.maxQueueSize) && notifications.maxQueueSize >= 1,
     'notifications.maxQueueSize must be a finite number >= 1'
+  );
+  assert.ok(
+    Number.isInteger(notifications.popupDurationMs) && notifications.popupDurationMs >= 0,
+    'notifications.popupDurationMs must be a non-negative integer (0 = click-only, default 6000)'
+  );
+  assert.ok(
+    Number.isInteger(notifications.popupMaxVisible) && notifications.popupMaxVisible >= 1,
+    'notifications.popupMaxVisible must be a positive integer (default 5)'
   );
   assert.ok(Array.isArray(notifications.types), 'notifications.types must be an array');
   assert.ok(notifications.types.length > 0, 'at least one notification type must be declared');

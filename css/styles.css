@@ -1055,3 +1055,92 @@ button.switch {
 .modal__dialog[hidden] {
   display: none;
 }
+
+/* --------------------------------------------------------------------------
+   16. Popup stack (js/ui/popup-stack.js) — transient top-right toasts for
+   notification entries that carry `popup: true`.
+   --------------------------------------------------------------------------
+   Anchored to the existing design tokens (--color-*, --space-*, --radius-*,
+   --shadow-panel, --font-sans); no new palette introduced. The host is a
+   fixed-position flex column at top-right that does NOT trap focus and has
+   no backdrop — the popups sit on top of the page but never intercept any
+   input that isn't directly on a popup's surface (clicks on the host's
+   empty space pass through via `pointer-events: none` on the host; each
+   popup opts back in with `pointer-events: auto` so it remains clickable
+   for dismissal). Z-index is below the modal (1000+) so a confirm dialog
+   still wins when both are mounted. */
+[data-popup-root] {
+  position: fixed;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: min(360px, calc(100vw - var(--space-3) * 2));
+  pointer-events: none;
+}
+
+.popup {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  /* Default left border: muted; the [data-popup-type="..."] rules below
+     recolor it per type — same color tokens the Activity Log uses for
+     .log__item--<type>. */
+  border-left: 3px solid var(--color-text-muted);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  cursor: pointer;
+  box-shadow: var(--shadow-panel);
+  /* Slide-in animation; the global prefers-reduced-motion rule below
+     disables it transparently when the user has opted out. */
+  animation: popup-slide-in 0.25s ease both;
+}
+
+.popup__message {
+  margin: 0;
+  flex: 1;
+}
+
+/* Type color-coding — keyed off [data-popup-type="..."] so the renderer
+   never has to translate the entry type into a class name; the JS module
+   just writes the attribute and CSS does the rest. The set is the same
+   five tokens the Activity Log uses for .log__item--<type>. */
+.popup[data-popup-type="info"] {
+  border-left-color: var(--color-accent);
+}
+
+.popup[data-popup-type="success"] {
+  border-left-color: var(--color-success);
+}
+
+.popup[data-popup-type="warning"] {
+  border-left-color: var(--color-warning);
+}
+
+.popup[data-popup-type="error"] {
+  border-left-color: var(--color-danger);
+}
+
+.popup[data-popup-type="achievement"] {
+  border-left-color: var(--color-accent-bright);
+}
+
+@keyframes popup-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

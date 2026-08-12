@@ -377,6 +377,15 @@
        context so a tall page does not scroll under the dialog. -->
   <div data-modal-root></div>
 
+  <!-- Popup host: js/ui/popup-stack.js appends transient toast popups here
+       for every notification entry that carries `popup: true` (the master's
+       parting gift, realm breakthroughs, tribulation outcomes, ...). Lives
+       outside the game-grid scroll context (same reason as data-modal-root)
+       and the host itself is fixed-positioned to the top-right by CSS — it
+       is a positioning container, never a backdrop, so it does not block
+       input. -->
+  <div data-popup-root></div>
+
   <!-- ES6 module entry point. Future systems plug in here via imports. -->
   <script type="module" src="js/main.js"></script>
 </body>

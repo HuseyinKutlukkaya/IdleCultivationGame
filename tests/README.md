@@ -196,7 +196,21 @@ feature touching a system knows exactly which tests to run and update.
   spec follows this and documents it in a comment; the existing tribulation
   spec may keep its synchronous `setRealm()` shortcut only because its attempt
   happens in the same `page.evaluate` as the progress write (no loop tick in
-  between).
+   between).
+- **2026-08-12 — P2 popup stack: auto‑dismissed and cap‑evicted popups resurrect
+   on later emits (sticky‑dismissal gap).** Found by code review during the
+   Revision Cycle 1 check (Architect reading `js/ui/popup-stack.js`): the
+   `removePopup()` helper tore down a popup but never added its id to the
+   `dismissed` set — only the click‑handler path did that. The auto‑dismiss
+   timer and the cap‑eviction loop in `renderQueue()` both called `removePopup`
+   without adding the id to `dismissed`, so a later `notification:changed` emit
+   re‑walked the queue and re‑rendered the entry (it was still in the
+   NotificationManager FIFO). In production the 50‑stone gift popup would
+   silently reappear the next time a breakthrough fires. Guard: `dismissed.add`
+   moved into `removePopup` so every removal path marks the entry as handled;
+   two regression tests in `tests/unit/popup-stack.test.mjs` assert that an
+   auto‑dismissed popup stays gone after a re‑emit and that a cap‑evicted
+   popup never re‑appears (both tagged “incident → guard”).
 
 ## Writing a new test
 

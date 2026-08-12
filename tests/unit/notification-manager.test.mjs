@@ -685,6 +685,147 @@ test('event payload shape carries {id,type,message,at} entries', () => {
   }
 });
 
+// ---------- popup flag ----------
+
+test('add() with { popup: true } persists popup: true on the entry', () => {
+  const bus = createFakeEventBus();
+  const manager = new NotificationManager({
+    config: { notifications: { maxQueueSize: 10, types: ['info'] } },
+    eventBus: bus,
+    now: fixedNow(),
+  });
+
+  manager.add('You received 50 stones.', { type: 'info', popup: true });
+  assert.equal(manager.queue[0].popup, true);
+});
+
+test('add() with no options defaults popup to false', () => {
+  const bus = createFakeEventBus();
+  const manager = new NotificationManager({
+    config: { notifications: { maxQueueSize: 10, types: ['info'] } },
+    eventBus: bus,
+    now: fixedNow(),
+  });
+
+  manager.add('Quiet log-only note.');
+  assert.equal(manager.queue[0].popup, false);
+});
+
+test('add() with { popup: "yes" } coerces to false (string coercion)', () => {
+  const bus = createFakeEventBus();
+  const manager = new NotificationManager({
+    config: { notifications: { maxQueueSize: 10, types: ['info'] } },
+    eventBus: bus,
+    now: fixedNow(),
+  });
+
+  manager.add('Truthy string.', { popup: 'yes' });
+  assert.equal(manager.queue[0].popup, false);
+});
+
+test('add() with { popup: 1 } coerces to false (truthy number coercion)', () => {
+  const bus = createFakeEventBus();
+  const manager = new NotificationManager({
+    config: { notifications: { maxQueueSize: 10, types: ['info'] } },
+    eventBus: bus,
+    now: fixedNow(),
+  });
+
+  manager.add('Truthy number.', { popup: 1 });
+  assert.equal(manager.queue[0].popup, false);
+});
+
+test('add() with { popup: null } coerces to false', () => {
+  const bus = createFakeEventBus();
+  const manager = new NotificationManager({
+    config: { notifications: { maxQueueSize: 10, types: ['info'] } },
+    eventBus: bus,
+    now: fixedNow(),
+  });
+
+  manager.add('Explicit null.', { popup: null });
+  assert.equal(manager.queue[0].popup, false);
+});
+
+test('add() with { popup: 0 } coerces to false', () => {
+  const bus = createFakeEventBus();
+  const manager = new NotificationManager({
+    config: { notifications: { maxQueueSize: 10, types: ['info'] } },
+    eventBus: bus,
+    now: fixedNow(),
+  });
+
+  manager.add('Zero.', { popup: 0 });
+  assert.equal(manager.queue[0].popup, false);
+});
+
+test('queue getter snapshot includes popup on every entry (popup:false / popup:true)', () => {
+  const bus = createFakeEventBus();
+  const manager = new NotificationManager({
+    config: { notifications: { maxQueueSize: 10, types: ['info'] } },
+    eventBus: bus,
+    now: fixedNow(),
+  });
+
+  manager.add('Quiet log entry.', { type: 'info' });
+  manager.add('Loud popup entry.', { type: 'info', popup: true });
+
+  const snapshot = manager.queue;
+  assert.equal(snapshot.length, 2);
+  // No popups on the snapshot's object identity (shallow copy).
+  assert.equal(snapshot[0].popup, false);
+  assert.equal(snapshot[1].popup, true);
+
+  // The emitted payload carries the same shaped entries — the popup-stack
+  // UI reads entry.popup straight off the payload, never re-queries the
+  // manager.
+  const payload = lastPayload(bus);
+  assert.ok(payload && Array.isArray(payload.queue));
+  assert.equal(payload.queue[0].popup, false);
+  assert.equal(payload.queue[1].popup, true);
+});
+
+test('dismiss(id) does not touch the popup field on surviving entries', () => {
+  const bus = createFakeEventBus();
+  const manager = new NotificationManager({
+    config: { notifications: { maxQueueSize: 10, types: ['info'] } },
+    eventBus: bus,
+    now: fixedNow(),
+  });
+
+  const id1 = manager.add('Pop one.', { popup: true });
+  manager.add('Pop two.', { popup: true });
+  manager.add('Quiet.', { type: 'info' });
+
+  assert.equal(manager.dismiss(id1), true);
+  assert.equal(manager.size(), 2);
+  // The two surviving entries still carry their original popup flags —
+  // dismiss() must not clear or flip the popup field on neighbours.
+  assert.equal(manager.queue[0].popup, true);
+  assert.equal(manager.queue[1].popup, false);
+});
+
+test('clear() does not affect the popup contract on subsequent adds', () => {
+  const bus = createFakeEventBus();
+  const manager = new NotificationManager({
+    config: { notifications: { maxQueueSize: 10, types: ['info'] } },
+    eventBus: bus,
+    now: fixedNow(),
+  });
+
+  manager.add('Pop before clear.', { popup: true });
+  manager.clear();
+
+  assert.equal(manager.size(), 0);
+
+  // After clear(), the popup contract is still intact — opt-in still works.
+  manager.add('Pop after clear.', { popup: true });
+  assert.equal(manager.queue[0].popup, true);
+  // And the default (no popup flag) is still false.
+  manager.add('Quiet after clear.');
+  assert.equal(manager.queue[1].popup, false);
+});
+
 // ---------- Purity ----------
 
 test('the manager never mutates the shared GameState', async () => {

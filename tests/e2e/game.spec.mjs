@@ -8,7 +8,10 @@
  *   4. the inventory system is wired and add()/remove() round-trip item
  *      stacks against the real data-driven item catalog;
  *   5. the notification manager is wired and add()/clear() mutate the
- *      queue; the activity log re-renders the entries;
+ *      queue; the activity log re-renders the entries; the popup stack
+ *      surfaces every popup:true entry as a transient top-right toast
+ *      (the master's parting gift, realm breakthroughs, and tribulation
+ *      outcomes — the P2 Event Popup & Log Pipeline visual half).
  *   6. the Settings panel initializer is wired — the three boolean
  *      switches toggle state on click, the notation style <select>
  *      changes the formatter via NotationFormatter.setStyle(), and the
@@ -278,6 +281,17 @@ test('notifications manager is wired and add()/clear() re-render the activity lo
   // 50 stones). Subsequent add() calls grow the queue from there.
   expect(await page.evaluate(() => window.__notifications.size())).toBe(1);
   expect(await page.evaluate(() => window.__notifications.queue[0].type)).toBe('info');
+  // P2 — the parting gift is enqueued with { popup: true }, so the popup
+  // stack surfaces it as a transient top-right toast (asserting state plus
+  // the visible popup, never formatted text — see tests/README.md E2E rules).
+  expect(await page.evaluate(() => window.__notifications.queue[0].popup)).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__popupStack)))
+    .toBe(true);
+  await expect(page.locator('[data-popup-root] [data-popup]')).toHaveCount(1);
+  await expect(
+    page.locator('[data-popup-root] [data-popup-type="info"]')
+  ).toHaveCount(1);
   await expect(page.locator('#activity-log .log__item')).toHaveCount(1);
   await expect(page.locator('#activity-log .log__item--info')).toHaveCount(1);
 
@@ -946,6 +960,36 @@ test('human playability: a real player can complete the core loop through the UI
     'Breakthrough to Qi Gathering!'
   );
 
+  // P2 — the breakthrough's success path surfaces a popup: the main.js
+  // subscription on 'realm:breakthrough' translates the success outcome
+  // into an `achievement`-typed notification with popup:true, and the
+  // popup-stack UI mounts it into [data-popup-root]. Assert on state
+  // plus the visible DOM shape (the [data-popup-type] attribute matches
+  // the notification type so CSS can color-code it).
+  await expect
+    .poll(() => page.evaluate(() => window.__notifications.queue.find(
+      (e) => e && typeof e.message === 'string' && e.message.startsWith('Breakthrough to ')
+    )))
+    .toMatchObject({ type: 'achievement', popup: true });
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          Array.from(document.querySelectorAll('[data-popup-root] [data-popup]')).map((node) => ({
+            type: node.getAttribute('data-popup-type'),
+            text: node.querySelector('[data-popup-message]').textContent,
+          }))
+        )
+    )
+    .toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'achievement',
+          text: expect.stringContaining('Breakthrough to Qi Gathering!'),
+        }),
+      ])
+    );
+
   // Reach the first tribulation-bearing realm (Core Formation — tier 3) the
   // way a player actually would: two more panel breakthroughs. Each accepted
   // attempt advances exactly one tier, so the ladder runs Qi Gathering →
@@ -1027,6 +1071,16 @@ test('human playability: a real player can complete the core loop through the UI
   await expect(panel.locator('[data-cultivation-feedback]')).toHaveText(
     'Tribulation survived!'
   );
+
+  // P2 — the tribulation survival path also surfaces a popup:
+  // main.js subscribes to 'tribulation:finished' and translates the
+  // survived:true outcome into an `achievement`-typed notification
+  // with popup:true. Assert on the queue + the visible popup shape.
+  await expect
+    .poll(() => page.evaluate(() => window.__notifications.queue.find(
+      (e) => e && typeof e.message === 'string' && e.message.startsWith('Tribulation survived')
+    )))
+    .toMatchObject({ type: 'achievement', popup: true });
 
   expect(errors).toEqual([]);
 });

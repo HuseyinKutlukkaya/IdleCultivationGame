@@ -24,10 +24,12 @@
  *     absence of an event as a guarantee that the queue did not change. The
  *     payload's `queue` is the same shape notifs.get queue() returns, so
  *     subscribers can read straight off the payload and never need to query
- *     the manager a second time.
+ *     the manager a second time. The popup-stack UI (Phase 2 — P2) reads
+ *     entry.popup off the payload to decide which entries to show as
+ *     transient popups versus steady log entries.
  *
  * Queue shape (every entry):
- *   { id: string, type: string, message: string, at: number /* epoch ms *\/ }
+ *   { id: string, type: string, message: string, at: number /* epoch ms *\/, popup: boolean }
  *
  * Pure manager service — no DOM access, no storage I/O, no GameState mutation
  * (notifications are transient UI state; they intentionally do NOT survive a
@@ -76,6 +78,13 @@ const ID_PREFIX = 'n';
  * @property {string} type
  * @property {string} message
  * @property {number} at Epoch milliseconds.
+ * @property {boolean} popup True when the originating caller asked for a
+ *           popup (Phase 2 — P2 Event Popup & Log Pipeline). The popup-stack
+ *           UI reads it off the emitted payload; the activity-log UI ignores
+ *           it. Always a boolean — only the literal `true` value is honored;
+ *           every other value (1, 'yes', null, undefined, '', ...) is
+ *           coerced to false so a hostile payload cannot flip a log entry
+ *           into a popup.
  */
 
 /**
@@ -125,8 +134,12 @@ export class NotificationManager {
    *
    * @param {string} message — human-readable notification text (trimmed check
    *        requires a non-empty, non-whitespace string).
-   * @param {{type?: string}} [options] — optional metadata. `type` defaults
-   *        to 'info' and must be in the configured whitelist.
+   * @param {{type?: string, popup?: boolean}} [options] — optional metadata.
+   *        `type` defaults to 'info' and must be in the configured whitelist.
+   *        `popup` is opt-in (default false); only the literal `true` value
+   *        promotes the entry to a popup — every other value (including 1,
+   *        'yes', null, undefined, '', ...) is coerced to `false` so a
+   *        hostile payload cannot flip a log entry into a popup.
    * @returns {string|null} the new entry's id, or null on a rejected call.
    */
   add(message, options = {}) {
@@ -163,6 +176,11 @@ export class NotificationManager {
       type: requestedType,
       message,
       at: this._now(),
+      // Hostile-payload defense: only the literal `true` promotes the entry
+      // to a popup. The popup-stack UI (Phase 2 — P2) reads entry.popup off
+      // the emitted payload; the activity-log UI ignores it. Type coercion
+      // collapses 1, 'yes', null, undefined, '', etc. to false.
+      popup: (options && options.popup) === true,
     };
 
     // FIFO cap: drop the oldest entries until the new one fits.

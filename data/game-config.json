@@ -63,9 +63,11 @@
     "progressRate": 1
   },
   "notifications": {
-    "comment": "NotificationManager tuning (Phase 2 — First Gameplay). maxQueueSize bounds the in-memory FIFO queue (oldest drops first). types lists every valid notification type id; the Activity Log renders each entry with a log__item--<type> class. Add a type by adding an id here — no code changes required.",
+    "comment": "NotificationManager tuning (Phase 2 — First Gameplay). maxQueueSize bounds the in-memory FIFO queue (oldest drops first). types lists every valid notification type id; the Activity Log renders each entry with a log__item--<type> class. Add a type by adding an id here — no code changes required. popupDurationMs is how long a popup stays on screen before auto-dismiss; popupMaxVisible is the maximum number of popups shown concurrently (oldest dismisses first once the cap is reached).",
     "maxQueueSize": 50,
-    "types": ["info", "success", "warning", "error", "achievement"]
+    "types": ["info", "success", "warning", "error", "achievement"],
+    "popupDurationMs": 6000,
+    "popupMaxVisible": 5
   },
   "notation": {
     "defaultStyle": "standard",
