@@ -59,6 +59,14 @@
         "requiredFields": ["id", "name", "tier", "elements", "attributes", "speedMultiplier", "weight"],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "techniques",
+      "files": ["data/techniques/techniques.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "baseCost", "costMultiplier", "baseRevenue", "revenuePerLevel", "cooldownMs"],
+        "uniqueField": "id"
+      }
     }
   ]
 }

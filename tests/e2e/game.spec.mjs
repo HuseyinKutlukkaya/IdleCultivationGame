@@ -1395,3 +1395,116 @@ test('inventory grid: add items and verify grid rendering', async ({ page }) => 
 
   expect(errors).toEqual([]);
 });
+
+// ===========================================================================
+// P5 Technique generators & proficiency — technique shop buy/upgrade flow.
+// ===========================================================================
+
+test('technique panel renders after bootstrap', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  // TechniqueSystem is exposed after bootstrap; the catalog comes from
+  // data/techniques/techniques.json (5 starter techniques).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__techniques)))
+    .toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__techniques.list().length))
+    .toBe(5);
+
+  // Navigate to the Techniques tab (techniques panel + upgrades panel).
+  await page.locator('[data-tab="techniques"]').click();
+  await expect(page.locator('#tab-techniques')).toBeVisible();
+
+  // The techniques panel is present in the tab and renders rows.
+  await expect(page.locator('[data-techniques-panel]')).toBeVisible();
+  await expect(page.locator('[data-technique-id]')).toHaveCount(5);
+
+  // The count tag shows "0 owned".
+  await expect(page.locator('[data-techniques-count]')).toHaveText('0 owned');
+
+  // Every technique row carries data-technique-id. Verify the canonical ids.
+  await expect(page.locator('[data-technique-id="breath-control"]')).toHaveCount(1);
+  await expect(page.locator('[data-technique-id="circulating-qi"]')).toHaveCount(1);
+  await expect(page.locator('[data-technique-id="meridian-channeling"]')).toHaveCount(1);
+  await expect(page.locator('[data-technique-id="dantian-cultivation"]')).toHaveCount(1);
+  await expect(page.locator('[data-technique-id="spirit-resonance"]')).toHaveCount(1);
+
+  expect(errors).toEqual([]);
+});
+
+test('buy a technique, verify level 1 and stones deducted', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  await page.locator('[data-tab="techniques"]').click();
+  await expect(page.locator('#tab-techniques')).toBeVisible();
+
+  // Pre-buy state: breath-control not owned.
+  expect(
+    await page.evaluate(() => window.__techniques.level('breath-control'))
+  ).toBe(0);
+  const stonesBefore = await page.evaluate(() =>
+    window.__resources.get('spiritStones')
+  );
+  expect(stonesBefore).toBe(50);
+
+  // Click the Buy button on the cheapest technique (breath-control, cost 50).
+  const buyBtn = page.locator('[data-technique-id="breath-control"] [data-technique-buy]');
+  await expect(buyBtn).toBeVisible();
+  await buyBtn.click();
+
+  // Level 1, stones deducted by 50.
+  await expect
+    .poll(() => page.evaluate(() => window.__techniques.level('breath-control')))
+    .toBe(1);
+  await expect
+    .poll(() => page.evaluate(() => window.__resources.get('spiritStones')))
+    .toBe(0);
+
+  // Count tag updated.
+  await expect(page.locator('[data-techniques-count]')).toHaveText('1 owned');
+
+  // The row now shows Lv.1, not "Not owned".
+  const row = page.locator('[data-technique-id="breath-control"]');
+  await expect(row.locator('.technique__level')).toHaveText('Lv.1');
+
+  // The buy button is gone, replaced by an Upgrade button.
+  await expect(
+    page.locator('[data-technique-id="breath-control"] [data-technique-upgrade]')
+  ).toHaveCount(1);
+
+  expect(errors).toEqual([]);
+});
+
+test('upgrade a technique, verify level increases', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  await page.locator('[data-tab="techniques"]').click();
+
+  // Top up stones to afford both buy + upgrade.
+  await page.evaluate(() => window.__resources.add('spiritStones', 200));
+
+  // Buy breath-control.
+  await page.locator('[data-technique-id="breath-control"] [data-technique-buy]').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__techniques.level('breath-control')))
+    .toBe(1);
+
+  // Upgrade once.
+  const upgradeBtn = page.locator('[data-technique-id="breath-control"] [data-technique-upgrade]');
+  await expect(upgradeBtn).toBeVisible();
+  await upgradeBtn.click();
+
+  // Level 2.
+  await expect
+    .poll(() => page.evaluate(() => window.__techniques.level('breath-control')))
+    .toBe(2);
+  await expect(
+    page.locator('[data-technique-id="breath-control"] .technique__level')
+  ).toHaveText('Lv.2');
+
+  expect(errors).toEqual([]);
+});

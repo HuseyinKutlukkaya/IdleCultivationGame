@@ -130,7 +130,7 @@ function createGameState() {
       // The QiSystem (js/systems/qi.js) aggregates them every tick via
       // config.qi.sources[].ratePath. More slots appear as more qi-producing
       // systems land.
-      qiSources: { meditation: 0, upgrades: 0 },
+      qiSources: { meditation: 0, upgrades: 0, techniques: 0 },
       breakthroughs: 0,
     },
 
@@ -188,9 +188,10 @@ function createGameState() {
     },
 
     techniques: {
-      known: [],
-      active: [],
-      activeSlots: 3,
+      // Owned by the TechniqueSystem (js/systems/techniques.js). Each entry
+      // is keyed by technique id with { level, proficiencyXp, lastActivationMs }.
+      // The aggregate qi/s contribution lands in cultivation.qiSources.techniques.
+      owned: {},
     },
 
     tribulations: {

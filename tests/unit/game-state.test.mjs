@@ -60,7 +60,7 @@ test('has the exact default placeholder shape', () => {
         qi: 0,
         qiMax: 100,
         qiPerSecond: 0,
-        qiSources: { meditation: 0, upgrades: 0 },
+        qiSources: { meditation: 0, upgrades: 0, techniques: 0 },
         breakthroughs: 0,
       },
 
@@ -100,9 +100,7 @@ test('has the exact default placeholder shape', () => {
     },
 
     techniques: {
-      known: [],
-      active: [],
-      activeSlots: 3,
+      owned: {},
     },
 
     tribulations: {
@@ -161,8 +159,7 @@ test('exposes exactly the fifteen top-level state slices', () => {
 
 test('placeholder values later systems build on start empty or zeroed', () => {
   assert.deepEqual(GameState.inventory.items, []);
-  assert.deepEqual(GameState.techniques.known, []);
-  assert.deepEqual(GameState.techniques.active, []);
+  assert.deepEqual(GameState.techniques.owned, {});
   assert.deepEqual(GameState.world.unlockedRegions, ['Mortal Plains']);
 
   assert.equal(GameState.player.meridians, 0);

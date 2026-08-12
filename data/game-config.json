@@ -46,7 +46,8 @@
     "baseMaxQi": 100,
     "sources": [
       { "id": "meditation", "label": "Meditation", "ratePath": "cultivation.qiSources.meditation" },
-      { "id": "upgrades", "label": "Upgrades", "ratePath": "cultivation.qiSources.upgrades" }
+      { "id": "upgrades", "label": "Upgrades", "ratePath": "cultivation.qiSources.upgrades" },
+      { "id": "techniques", "label": "Techniques", "ratePath": "cultivation.qiSources.techniques" }
     ]
   },
   "resources": {

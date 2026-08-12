@@ -1313,3 +1313,127 @@ button.switch {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ==========================================================================
+   Technique shop (js/ui/techniques-panel.js — P5 technique generators)
+   ========================================================================== */
+
+.technique {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: inherit;
+  width: 100%;
+  transition: background 0.15s ease;
+}
+
+.technique:hover {
+  background: var(--color-bg-raised);
+}
+
+.technique:last-child {
+  border-bottom: none;
+}
+
+/* Info column (name, level, proficiency) */
+.technique__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.technique__name {
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.technique__level {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.technique__proficiency {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Proficiency tier colors */
+.technique__proficiency--beginner { color: var(--color-text-faint); }
+.technique__proficiency--minor { color: var(--color-success); }
+.technique__proficiency--greater { color: var(--color-accent); }
+.technique__proficiency--complete { color: #d9843c; }
+.technique__proficiency--mastered { color: #c8a84e; }
+.technique__proficiency--assimilated { color: #b87fcf; }
+.technique__proficiency--transcendence { color: #f7f6f4; }
+
+/* Stats column (qi/s, cooldown) */
+.technique__stats {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.technique__stat {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Actions column (cost, button) */
+.technique__actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.technique__cost {
+  font-size: 0.8rem;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.technique__action--disabled,
+.technique .btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 640px) {
+  .technique {
+    flex-wrap: wrap;
+  }
+
+  .technique__info {
+    flex: 1 1 100%;
+  }
+
+  .technique__stats {
+    flex: 0 0 auto;
+  }
+
+  .technique__actions {
+    flex: 0 0 auto;
+  }
+}

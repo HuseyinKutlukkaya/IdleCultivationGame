@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": { "comment": "Technique generators for P5. Produce qi per activation on cooldown." },
+  "definitions": [
+    {
+      "id": "breath-control",
+      "name": "Breath Control",
+      "description": "Regulate your breathing to gather ambient qi.",
+      "category": "cultivation",
+      "grade": "Mortal",
+      "baseCost": 50,
+      "costMultiplier": 1.15,
+      "baseRevenue": 0.5,
+      "revenuePerLevel": 0.1,
+      "cooldownMs": 1000,
+      "milestones": {
+        "5":  { "type": "cooldown", "value": 0.90 },
+        "10": { "type": "revenue",  "value": 1.25 },
+        "25": { "type": "cooldown", "value": 0.80 },
+        "50": { "type": "revenue",  "value": 1.50 },
+        "100":{ "type": "cooldown", "value": 0.70 },
+        "150":{ "type": "revenue",  "value": 2.00 },
+        "200":{ "type": "cooldown", "value": 0.50 }
+      },
+      "proficiency": {
+        "xpPerActivation": 1,
+        "ladder": [
+          { "name": "Beginner",     "threshold": 0 },
+          { "name": "Minor",        "threshold": 100 },
+          { "name": "Greater",      "threshold": 500 },
+          { "name": "Complete",     "threshold": 1500 },
+          { "name": "Mastered",     "threshold": 5000 },
+          { "name": "Assimilated",  "threshold": 15000 },
+          { "name": "Transcendence","threshold": 50000 }
+        ]
+      }
+    },
+    {
+      "id": "circulating-qi",
+      "name": "Circulating Qi",
+      "description": "Cycle qi through your meridians for a steady flow.",
+      "category": "cultivation",
+      "grade": "Mortal",
+      "baseCost": 200,
+      "costMultiplier": 1.20,
+      "baseRevenue": 1.5,
+      "revenuePerLevel": 0.3,
+      "cooldownMs": 1500,
+      "milestones": {
+        "5":  { "type": "revenue",  "value": 1.30 },
+        "10": { "type": "cooldown", "value": 0.85 },
+        "25": { "type": "revenue",  "value": 1.60 },
+        "50": { "type": "cooldown", "value": 0.70 },
+        "100":{ "type": "revenue",  "value": 2.00 },
+        "150":{ "type": "revenue",  "value": 2.50 },
+        "200":{ "type": "cooldown", "value": 0.50 }
+      },
+      "proficiency": {
+        "xpPerActivation": 1,
+        "ladder": [
+          { "name": "Beginner",     "threshold": 0 },
+          { "name": "Minor",        "threshold": 150 },
+          { "name": "Greater",      "threshold": 750 },
+          { "name": "Complete",     "threshold": 2200 },
+          { "name": "Mastered",     "threshold": 7500 },
+          { "name": "Assimilated",  "threshold": 22000 },
+          { "name": "Transcendence","threshold": 75000 }
+        ]
+      }
+    },
+    {
+      "id": "meridian-channeling",
+      "name": "Meridian Channeling",
+      "description": "Direct qi through opened meridian channels.",
+      "category": "cultivation",
+      "grade": "Earth",
+      "baseCost": 750,
+      "costMultiplier": 1.18,
+      "baseRevenue": 4.0,
+      "revenuePerLevel": 0.8,
+      "cooldownMs": 2000,
+      "milestones": {
+        "5":  { "type": "cooldown", "value": 0.88 },
+        "10": { "type": "revenue",  "value": 1.35 },
+        "25": { "type": "cooldown", "value": 0.75 },
+        "50": { "type": "revenue",  "value": 1.80 },
+        "100":{ "type": "cooldown", "value": 0.60 },
+        "150":{ "type": "revenue",  "value": 2.20 },
+        "200":{ "type": "cooldown", "value": 0.45 }
+      },
+      "proficiency": {
+        "xpPerActivation": 1,
+        "ladder": [
+          { "name": "Beginner",     "threshold": 0 },
+          { "name": "Minor",        "threshold": 200 },
+          { "name": "Greater",      "threshold": 1000 },
+          { "name": "Complete",     "threshold": 3000 },
+          { "name": "Mastered",     "threshold": 10000 },
+          { "name": "Assimilated",  "threshold": 30000 },
+          { "name": "Transcendence","threshold": 100000 }
+        ]
+      }
+    },
+    {
+      "id": "dantian-cultivation",
+      "name": "Dantian Cultivation",
+      "description": "Expand and refine your dantian to hold more qi.",
+      "category": "cultivation",
+      "grade": "Heaven",
+      "baseCost": 2500,
+      "costMultiplier": 1.22,
+      "baseRevenue": 12.0,
+      "revenuePerLevel": 2.0,
+      "cooldownMs": 2500,
+      "milestones": {
+        "5":  { "type": "revenue",  "value": 1.40 },
+        "10": { "type": "cooldown", "value": 0.82 },
+        "25": { "type": "revenue",  "value": 1.70 },
+        "50": { "type": "revenue",  "value": 2.00 },
+        "100":{ "type": "cooldown", "value": 0.55 },
+        "150":{ "type": "revenue",  "value": 2.50 },
+        "200":{ "type": "cooldown", "value": 0.40 }
+      },
+      "proficiency": {
+        "xpPerActivation": 1,
+        "ladder": [
+          { "name": "Beginner",     "threshold": 0 },
+          { "name": "Minor",        "threshold": 300 },
+          { "name": "Greater",      "threshold": 1500 },
+          { "name": "Complete",     "threshold": 4500 },
+          { "name": "Mastered",     "threshold": 15000 },
+          { "name": "Assimilated",  "threshold": 45000 },
+          { "name": "Transcendence","threshold": 150000 }
+        ]
+      }
+    },
+    {
+      "id": "spirit-resonance",
+      "name": "Spirit Resonance",
+      "description": "Attune your spirit to the ambient qi of the world.",
+      "category": "cultivation",
+      "grade": "Spirit",
+      "baseCost": 8000,
+      "costMultiplier": 1.25,
+      "baseRevenue": 35.0,
+      "revenuePerLevel": 5.0,
+      "cooldownMs": 3000,
+      "milestones": {
+        "5":  { "type": "cooldown", "value": 0.85 },
+        "10": { "type": "revenue",  "value": 1.45 },
+        "25": { "type": "cooldown", "value": 0.70 },
+        "50": { "type": "revenue",  "value": 1.90 },
+        "100":{ "type": "revenue",  "value": 2.50 },
+        "150":{ "type": "cooldown", "value": 0.45 },
+        "200":{ "type": "revenue",  "value": 3.00 }
+      },
+      "proficiency": {
+        "xpPerActivation": 1,
+        "ladder": [
+          { "name": "Beginner",     "threshold": 0 },
+          { "name": "Minor",        "threshold": 500 },
+          { "name": "Greater",      "threshold": 2500 },
+          { "name": "Complete",     "threshold": 7500 },
+          { "name": "Mastered",     "threshold": 25000 },
+          { "name": "Assimilated",  "threshold": 75000 },
+          { "name": "Transcendence","threshold": 250000 }
+        ]
+      }
+    }
+  ]
+}

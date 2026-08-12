@@ -28,6 +28,7 @@ import { TribulationSystem } from './systems/tribulations.js';
 import { SpiritRootSystem } from './systems/spirit-roots.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
+import { TechniqueSystem } from './systems/techniques.js';
 import { NotationFormatter } from './ui/notation.js';
 import { Renderer } from './ui/renderer.js';
 import { initActivityLog } from './ui/activity-log.js';
@@ -37,6 +38,7 @@ import { initScrollReveal } from './ui/reveal.js';
 import { initCultivationPanel } from './ui/cultivation-panel.js';
 import { initSettingsPanel } from './ui/settings-panel.js';
 import { initUpgradesPanel } from './ui/upgrades-panel.js';
+import { initTechniquesPanel } from './ui/techniques-panel.js';
 import { initTabs } from './ui/tabs.js';
 import { initInventoryPanel } from './ui/inventory-panel.js';
 
@@ -238,6 +240,31 @@ async function bootstrap() {
       eventBus: EventBus,
       upgrades,
       notation,
+    });
+
+    // Techniques: single owner of the P5 idle-style technique generators.
+    // Reads the catalog from dataManager.getAll('techniques')
+    // (data/techniques/techniques.json via data/manifest.json — id, name,
+    // baseCost, costMultiplier, baseRevenue, revenuePerLevel, cooldownMs,
+    // milestones, proficiency) and writes state.techniques.owned[id] plus
+    // cultivation.qiSources.techniques (the aggregate qi/s rate the QiSystem
+    // picks up through config.qi.sources). Cost deduction goes through
+    // ResourceSystem.spend('spiritStones', ...) — never writes the wallet
+    // directly. Constructed AFTER save restore + offline apply (a restored
+    // owned map seeds the tick state), AFTER ResourceSystem + DataManager
+    // (the catalog and wallet are available), and BEFORE game.start() so the
+    // first tick finds its 'loop:update' subscription active.
+    const techniques = new TechniqueSystem({
+      config,
+      eventBus: EventBus,
+      state: game.state,
+      dataManager,
+      resourceSystem: resources,
+    });
+    initTechniquesPanel({
+      eventBus: EventBus,
+      techniqueSystem: techniques,
+      formatter: notation,
     });
 
     // NotificationManager: the queue-based notification service. Tuning
@@ -485,6 +512,7 @@ async function bootstrap() {
     window.__popupStack = popupStack;
     window.__settingsPanel = settingsPanel;
     window.__upgrades = upgrades;
+    window.__techniques = techniques;
     window.__breakthroughs = breakthroughs;
     window.__tribulations = tribulations;
     window.__spiritRoots = spiritRoots;
