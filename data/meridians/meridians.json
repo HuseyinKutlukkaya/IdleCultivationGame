@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": { "comment": "Phase-3 Meridians data. Placeholder flat ladder — Phase 10 Balancing retunes." },
+  "definitions": [
+    { "id": "broken",   "name": "Broken",  "description": "Shattered meridians — qi leaks through every crack.",                  "capacityMultiplier": 0.70, "flowMultiplier": 0.60 },
+    { "id": "damaged",  "name": "Damaged", "description": "Frayed meridians — qi flows sluggishly through partially blocked paths.", "capacityMultiplier": 0.85, "flowMultiplier": 0.80 },
+    { "id": "normal",   "name": "Normal",  "description": "Healthy meridians — qi circulates steadily without obstruction.",        "capacityMultiplier": 1.00, "flowMultiplier": 1.00 },
+    { "id": "wide",     "name": "Wide",    "description": "Broadened meridians — qi rushes through widened channels.",              "capacityMultiplier": 1.25, "flowMultiplier": 1.10 },
+    { "id": "perfect",  "name": "Perfect", "description": "Flawless meridians — qi flows with perfect efficiency.",                 "capacityMultiplier": 1.60, "flowMultiplier": 1.25 },
+    { "id": "golden",   "name": "Golden",  "description": "Golden meridians — tempered by tribulation, qi surges through them.",    "capacityMultiplier": 2.00, "flowMultiplier": 1.50 },
+    { "id": "heavenly", "name": "Heavenly","description": "Heavenly meridians — the body's qi network rivals an immortal's.",       "capacityMultiplier": 2.50, "flowMultiplier": 1.80 }
+  ]
+}

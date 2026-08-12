@@ -393,6 +393,8 @@ test('a restored cultivation slice that is null is repaired and never aborts boo
       lifespanYears: 100,
     },
     spiritRootMultiplier: 1,
+    meridianCapacityMultiplier: 1,
+    meridianFlowMultiplier: 1,
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
@@ -691,4 +693,130 @@ test('realm speed multiplier and spirit-root multiplier stack', () => {
   assert.equal(state.cultivation.qi, 6);
   assert.equal(state.statistics.qiGenerated, 6);
   assert.deepEqual(gained[0], { amount: 6, total: 6, sources: ['meditation'] });
+});
+
+test('the meridian capacity multiplier stacks in _computeQiMax', () => {
+  // The MeridianSystem writes cultivation.meridianCapacityMultiplier from the
+  // current meridian's capacityMultiplier; a factor of 2 doubles the cap.
+  const state = structuredClone(GameState);
+  state.cultivation.meridianCapacityMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 100 (baseMaxQi) × 1 (realm) × 2 (meridian capacity) → 200.
+  assert.equal(state.cultivation.qiMax, 200);
+
+  // The unmanaged path (no baseMaxQi) keeps the state value untouched.
+  const unmanaged = structuredClone(GameState);
+  unmanaged.cultivation.meridianCapacityMultiplier = 2;
+  makeSystem(makeConfig({ baseMaxQi: undefined }), unmanaged);
+  assert.equal(unmanaged.cultivation.qiMax, 100);
+});
+
+test('the meridian capacity multiplier never touches the per-second rate', () => {
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.meridianCapacityMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 2 qi/s × 1 (realm) × 1 (spirit root) × 1 (meridian flow) → the capacity
+  // multiplier never reaches the rate.
+  assert.equal(state.cultivation.qiPerSecond, 2);
+  assert.equal(state.cultivation.qiMax, 200);
+});
+
+test('the meridian flow multiplier scales the aggregate rate', () => {
+  // The MeridianSystem writes cultivation.meridianFlowMultiplier from the
+  // current meridian's flowMultiplier; a factor of 1.5 multiplies the rate.
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.meridianFlowMultiplier = 1.5;
+
+  makeSystem(makeConfig(), state);
+
+  // 2 qi/s × 1.5 → the constructor sync already exposes 3.
+  assert.equal(state.cultivation.qiPerSecond, 3);
+  // The cap is NOT affected.
+  assert.equal(state.cultivation.qiMax, 100);
+
+  const gained = [];
+  EventBus.subscribe('qi:gained', (payload) => gained.push(payload));
+  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+
+  assert.equal(state.cultivation.qi, 3);
+  assert.equal(state.statistics.qiGenerated, 3);
+  assert.deepEqual(gained[0], { amount: 3, total: 3, sources: ['meditation'] });
+});
+
+test('the meridian flow multiplier never touches the qi cap', () => {
+  const state = structuredClone(GameState);
+  state.cultivation.realmEffects.qiMaxMultiplier = 2;
+  state.cultivation.meridianFlowMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 100 × 2 (realm only) → 200 — the meridian flow factor never multiplies in.
+  assert.equal(state.cultivation.qiMax, 200);
+
+  // The unmanaged path keeps the state value untouched too.
+  const unmanaged = structuredClone(GameState);
+  unmanaged.cultivation.realmEffects.qiMaxMultiplier = 2;
+  unmanaged.cultivation.meridianFlowMultiplier = 2;
+  makeSystem(makeConfig({ baseMaxQi: undefined }), unmanaged);
+  assert.equal(unmanaged.cultivation.qiMax, 100);
+});
+
+test('a missing or malformed meridian capacity multiplier is neutral (multiplier 1)', () => {
+  for (const multiplier of [undefined, null, -5, 0, 'bogus', NaN, Infinity]) {
+    EventBus.clear();
+    const state = structuredClone(GameState);
+    if (multiplier === undefined) delete state.cultivation.meridianCapacityMultiplier;
+    else state.cultivation.meridianCapacityMultiplier = multiplier;
+
+    makeSystem(makeConfig(), state);
+
+    assert.equal(state.cultivation.qiMax, 100);
+  }
+});
+
+test('a missing or malformed meridian flow multiplier is neutral (multiplier 1)', () => {
+  for (const multiplier of [undefined, null, -5, 0, 'bogus', NaN, Infinity]) {
+    EventBus.clear();
+    const state = structuredClone(GameState);
+    if (multiplier === undefined) delete state.cultivation.meridianFlowMultiplier;
+    else state.cultivation.meridianFlowMultiplier = multiplier;
+    state.cultivation.qiSources.meditation = 2;
+
+    makeSystem(makeConfig(), state);
+
+    assert.equal(state.cultivation.qiPerSecond, 2);
+  }
+});
+
+test('all four multipliers stack together — realm, spirit root and meridians', () => {
+  // Realm speed, spirit root speed and meridian flow stack on the rate;
+  // realm qiMax and meridian capacity stack on the cap.
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.realmEffects.qiMaxMultiplier = 1.5;
+  state.cultivation.realmEffects.cultivationSpeedMultiplier = 1.5;
+  state.cultivation.spiritRootMultiplier = 2;
+  state.cultivation.meridianCapacityMultiplier = 2;
+  state.cultivation.meridianFlowMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // Cap: 100 × 1.5 (realm) × 2 (meridian capacity) → 300.
+  assert.equal(state.cultivation.qiMax, 300);
+  // Rate: 2 qi/s × 1.5 (realm) × 2 (spirit root) × 2 (meridian flow) → 12.
+  assert.equal(state.cultivation.qiPerSecond, 12);
+
+  const gained = [];
+  EventBus.subscribe('qi:gained', (payload) => gained.push(payload));
+  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+
+  assert.equal(state.cultivation.qi, 12);
+  assert.equal(state.statistics.qiGenerated, 12);
+  assert.deepEqual(gained[0], { amount: 12, total: 12, sources: ['meditation'] });
 });

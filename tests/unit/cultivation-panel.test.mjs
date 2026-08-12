@@ -358,7 +358,7 @@ function createFakeTribulations(overrides = {}) {
  */
 function createFakeState(overrides = {}) {
   return {
-    player: { spiritRoot: 'Unawakened', meridians: 0 },
+    player: { spiritRoot: 'Unawakened', meridians: 'Normal' },
     cultivation: { realm: 'Mortal', breakthroughCost: 0, realmLayer: 1, realmLayerMax: 9 },
     ...overrides,
     // Allow overriding nested cultivation fields without losing defaults.
@@ -407,7 +407,7 @@ test('init renders the character readout, buttons and feedback; registers exactl
 
   const character = findNode(body, 'data-cultivation-character');
   assert.ok(character, 'character readout rendered');
-  assert.equal(character.textContent, 'Spirit Root: Unawakened · Meridians: 0');
+  assert.equal(character.textContent, 'Spirit Root: Unawakened · Meridians: Normal');
 
   // Layer readout is always shown.
   const layer = findNode(body, 'data-cultivation-layer');
@@ -446,7 +446,7 @@ test('init renders the character readout, buttons and feedback; registers exactl
 test('character readout reads spirit root + meridians fresh from state', () => {
   const { root, body } = createFakeRoot();
   const state = createFakeState({
-    player: { spiritRoot: 'No Root', meridians: 3 },
+    player: { spiritRoot: 'No Root', meridians: 'Wide' },
   });
   initCultivationPanel({
     eventBus: EventBus,
@@ -456,13 +456,13 @@ test('character readout reads spirit root + meridians fresh from state', () => {
     root,
   });
   const character = findNode(body, 'data-cultivation-character');
-  assert.equal(character.textContent, 'Spirit Root: No Root · Meridians: 3');
+  assert.equal(character.textContent, 'Spirit Root: No Root · Meridians: Wide');
 });
 
 test('character readout truncates a hostile very-long spirit root name', () => {
   const { root, body } = createFakeRoot();
   const state = createFakeState({
-    player: { spiritRoot: 'X'.repeat(4096), meridians: 0 },
+    player: { spiritRoot: 'X'.repeat(4096), meridians: 'Normal' },
   });
   initCultivationPanel({
     eventBus: EventBus,
@@ -476,7 +476,7 @@ test('character readout truncates a hostile very-long spirit root name', () => {
   // The rendered line stays bounded (the 64-char cap on the root name) so a
   // hostile save can never churn a multi-MB string on every loop pulse.
   assert.ok(text.length <= 128, `rendered character line length ${text.length}`);
-  assert.equal(text, `Spirit Root: ${'X'.repeat(64)} · Meridians: 0`);
+  assert.equal(text, `Spirit Root: ${'X'.repeat(64)} · Meridians: Normal`);
 });
 
 test('init without a panel warns and returns a no-op handle', () => {

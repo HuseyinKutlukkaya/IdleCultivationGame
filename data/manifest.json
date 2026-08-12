@@ -67,6 +67,14 @@
         "requiredFields": ["id", "name", "baseCost", "costMultiplier", "baseRevenue", "revenuePerLevel", "cooldownMs"],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "meridians",
+      "files": ["data/meridians/meridians.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "capacityMultiplier", "flowMultiplier"],
+        "uniqueField": "id"
+      }
     }
   ]
 }

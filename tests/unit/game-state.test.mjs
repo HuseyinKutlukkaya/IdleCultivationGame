@@ -37,7 +37,14 @@ test('has the exact default placeholder shape', () => {
       spiritRoot: 'Unawakened',
       physique: 'Common',
       bloodline: 'None',
-      meridians: 0,
+      meridians: 'Normal',
+    },
+
+    meridians: {
+      id: 'normal',
+      name: 'Normal',
+      capacityMultiplier: 1.0,
+      flowMultiplier: 1.0,
     },
 
       cultivation: {
@@ -57,6 +64,8 @@ test('has the exact default placeholder shape', () => {
           lifespanYears: 100,
         },
         spiritRootMultiplier: 1,
+        meridianCapacityMultiplier: 1,
+        meridianFlowMultiplier: 1,
         qi: 0,
         qiMax: 100,
         qiPerSecond: 0,
@@ -137,11 +146,12 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the fifteen top-level state slices', () => {
+test('exposes exactly the sixteen top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'cultivation',
     'inventory',
     'meditation',
+    'meridians',
     'meta',
     'player',
     'resources',
@@ -162,7 +172,7 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.deepEqual(GameState.techniques.owned, {});
   assert.deepEqual(GameState.world.unlockedRegions, ['Mortal Plains']);
 
-  assert.equal(GameState.player.meridians, 0);
+  assert.equal(GameState.player.meridians, 'Normal');
   assert.equal(GameState.cultivation.realmStage, 1);
   assert.equal(GameState.cultivation.realmProgress, 0);
   assert.equal(GameState.cultivation.qi, 0);
@@ -184,6 +194,8 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.spiritRoot.compatibility, 0);
   assert.equal(GameState.spiritRoot.speedMultiplier, 1);
   assert.equal(GameState.cultivation.spiritRootMultiplier, 1);
+  assert.equal(GameState.cultivation.meridianCapacityMultiplier, 1);
+  assert.equal(GameState.cultivation.meridianFlowMultiplier, 1);
   // Master's parting gift — fresh-state spirit-stone endowment (50 stones).
   // The other resources still start at zero (no equivalent endowment for
   // herbs/jade/pills yet; those arrive with the Phase-4 alchemical market).
@@ -208,17 +220,18 @@ test('default settings favour offline progress and stay silent by default', () =
   assert.equal(GameState.settings.notationStyle, null);
 });
 
-test('a legacy save without the spirit-root keys keeps canonical fresh values after the standard restore merge', () => {
-  // Saves written before the SpiritRootSystem carry no `spiritRoot` slice and
-  // no cultivation.spiritRootMultiplier. Game.restore() applies a save via
-  // deepMerge(GameState, snapshot), so keys the old save does not carry are
-  // left at their current fresh defaults — the same guarantee that keeps the
-  // tribulations slice working for pre-tribulations saves. The old save's own
-  // values still land; the new keys land at the neutral unawakened root.
+test('a legacy save without the spirit-root and meridian keys keeps canonical fresh values after the standard restore merge', () => {
+  // Saves written before the SpiritRootSystem and MeridianSystem carry no
+  // `spiritRoot` / `meridians` slices and no multiplier slots.
+  // Game.restore() applies a save via deepMerge(GameState, snapshot), so keys
+  // the old save does not carry are left at their current fresh defaults.
   const state = structuredClone(GameState);
   const legacySave = structuredClone(GameState);
   delete legacySave.spiritRoot;
   delete legacySave.cultivation.spiritRootMultiplier;
+  delete legacySave.meridians;
+  delete legacySave.cultivation.meridianCapacityMultiplier;
+  delete legacySave.cultivation.meridianFlowMultiplier;
   legacySave.player.name = 'Ren';
   legacySave.resources.spiritStones = 42;
 
@@ -241,4 +254,13 @@ test('a legacy save without the spirit-root keys keeps canonical fresh values af
     speedMultiplier: 1,
   });
   assert.equal(state.cultivation.spiritRootMultiplier, 1);
+  // Missing meridian keys keep the canonical fresh values.
+  assert.deepEqual(state.meridians, {
+    id: 'normal',
+    name: 'Normal',
+    capacityMultiplier: 1.0,
+    flowMultiplier: 1.0,
+  });
+  assert.equal(state.cultivation.meridianCapacityMultiplier, 1);
+  assert.equal(state.cultivation.meridianFlowMultiplier, 1);
 });

@@ -77,7 +77,13 @@
  * multipliers are wired through cultivation.realmEffects and the
  * spirit-root multiplier through cultivation.spiritRootMultiplier (the
  * rate product multiplies both; the cap takes the realm factor only);
- * additional qi sources (herbs, sect income, ...) are declared in
+ * the meridian multipliers have LANDED: the CAP multiplies by
+ * cultivation.meridianCapacityMultiplier and the rate by
+ * cultivation.meridianFlowMultiplier (the slots the MeridianSystem
+ * (js/systems/meridians.js) writes from the current meridian's data-driven
+ * factors), both with the same neutral-1 coercion as the other factor slots
+ * (see _meridianCapacityMultiplier and _meridianFlowMultiplier); additional
+ * qi sources (herbs, sect income, ...) are declared in
  * config.qi.sources with their own state rate slot.
  */
 
@@ -191,11 +197,11 @@ export class QiSystem {
     this._ensureSlice('statistics', _freshStatisticsSlice);
 
     // Aggregate the RAW source rates first — the active-sources list must
-    // reflect which sources contributed (the realm and spirit-root speed
-    // multipliers do NOT change which sources are active), then stack the
-    // realm's cultivationSpeedMultiplier AND the spirit-root multiplier on
-    // the aggregate (clamped finite so an absurd restored multiplier can
-    // never put Infinity into the rate).
+    // reflect which sources contributed (the realm, spirit-root and meridian
+    // speed multipliers do NOT change which sources are active), then stack
+    // the realm's cultivationSpeedMultiplier, the spirit-root multiplier AND
+    // the meridian flow multiplier on the aggregate (clamped finite so an
+    // absurd restored multiplier can never put Infinity into the rate).
     let rateSum = 0;
     const activeSources = [];
     for (const source of this._sources) {
@@ -206,7 +212,8 @@ export class QiSystem {
     const rate = _safeFinite(
       rateSum *
         _realmMultiplier(this._state, 'cultivationSpeedMultiplier') *
-        _spiritRootMultiplier(this._state)
+        _spiritRootMultiplier(this._state) *
+        _meridianFlowMultiplier(this._state)
     );
     this._syncPerSecondRate(rate);
 
@@ -252,14 +259,18 @@ export class QiSystem {
    * offline-progress capPath) reads the synced cultivation.qiMax, so adding
    * a multiplier never touches the production math. The SPIRIT-ROOT
    * multiplier deliberately does NOT stack here — it affects cultivation
-   * SPEED (the rate) only, never the cap (see _spiritRootMultiplier).
+   * SPEED (the rate) only, never the cap (see _spiritRootMultiplier). The
+   * MERIDIAN capacity multiplier stacks here: wider/better meridians enlarge
+   * the cap alongside the realm factor (see _meridianCapacityMultiplier).
    *
    * @returns {number} the derived qi cap.
    */
   _computeQiMax() {
     if (this._baseMaxQi !== null) {
       return _safeFinite(
-        this._baseMaxQi * _realmMultiplier(this._state, 'qiMaxMultiplier')
+        this._baseMaxQi *
+          _realmMultiplier(this._state, 'qiMaxMultiplier') *
+          _meridianCapacityMultiplier(this._state)
       );
     }
     return _asNumber(this._state.cultivation.qiMax);
@@ -328,10 +339,10 @@ export class QiSystem {
 
   /**
    * Sum the current rate contribution of every configured source, stacked
-   * with the current realm's cultivationSpeedMultiplier AND the spirit-root
-   * multiplier (both clamped finite). A source whose ratePath is missing,
-   * malformed or unsafe contributes 0 (never throws, never reaches the
-   * prototype chain).
+   * with the current realm's cultivationSpeedMultiplier, the spirit-root
+   * multiplier AND the meridian flow multiplier (all clamped finite). A
+   * source whose ratePath is missing, malformed or unsafe contributes 0
+   * (never throws, never reaches the prototype chain).
    *
    * @returns {number} the aggregate per-second qi rate right now.
    */
@@ -343,7 +354,8 @@ export class QiSystem {
     return _safeFinite(
       sum *
         _realmMultiplier(this._state, 'cultivationSpeedMultiplier') *
-        _spiritRootMultiplier(this._state)
+        _spiritRootMultiplier(this._state) *
+        _meridianFlowMultiplier(this._state)
     );
   }
 
@@ -394,6 +406,8 @@ function _freshCultivationSlice() {
       lifespanYears: 100,
     },
     spiritRootMultiplier: 1,
+    meridianCapacityMultiplier: 1,
+    meridianFlowMultiplier: 1,
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
@@ -514,6 +528,45 @@ function _realmMultiplier(state, key) {
 function _spiritRootMultiplier(state) {
   if (!state || !state.cultivation) return 1;
   const parsed = Number(state.cultivation.spiritRootMultiplier);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+/**
+ * Read the meridian capacity factor off
+ * state.cultivation.meridianCapacityMultiplier — the slot the MeridianSystem
+ * (js/systems/meridians.js) writes from the current meridian's data-driven
+ * capacityMultiplier. A missing, malformed or non-positive value returns the
+ * neutral factor 1 (never 0, so a hostile save or a missing slot can never
+ * zero out the cap). The meridian capacity factor stacks in _computeQiMax
+ * alongside the realm's qiMaxMultiplier — better meridians enlarge the
+ * dantian's effective capacity. Guards against a null cultivation slice.
+ *
+ * @param {object|null} state — game state object.
+ * @returns {number} the effective multiplier (>= 1).
+ */
+function _meridianCapacityMultiplier(state) {
+  if (!state || !state.cultivation) return 1;
+  const parsed = Number(state.cultivation.meridianCapacityMultiplier);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+/**
+ * Read the meridian flow factor off
+ * state.cultivation.meridianFlowMultiplier — the slot the MeridianSystem
+ * (js/systems/meridians.js) writes from the current meridian's data-driven
+ * flowMultiplier. A missing, malformed or non-positive value returns the
+ * neutral factor 1 (never 0, so a hostile save or a missing slot can never
+ * zero out a rate). The meridian flow factor stacks on the aggregate rate
+ * alongside the realm's cultivationSpeedMultiplier and the spirit-root
+ * multiplier — better meridians increase qi circulation speed. Guards
+ * against a null cultivation slice.
+ *
+ * @param {object|null} state — game state object.
+ * @returns {number} the effective multiplier (>= 1).
+ */
+function _meridianFlowMultiplier(state) {
+  if (!state || !state.cultivation) return 1;
+  const parsed = Number(state.cultivation.meridianFlowMultiplier);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 

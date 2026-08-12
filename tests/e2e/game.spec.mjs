@@ -921,10 +921,10 @@ test('human playability: a real player can complete the core loop through the UI
 
   // The character readout renders the fresh-state cultivator: the canonical
   // pre-roll display name 'Unawakened' from player.spiritRoot and the
-  // meridian count from player.meridians (assert state-derived text, not
+  // meridian name from player.meridians (assert state-derived text, not
   // Intl-formatted numbers — see tests/README.md E2E rules).
   await expect(panel.locator('[data-cultivation-character]')).toHaveText(
-    'Spirit Root: Unawakened · Meridians: 0'
+    'Spirit Root: Unawakened · Meridians: Normal'
   );
 
   // Fresh boot at Mortal with zero realm progress: the Breakthrough button

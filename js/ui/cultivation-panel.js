@@ -297,7 +297,7 @@ export function initCultivationPanel({
    * fields render as "—" (defensive; a healthy state never hits that).
    *
    * @param {object} gameState — the game state (player slice).
-   * @returns {string} e.g. "Spirit Root: Unawakened · Meridians: 0".
+   * @returns {string} e.g. "Spirit Root: Unawakened · Meridians: Normal".
    */
   function characterText(gameState) {
     const player = gameState && gameState.player;
@@ -306,7 +306,9 @@ export function initCultivationPanel({
         ? String(player.spiritRoot).slice(0, 64)
         : '—';
     const meridians =
-      player && typeof player.meridians === 'number' ? player.meridians : '—';
+      player && typeof player.meridians === 'string'
+        ? String(player.meridians).slice(0, 64)
+        : '—';
     return `Spirit Root: ${rootName} · Meridians: ${meridians}`;
   }
 

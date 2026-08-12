@@ -21,6 +21,9 @@
  * @property {Object} cultivation — cultivation progress and qi
  * @property {number} cultivation.spiritRootMultiplier — spirit-root cultivation-speed slot (neutral 1 while unawakened)
  * @property {Object} spiritRoot — the cultivator's spirit root (id, name, tier, elements, purity, stability, growth, mutation, compatibility, speedMultiplier)
+ * @property {Object} meridians — the cultivator's meridian state (id, name, capacityMultiplier, flowMultiplier)
+ * @property {number} cultivation.meridianCapacityMultiplier — meridian qi-cap slot (neutral 1 by default; written by MeridianSystem)
+ * @property {number} cultivation.meridianFlowMultiplier — meridian qi-rate slot (neutral 1 by default; written by MeridianSystem)
  * @property {Object} resources — currency and material counts
  * @property {Object} inventory — carried items
  * @property {Object} techniques — known and active techniques
@@ -71,7 +74,7 @@ function createGameState() {
       spiritRoot: 'Unawakened',
       physique: 'Common',
       bloodline: 'None',
-      meridians: 0,
+      meridians: 'Normal',
     },
 
     cultivation: {
@@ -119,6 +122,16 @@ function createGameState() {
       // today's rates); a missing/malformed value is coerced to 1 by the
       // QiSystem.
       spiritRootMultiplier: 1,
+      // Meridian circulation slots (consumer pattern like
+      // spiritRootMultiplier): written by the MeridianSystem
+      // (js/systems/meridians.js) from the current meridian's data-driven
+      // capacityMultiplier / flowMultiplier; the QiSystem stacks
+      // meridianCapacityMultiplier into _computeQiMax (cap) and
+      // meridianFlowMultiplier into the per-second rate aggregate.
+      // Fresh default 1 (neutral — exactly today's rates); a
+      // missing/malformed value is coerced to 1 by the QiSystem.
+      meridianCapacityMultiplier: 1,
+      meridianFlowMultiplier: 1,
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
@@ -156,6 +169,21 @@ function createGameState() {
       mutation: 0,
       compatibility: 0,
       speedMultiplier: 1,
+    },
+
+    meridians: {
+      // Owned by the MeridianSystem (js/systems/meridians.js). The
+      // cultivator's qi-circulation network state: id is the data-table key
+      // (data/meridians/meridians.json — 'normal' in the ladder); name is
+      // the display name mirrored on player.meridians; capacityMultiplier
+      // feeds cultivation.meridianCapacityMultiplier (qi cap) and
+      // flowMultiplier feeds cultivation.meridianFlowMultiplier (qi rate) —
+      // both neutral 1.0, so fresh games and old saves stay numerically
+      // identical to today.
+      id: 'normal',
+      name: 'Normal',
+      capacityMultiplier: 1.0,
+      flowMultiplier: 1.0,
     },
 
     resources: {

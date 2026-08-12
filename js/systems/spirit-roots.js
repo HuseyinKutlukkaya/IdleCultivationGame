@@ -486,7 +486,7 @@ function _freshPlayerSlice() {
     spiritRoot: 'Unawakened',
     physique: 'Common',
     bloodline: 'None',
-    meridians: 0,
+    meridians: 'Normal',
   };
 }
 

@@ -26,6 +26,7 @@ import { InventorySystem } from './systems/inventory.js';
 import { BreakthroughSystem } from './systems/breakthroughs.js';
 import { TribulationSystem } from './systems/tribulations.js';
 import { SpiritRootSystem } from './systems/spirit-roots.js';
+import { MeridianSystem } from './systems/meridians.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { TechniqueSystem } from './systems/techniques.js';
@@ -438,6 +439,22 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Meridians: single owner of the cultivator's meridian state and its
+    // qi-circulation multiplier slots (data/meridians/meridians.json via the
+    // DataManager — the canonical 7-state ladder Broken → Heavenly).
+    // Constructed AFTER the DataManager load (the ladder must resolve) and
+    // AFTER the QiSystem: the constructor sync writes
+    // cultivation.meridianCapacityMultiplier and
+    // cultivation.meridianFlowMultiplier from the restored meridian's
+    // factors, and the QiSystem stacks both slots into the cap and
+    // per-second rate from the first tick. It has NO loop subscription —
+    // meridians only change through setState() (the future character-gen
+    // flow, the console and tests), never on a tick.
+    const meridians = new MeridianSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Cultivation panel: the Phase-3 play-test surface — the human player's
     // Breakthrough / Face Tribulation buttons plus the character readout.
     // The "Cultivation Realm" panel shows the realm/progress/cost bindings
@@ -516,6 +533,7 @@ async function bootstrap() {
     window.__breakthroughs = breakthroughs;
     window.__tribulations = tribulations;
     window.__spiritRoots = spiritRoots;
+    window.__meridians = meridians;
     window.__cultivationPanel = cultivationPanel;
     window.__inventoryPanel = inventoryPanel;
 
