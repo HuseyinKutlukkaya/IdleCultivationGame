@@ -291,6 +291,7 @@ test('requirements() reports the current realm gates as a read-only snapshot', (
     layer: 1,
     layerMax: 9,
     layerMet: false,
+    physiqueBreakthroughBonus: 0,
     canAttempt: false,
   });
 
@@ -720,6 +721,7 @@ test('without a dataManager the system degrades neutrally: count 0, no writes, a
     layer: 1,
     layerMax: 9,
     layerMet: false,
+    physiqueBreakthroughBonus: 0,
     canAttempt: false,
   });
   assert.deepEqual(state.cultivation, before);
@@ -843,4 +845,63 @@ test('restore-trust: malformed progress values never poison the gates', () => {
   assert.deepEqual(result, { outcome: 'heavy-failure', advanced: false });
   // loss = 0.5 × fallback 1000 (not 0.5 × -5) → progress 500, not 1002.5.
   assert.equal(state.cultivation.realmProgress, 500);
+});
+
+test('the physique breakthroughBonus stacks onto the perfect outcome weight', () => {
+  // The mortal entry's results table has perfect with weight 5 (total weight
+  // 100). A bonus of 0.05 adds 5 to the perfect weight (bonus × 100), moving
+  // the perfect bucket from [0,5) to [0,10) and shrinking all other buckets
+  // proportionally (new total weight 105). A roll of 0.07 lands on perfect
+  // only with the bonus applied (without it 0.07 would land on great-success
+  // [5,15)). The state MUST have realmLayer === realmLayerMax else attempt
+  // rejects 'layer'.
+  const state = structuredClone(GameState);
+  state.cultivation.physiqueBreakthroughBonus = 0.05;
+  state.cultivation.realmProgress = 1000;
+  const { breakthroughs } = makeSystems({ state, random: () => 0.07 });
+  // RealmSystem constructor resets realmLayer to 1, so set it AFTER.
+  state.cultivation.realmLayer = 9;
+
+  const result = breakthroughs.attempt();
+  assert.deepEqual(result, { outcome: 'perfect', advanced: true });
+
+  // Without the bonus (bonus 0), roll 0.07 × 105 = 7.35, still inside the
+  // first bucket because total weight raised to 105 (perfect [0,10) = weight
+  // 5+5=10 → covers up to 0-9.999...). With bonus 0 and random 0.07, the
+  // total would be 100 and roll 7 would land in great-success [5,15). So the
+  // bonus is what pushed this roll into 'perfect'.
+});
+
+test('physiqueBreakthroughBonus of 0 leaves the roll distribution unchanged', () => {
+  // The same roll that maps to 'success' at the default distribution still
+  // maps to 'success' when the bonus is zero (weight and total unchanged).
+  const state = structuredClone(GameState);
+  state.cultivation.physiqueBreakthroughBonus = 0;
+  state.cultivation.realmProgress = 1000;
+  const { breakthroughs } = makeSystems({ state, random: () => 0.5 });
+  state.cultivation.realmLayer = 9;
+
+  const result = breakthroughs.attempt();
+  assert.equal(result.outcome, 'success');
+
+  // requirements() reports the bonus.
+  assert.equal(breakthroughs.requirements().physiqueBreakthroughBonus, 0);
+});
+
+test('a hostile physiqueBreakthroughBonus is coerced to 0 and does not shift the roll', () => {
+  for (const bonus of [NaN, Infinity, -Infinity, -5]) {
+    EventBus.clear();
+    const state = structuredClone(GameState);
+    state.cultivation.physiqueBreakthroughBonus = bonus;
+    state.cultivation.realmProgress = 1000;
+    const { breakthroughs } = makeSystems({ state, random: () => 0.5 });
+    state.cultivation.realmLayer = 9;
+
+    // With a neutralized bonus and random 0.5, the roll still hits 'success'.
+    const result = breakthroughs.attempt();
+    assert.equal(result.outcome, 'success');
+
+    // requirements() reports the coerced value.
+    assert.equal(breakthroughs.requirements().physiqueBreakthroughBonus, 0);
+  }
 });

@@ -27,6 +27,7 @@ import { BreakthroughSystem } from './systems/breakthroughs.js';
 import { TribulationSystem } from './systems/tribulations.js';
 import { SpiritRootSystem } from './systems/spirit-roots.js';
 import { MeridianSystem } from './systems/meridians.js';
+import { PhysiqueSystem } from './systems/physiques.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { TechniqueSystem } from './systems/techniques.js';
@@ -455,6 +456,21 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Physiques: single owner of the cultivator's physique and its
+    // breakthrough-success bonus slot (data/physiques/physiques.json via the
+    // DataManager — the canonical 6-state ladder Ordinary → Chaos).
+    // Constructed AFTER the DataManager load (the ladder must resolve) and
+    // AFTER the BreakthroughSystem: the constructor sync writes
+    // cultivation.physiqueBreakthroughBonus from the restored physique's
+    // bonus, and the BreakthroughSystem stacks that slot into the outcome
+    // roll. It has NO loop subscription — physiques only change through
+    // setPhysique() (the future character-gen flow, the console and tests),
+    // never on a tick.
+    const physiques = new PhysiqueSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Cultivation panel: the Phase-3 play-test surface — the human player's
     // Breakthrough / Face Tribulation buttons plus the character readout.
     // The "Cultivation Realm" panel shows the realm/progress/cost bindings
@@ -534,6 +550,7 @@ async function bootstrap() {
     window.__tribulations = tribulations;
     window.__spiritRoots = spiritRoots;
     window.__meridians = meridians;
+    window.__physiques = physiques;
     window.__cultivationPanel = cultivationPanel;
     window.__inventoryPanel = inventoryPanel;
 

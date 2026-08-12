@@ -75,6 +75,14 @@
         "requiredFields": ["id", "name", "capacityMultiplier", "flowMultiplier"],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "physiques",
+      "files": ["data/physiques/physiques.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "breakthroughBonus", "lifespanMultiplier", "healthMultiplier", "powerMultiplier"],
+        "uniqueField": "id"
+      }
     }
   ]
 }

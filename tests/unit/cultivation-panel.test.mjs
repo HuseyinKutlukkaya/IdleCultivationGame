@@ -357,16 +357,15 @@ function createFakeTribulations(overrides = {}) {
  * @returns {object} the fake state.
  */
 function createFakeState(overrides = {}) {
-  return {
-    player: { spiritRoot: 'Unawakened', meridians: 'Normal' },
+  const base = {
+    player: { spiritRoot: 'Unawakened', physique: 'Ordinary Body', meridians: 'Normal' },
     cultivation: { realm: 'Mortal', breakthroughCost: 0, realmLayer: 1, realmLayerMax: 9 },
-    ...overrides,
-    // Allow overriding nested cultivation fields without losing defaults.
+  };
+  // Deep-merge player so a partial override keeps unmentioned keys.
+  return {
+    player: { ...base.player, ...(overrides.player || {}) },
     cultivation: {
-      realm: 'Mortal',
-      breakthroughCost: 0,
-      realmLayer: 1,
-      realmLayerMax: 9,
+      ...base.cultivation,
       ...(overrides.cultivation || {}),
     },
   };
@@ -407,7 +406,7 @@ test('init renders the character readout, buttons and feedback; registers exactl
 
   const character = findNode(body, 'data-cultivation-character');
   assert.ok(character, 'character readout rendered');
-  assert.equal(character.textContent, 'Spirit Root: Unawakened · Meridians: Normal');
+  assert.equal(character.textContent, 'Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal');
 
   // Layer readout is always shown.
   const layer = findNode(body, 'data-cultivation-layer');
@@ -456,7 +455,7 @@ test('character readout reads spirit root + meridians fresh from state', () => {
     root,
   });
   const character = findNode(body, 'data-cultivation-character');
-  assert.equal(character.textContent, 'Spirit Root: No Root · Meridians: Wide');
+  assert.equal(character.textContent, 'Spirit Root: No Root · Physique: Ordinary Body · Meridians: Wide');
 });
 
 test('character readout truncates a hostile very-long spirit root name', () => {
@@ -476,7 +475,7 @@ test('character readout truncates a hostile very-long spirit root name', () => {
   // The rendered line stays bounded (the 64-char cap on the root name) so a
   // hostile save can never churn a multi-MB string on every loop pulse.
   assert.ok(text.length <= 128, `rendered character line length ${text.length}`);
-  assert.equal(text, `Spirit Root: ${'X'.repeat(64)} · Meridians: Normal`);
+  assert.equal(text, `Spirit Root: ${'X'.repeat(64)} · Physique: Ordinary Body · Meridians: Normal`);
 });
 
 test('init without a panel warns and returns a no-op handle', () => {

@@ -94,7 +94,7 @@
  * ResourceSystem / InventorySystem / DataManager / random source.
  *
  * Future expansion (see DESIGN.md/PLANS.md): combined tribulations (a realm
- * imposing several types at once), physiques and spirit roots stack
+ * imposing several types at once), spirit roots stack
  * additional requirement gates and success modifiers into the entry
  * coercion + roll; bottleneck items become real drops AND rejoin the gates
  * once the Phase-4 item producers land (the informational fields already
@@ -262,6 +262,7 @@ export class BreakthroughSystem {
    *            bottleneck: Array<{id: string, count: number}>, bottleneckMet: boolean,
    *            tribulationRequired: boolean, tribulationMet: boolean,
    *            layer: number, layerMax: number, layerMet: boolean,
+   *            physiqueBreakthroughBonus: number,
    *            canAttempt: boolean }} the current requirement snapshot
    *            (cost/bottleneck informational, not gates).
    */
@@ -285,6 +286,9 @@ export class BreakthroughSystem {
     const layer = _asPositiveInteger(this._state.cultivation.realmLayer, 1);
     const layerMax = _asPositiveInteger(this._state.cultivation.realmLayerMax, 9);
     const layerMet = layer >= layerMax;
+    const physiqueBreakthroughBonus = _coercePhysiqueBonus(
+      Number(this._state.cultivation.physiqueBreakthroughBonus)
+    );
 
     return {
       realmId,
@@ -300,6 +304,7 @@ export class BreakthroughSystem {
       layer,
       layerMax,
       layerMet,
+      physiqueBreakthroughBonus,
       canAttempt:
         Boolean(entry) &&
         !this._atTopRealm() &&
@@ -396,9 +401,11 @@ export class BreakthroughSystem {
     // Accepted: nothing is spent or consumed — cost and bottleneck are
     // INFORMATIONAL ONLY (P1 playtest fix, user decision 2026-08-11; the
     // data fields and code paths stay intact for reuse when item sources
-    // land in P4). Roll the weighted outcome directly.
+    // land in P4). Roll the weighted outcome directly, with the physique
+    // breakthrough bonus stacked onto the 'perfect' outcome weight.
 
-    const outcome = this._rollOutcome(entry.results);
+    const results = this._applyPhysiqueBonus(entry.results);
+    const outcome = this._rollOutcome(results);
     const advanced = SUCCESS_OUTCOMES.has(outcome.outcome);
 
     if (advanced) {
@@ -668,6 +675,35 @@ export class BreakthroughSystem {
       if (roll < cumulative) return { ...result };
     }
     return { ...results[results.length - 1] };
+  }
+
+  /**
+   * Clone a results table with the physique breakthrough bonus stacked onto
+   * the 'perfect' outcome weight (bonus × 100). A bonus of 0 produces an
+   * identical clone — the roll is numerically unchanged from today. The
+   * bonus is read from the shared cultivation slot
+   * (cultivation.physiqueBreakthroughBonus, written by the PhysiqueSystem),
+   * coerced to 0 when not a finite number >= 0. The clone is fresh — no
+   * entry from the deep-frozen cache is ever mutated.
+   *
+   * @param {Array<{outcome: string, weight: number, progressLoss: number}>} results —
+   *        coerced results table.
+   * @returns {Array<{outcome: string, weight: number, progressLoss: number}>}
+   *          a fresh clone with the bonus applied.
+   */
+  _applyPhysiqueBonus(results) {
+    const bonus = _coercePhysiqueBonus(
+      Number(this._state.cultivation.physiqueBreakthroughBonus)
+    );
+    if (bonus <= 0) return results.map((entry) => ({ ...entry }));
+
+    return results.map((entry) => {
+      const clone = { ...entry };
+      if (clone.outcome === 'perfect') {
+        clone.weight += bonus * 100;
+      }
+      return clone;
+    });
   }
 
   /**
@@ -982,4 +1018,17 @@ function _asPositiveInteger(value, floor) {
   return Number.isFinite(parsed) && parsed >= 1
     ? Math.floor(parsed)
     : floor;
+}
+
+/**
+ * Coerce a physique breakthrough bonus: a finite number >= 0 is kept,
+ * anything unusable (NaN, Infinity, negative) reads as 0 — a hostile value
+ * can never shift the roll distribution beyond the data contract.
+ *
+ * @param {*} value — raw breakthroughBonus from the cultivation slot.
+ * @returns {number} the bonus value (>= 0).
+ */
+function _coercePhysiqueBonus(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }

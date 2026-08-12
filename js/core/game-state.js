@@ -22,8 +22,10 @@
  * @property {number} cultivation.spiritRootMultiplier — spirit-root cultivation-speed slot (neutral 1 while unawakened)
  * @property {Object} spiritRoot — the cultivator's spirit root (id, name, tier, elements, purity, stability, growth, mutation, compatibility, speedMultiplier)
  * @property {Object} meridians — the cultivator's meridian state (id, name, capacityMultiplier, flowMultiplier)
+ * @property {Object} physiques — the cultivator's physique (id, name, breakthroughBonus, lifespanMultiplier, healthMultiplier, powerMultiplier)
  * @property {number} cultivation.meridianCapacityMultiplier — meridian qi-cap slot (neutral 1 by default; written by MeridianSystem)
  * @property {number} cultivation.meridianFlowMultiplier — meridian qi-rate slot (neutral 1 by default; written by MeridianSystem)
+ * @property {number} cultivation.physiqueBreakthroughBonus — physique breakthrough-success bonus slot (neutral 0 by default; written by PhysiqueSystem)
  * @property {Object} resources — currency and material counts
  * @property {Object} inventory — carried items
  * @property {Object} techniques — known and active techniques
@@ -72,7 +74,7 @@ function createGameState() {
       name: 'Unnamed Cultivator',
       title: '',
       spiritRoot: 'Unawakened',
-      physique: 'Common',
+      physique: 'Ordinary Body',
       bloodline: 'None',
       meridians: 'Normal',
     },
@@ -132,6 +134,14 @@ function createGameState() {
       // missing/malformed value is coerced to 1 by the QiSystem.
       meridianCapacityMultiplier: 1,
       meridianFlowMultiplier: 1,
+      // Physique breakthrough-success bonus slot (consumer pattern like
+      // spiritRootMultiplier): written by the PhysiqueSystem
+      // (js/systems/physiques.js) from the current physique's
+      // data-driven breakthroughBonus; the BreakthroughSystem stacks it
+      // into the outcome roll. Fresh default 0 (neutral — exactly today's
+      // rates); a missing/malformed value is coerced to 0 by the
+      // BreakthroughSystem.
+      physiqueBreakthroughBonus: 0,
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
@@ -184,6 +194,23 @@ function createGameState() {
       name: 'Normal',
       capacityMultiplier: 1.0,
       flowMultiplier: 1.0,
+    },
+
+    physiques: {
+      // Owned by the PhysiqueSystem (js/systems/physiques.js). The
+      // cultivator's body quality: id is the data-table key
+      // (data/physiques/physiques.json — 'ordinary' in the ladder); name is
+      // the display name mirrored on player.physique; breakthroughBonus
+      // feeds cultivation.physiqueBreakthroughBonus (breakthrough success
+      // weight); lifespanMultiplier / healthMultiplier / powerMultiplier
+      // are future-consumer slots — all neutral Ordinary defaults, so fresh
+      // games and old saves stay numerically identical to today.
+      id: 'ordinary',
+      name: 'Ordinary Body',
+      breakthroughBonus: 0,
+      lifespanMultiplier: 1,
+      healthMultiplier: 1,
+      powerMultiplier: 1,
     },
 
     resources: {
