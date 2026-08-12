@@ -78,6 +78,9 @@ export class RealmSystem {
    *        from the 'realms' collection. When absent the ladder is empty —
    *        every read returns neutral values and setRealm() rejects. Realm
    *        content is never hardcoded.
+   * @param {object} [options.config] — parsed contents of data/game-config.json;
+   *        the `cultivation` block is read for layerFactor (default 0.15) and
+   *        layerMax (default 9). A missing block is silent (defaults apply).
    */
   constructor(options = {}) {
     /** @type {object} game state the system reads from and writes to. */
@@ -86,6 +89,20 @@ export class RealmSystem {
     this._eventBus = options.eventBus || EventBus;
     /** @type {object|null} definition resolver ('realms' collection). */
     this._dataManager = options.dataManager || null;
+
+    const cultivationConfig = (options.config && options.config.cultivation) || {};
+    /** @type {number} layerFactor — progressive difficulty per sub-layer. */
+    this._layerFactor = _readFiniteNumber(
+      cultivationConfig.layerFactor,
+      0.15,
+      'layerFactor'
+    );
+    /** @type {number} fixed number of sub-layers per realm. */
+    this._layerMax = _readPositiveInteger(
+      cultivationConfig.layerMax,
+      9,
+      'layerMax'
+    );
 
     // Restore-trust: a malformed cultivation slice (null, a primitive or an
     // array) restored from an attacker-shaped save must never abort boot —
@@ -293,7 +310,64 @@ export class RealmSystem {
   }
 
   /**
-   * Make sure the cultivation slice is a plain object before touching any
+   * Advance one sub-layer within the current realm. Only valid when the
+   * cultivator is below layer 9 — at layer 9 the realm breakthrough gates.
+   * Resets realmProgress to 0 and updates realmProgressMax for the new layer
+   * (scaled by the layerFactor from config.cultivation). Emits
+   * 'realm:layerAdvanced' on success.
+   *
+   * @returns {boolean} true when the layer advanced (1 → 2, … → 9).
+   */
+  advanceLayer() {
+    const currentLayer = _asPositiveInteger(
+      this._state.cultivation.realmLayer,
+      1
+    );
+    if (currentLayer >= this._layerMax) return false;
+
+    const newLayer = currentLayer + 1;
+    // Compute the new progress max BEFORE writing the new layer — the
+    // computation extracts the base from the current max and current layer.
+    const newMax = this._computeLayerProgressMax(currentLayer, newLayer);
+    this._state.cultivation.realmLayer = newLayer;
+    this._state.cultivation.realmProgress = 0;
+    this._state.cultivation.realmProgressMax = newMax;
+
+    this._eventBus.emit('realm:layerAdvanced', {
+      layer: newLayer,
+      realm: this._state.cultivation.realm,
+      realmId: this.current() ? this.current().id : null,
+    });
+    return true;
+  }
+
+  /**
+   * Compute the realmProgressMax for a target sub-layer within the current
+   * realm. The base is realmProgressMax at layer 1 (the breakthrough entry's
+   * requiredProgress); the formula is:
+   *
+   *   max = base × (1 + layerFactor × (targetLayer − 1))
+   *
+   * At layer 1 the factor is 1 (no scaling). The base is extracted from the
+   * current realmProgressMax by dividing by the current layer's factor.
+   *
+   * @param {number} currentLayer — the current sub-layer (1..layerMax).
+   * @param {number} targetLayer — the target sub-layer (1..layerMax).
+   * @returns {number} the computed realmProgressMax for the target layer.
+   */
+  _computeLayerProgressMax(currentLayer, targetLayer) {
+    const currentMax = Number(this._state.cultivation.realmProgressMax);
+    const currentFactor =
+      1 + this._layerFactor * (currentLayer - 1);
+    const base = Number.isFinite(currentMax) && currentFactor > 0
+      ? currentMax / currentFactor
+      : currentMax;
+    const targetFactor =
+      1 + this._layerFactor * (targetLayer - 1);
+    return Math.max(Math.round(base * targetFactor), 1);
+  }
+
+  /**
    * of its fields. A malformed slice restored from an attacker-shaped save
    * (null, a primitive or an array) is replaced with the canonical fresh
    * cultivation shape — restore-trust: a broken top-level slice must never
@@ -428,6 +502,7 @@ export class RealmSystem {
   _apply(definition) {
     this._state.cultivation.realm = definition.name;
     this._state.cultivation.realmTier = definition.tier;
+    this._state.cultivation.realmLayer = 1;
     const next = this._byTier.get(definition.tier + 1);
     this._state.cultivation.nextRealm = next ? next.name : null;
     this._state.cultivation.realmEffects = {
@@ -470,6 +545,8 @@ function _freshCultivationSlice() {
     realm: 'Mortal',
     realmTier: 0,
     realmStage: 1,
+    realmLayer: 1,
+    realmLayerMax: 9,
     nextRealm: 'Qi Gathering',
     breakthroughCost: null,
     realmProgress: 0,
@@ -512,4 +589,63 @@ function _coerceLifespan(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 0;
   return parsed > 0 ? parsed : 0;
+}
+
+/**
+ * Read a finite tuning option, falling back to a default. A missing value
+ * falls back silently; a present but invalid value warns once.
+ *
+ * @param {*} value — raw option value.
+ * @param {number} fallback — default to use when value is not usable.
+ * @param {string} name — option name for the warning message.
+ * @returns {number} the validated value, or the fallback.
+ */
+function _readFiniteNumber(value, fallback, name) {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed)) return parsed;
+  if (value !== undefined) {
+    console.warn(
+      `RealmSystem: invalid "${name}" (${String(value)}) — using the default ${fallback}.`
+    );
+  }
+  return fallback;
+}
+
+/**
+ * Read a positive integer tuning option, falling back to a default.
+ *
+ * @param {*} value — raw option value.
+ * @param {number} fallback — default to use when value is not usable.
+ * @param {string} name — option name for the warning message.
+ * @returns {number} the validated value, or the fallback.
+ */
+function _readPositiveInteger(value, fallback, name) {
+  const parsed = Number(value);
+  if (
+    Number.isFinite(parsed) &&
+    parsed > 0 &&
+    Number.isInteger(parsed)
+  ) {
+    return parsed;
+  }
+  if (value !== undefined) {
+    console.warn(
+      `RealmSystem: invalid "${name}" (${String(value)}) — using the default ${fallback}.`
+    );
+  }
+  return fallback;
+}
+
+/**
+ * Coerce a value to a positive integer, keeping a floor of 1 (never 0).
+ *
+ * @param {*} value — raw value.
+ * @param {number} floor — minimum value to return when unusable.
+ * @returns {number} the validated value (>= 1).
+ */
+function _asPositiveInteger(value, floor) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 1
+    ? Math.floor(parsed)
+    : floor;
 }

@@ -114,6 +114,9 @@ const BREAKTHROUGH_SELECTOR = '[data-cultivation-breakthrough]';
 /** CSS selector for the Face Tribulation button (delegated click anchor). */
 const FACE_SELECTOR = '[data-cultivation-face]';
 
+/** CSS selector for the Advance Layer button (delegated click anchor). */
+const ADVANCE_LAYER_SELECTOR = '[data-cultivation-advance-layer]';
+
 /**
  * CSS selector for the Cultivation Realm progress bar (outside this panel's
  * own body). The bar is the new actionable entry point: clicking it routes
@@ -156,6 +159,7 @@ const BLOCKED_FEEDBACK = {
   tribulation: 'Face the tribulation first',
   'max-realm': 'Already at peak realm',
   'no-definition': 'No path forward',
+  layer: 'Advance to the final layer first',
 };
 
 /** Shared no-op handle for every skip path (nothing to tear down). */
@@ -164,6 +168,9 @@ const NOOP_HANDLE = {
     return false;
   },
   applyFace() {
+    return false;
+  },
+  applyAdvanceLayer() {
     return false;
   },
   render() {},
@@ -192,10 +199,14 @@ const NOOP_HANDLE = {
  *        the writer of that field, never read directly here).
  * @param {object|null} [options.notation=null] — optional NotationFormatter
  *        (.format(value, decimals)); absent → Intl.NumberFormat.
+ * @param {object|null} [options.realms=null] — RealmSystem (or a lookalike
+ *        with advanceLayer()); REQUIRED for the Advance Layer button. When
+ *        null applyAdvanceLayer warns once per instance.
  * @param {object} [options.root=document] — DOM scope for querySelector
  *        (resolves the panel + the cross-panel progress bar) and
  *        addEventListener (the delegated click).
  * @returns {{ applyBreakthrough(): boolean, applyFace(): boolean,
+ *            applyAdvanceLayer(): boolean,
  *            render(): void, destroy(): void }} the panel handle.
  *          applyBreakthrough()/applyFace() return true when the injected
  *          system accepted the action (outcome non-null); render() re-reads
@@ -209,6 +220,7 @@ export function initCultivationPanel({
   tribulations = null,
   spiritRoots = null, // eslint-disable-line no-unused-vars — read via state.player
   notation = null,
+  realms = null,
   root = document,
 } = {}) {
   if (typeof root.querySelector !== 'function') {
@@ -246,12 +258,15 @@ export function initCultivationPanel({
   // ONCE-per-instance warning flags for the missing-system apply paths.
   let warnedNoBreakthroughs = false;
   let warnedNoTribulations = false;
+  let warnedNoRealms = false;
 
   /** @type {string} text of the last action result (persists across renders). */
   let feedbackText = '';
 
   /** Stable DOM references populated by mount() and updated in place. */
   let characterEl = null;
+  let layerEl = null;
+  let advanceLayerBtnEl = null;
   let breakthroughBtnEl = null;
   let reasonEl = null;
   let tribulationBlockEl = null;
@@ -459,6 +474,8 @@ export function initCultivationPanel({
     body.replaceChildren();
 
     characterEl = makeNode('p', ['cultivation__character'], { 'data-cultivation-character': '' }, '');
+    layerEl = makeNode('p', ['cultivation__layer'], { 'data-cultivation-layer': '' }, '');
+    advanceLayerBtnEl = makeNode('button', ['btn', 'btn--primary', 'cultivation__action'], { type: 'button', 'data-cultivation-advance-layer': '', hidden: 'true' }, 'Advance Layer');
     breakthroughBtnEl = makeNode('button', ['btn', 'btn--primary', 'cultivation__action'], { type: 'button', 'data-cultivation-breakthrough': '' }, 'Breakthrough');
     reasonEl = makeNode('p', ['cultivation__reason'], { 'data-cultivation-reason': '' }, '');
     tribulationBlockEl = makeNode('div', ['cultivation__tribulation'], { 'data-cultivation-tribulation': '', hidden: 'true' }, '');
@@ -470,7 +487,7 @@ export function initCultivationPanel({
       if (tribulationNameEl) tribulationBlockEl.appendChild(tribulationNameEl);
       if (faceBtnEl) tribulationBlockEl.appendChild(faceBtnEl);
     }
-    for (const node of [characterEl, breakthroughBtnEl, reasonEl, tribulationBlockEl, feedbackEl]) {
+    for (const node of [characterEl, layerEl, advanceLayerBtnEl, breakthroughBtnEl, reasonEl, tribulationBlockEl, feedbackEl]) {
       if (node) body.appendChild(node);
     }
   }
@@ -480,14 +497,67 @@ export function initCultivationPanel({
     if (!characterEl) return;
     characterEl.textContent = characterText(state);
 
+    // Layer readout: always shown with the current layer from state.
+    const cultivation = state && state.cultivation;
+    const currentLayer =
+      cultivation && typeof cultivation.realmLayer === 'number'
+        ? Math.floor(cultivation.realmLayer)
+        : 1;
+    const layerMax =
+      cultivation && typeof cultivation.realmLayerMax === 'number'
+        ? Math.floor(cultivation.realmLayerMax)
+        : 9;
+    if (layerEl) {
+      layerEl.textContent = `Layer ${currentLayer} / ${layerMax}`;
+    }
+
     const req = breakthroughs && typeof breakthroughs.requirements === 'function'
       ? breakthroughs.requirements()
       : null;
     const desc = describeBreakthrough(req, state);
+
+    // Advance Layer button: shown when progress is full and layer < max.
+    // Hidden when at layer max (breakthrough button takes over).
+    // Always disabled when hidden so Playwright's toBeDisabled() sees the
+    // correct state regardless of visibility.
+    const showAdvanceLayer =
+      req &&
+      req.progressMet &&
+      currentLayer < layerMax;
+    if (advanceLayerBtnEl) {
+      if (showAdvanceLayer) {
+        if (typeof advanceLayerBtnEl.removeAttribute === 'function') {
+          advanceLayerBtnEl.removeAttribute('hidden');
+          advanceLayerBtnEl.removeAttribute('disabled');
+        } else if (advanceLayerBtnEl.attrs) {
+          delete advanceLayerBtnEl.attrs.hidden;
+          delete advanceLayerBtnEl.attrs.disabled;
+        }
+      } else {
+        advanceLayerBtnEl.setAttribute('hidden', 'true');
+        advanceLayerBtnEl.setAttribute('disabled', 'true');
+      }
+    }
+
+    // Breakthrough button: enabled + visible only at layer max (layer === max).
+    // When below layer max, the button is both hidden AND disabled so a
+    // Playwright toBeDisabled() / isDisabled() check returns true regardless
+    // of visibility (the DOM [disabled] attribute is the source of truth).
     if (breakthroughBtnEl) {
-      if (desc.disabled) breakthroughBtnEl.setAttribute('disabled', 'true');
-      else if (typeof breakthroughBtnEl.removeAttribute === 'function') breakthroughBtnEl.removeAttribute('disabled');
-      else if (breakthroughBtnEl.attrs) delete breakthroughBtnEl.attrs.disabled;
+      const atLayerMax = currentLayer >= layerMax;
+      if (!atLayerMax) {
+        breakthroughBtnEl.setAttribute('hidden', 'true');
+        breakthroughBtnEl.setAttribute('disabled', 'true');
+      } else {
+        if (typeof breakthroughBtnEl.removeAttribute === 'function') {
+          breakthroughBtnEl.removeAttribute('hidden');
+        } else if (breakthroughBtnEl.attrs) {
+          delete breakthroughBtnEl.attrs.hidden;
+        }
+        if (desc.disabled) breakthroughBtnEl.setAttribute('disabled', 'true');
+        else if (typeof breakthroughBtnEl.removeAttribute === 'function') breakthroughBtnEl.removeAttribute('disabled');
+        else if (breakthroughBtnEl.attrs) delete breakthroughBtnEl.attrs.disabled;
+      }
     }
     if (reasonEl) reasonEl.textContent = desc.reason;
 
@@ -517,6 +587,33 @@ export function initCultivationPanel({
   /** Public compatibility alias for update(). */
   function render() {
     update();
+  }
+
+  /**
+   * Advance one sub-layer within the current realm through the injected
+   * RealmSystem. Returns the system's acceptance (true when the layer
+   * advanced). On success the panel re-renders from state and emits
+   * 'ui:refresh'.
+   *
+   * @returns {boolean} true when the layer advanced.
+   */
+  function applyAdvanceLayer() {
+    if (!realms || typeof realms.advanceLayer !== 'function') {
+      if (!warnedNoRealms) {
+        warnedNoRealms = true;
+        console.warn(
+          'CultivationPanel: no RealmSystem — applyAdvanceLayer ignored.'
+        );
+      }
+      return false;
+    }
+    const ok = realms.advanceLayer();
+    if (ok) {
+      feedbackText = `Advanced to layer ${state.cultivation.realmLayer}.`;
+      update();
+      eventBus.emit(REFRESH_EVENT);
+    }
+    return ok;
   }
 
   /**
@@ -618,6 +715,10 @@ export function initCultivationPanel({
   function onRootClick(event) {
     const target = event && event.target;
     if (!target || typeof target.closest !== 'function') return;
+    if (target.closest(ADVANCE_LAYER_SELECTOR)) {
+      applyAdvanceLayer();
+      return;
+    }
     if (target.closest(BREAKTHROUGH_SELECTOR)) {
       applyBreakthrough();
       return;
@@ -650,6 +751,7 @@ export function initCultivationPanel({
   return {
     applyBreakthrough,
     applyFace,
+    applyAdvanceLayer,
     render,
     destroy() {
       root.removeEventListener('click', onRootClick);

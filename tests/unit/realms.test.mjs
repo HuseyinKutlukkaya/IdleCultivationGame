@@ -48,6 +48,8 @@ function freshCultivation() {
     realm: 'Mortal',
     realmTier: 0,
     realmStage: 1,
+    realmLayer: 1,
+    realmLayerMax: 9,
     nextRealm: 'Qi Gathering',
     breakthroughCost: null,
     realmProgress: 0,
@@ -155,8 +157,8 @@ function makeDataManager(definitions = LADDER) {
  *        fixture ladder lookalike).
  * @returns {RealmSystem} the system instance.
  */
-function makeSystem(state = structuredClone(GameState), dataManager = makeDataManager()) {
-  return new RealmSystem({ state, eventBus: EventBus, dataManager });
+function makeSystem(state = structuredClone(GameState), dataManager = makeDataManager(), config = undefined) {
+  return new RealmSystem({ state, eventBus: EventBus, dataManager, config });
 }
 
 test('construction snapshots the ladder and exposes the lookup API', () => {
@@ -499,4 +501,103 @@ test('the REAL ladder resolves through the REAL DataManager with the real mortal
     powerMultiplier: 1,
     lifespanYears: 100,
   });
+});
+
+// ---- P4: Nine sub-levels per realm ----
+
+test('advanceLayer increments realmLayer and resets progress', () => {
+  const state = structuredClone(GameState);
+  const system = makeSystem(state, makeDataManager(), { cultivation: { layerFactor: 0.15, layerMax: 9 } });
+  // Simulate a layer-1 realm with full progress.
+  state.cultivation.realmProgress = 1000;
+
+  const layerAdvanced = [];
+  EventBus.subscribe('realm:layerAdvanced', (p) => layerAdvanced.push(p));
+
+  // First advance: 1 → 2
+  const ok = system.advanceLayer();
+  assert.equal(ok, true);
+  assert.equal(state.cultivation.realmLayer, 2);
+  assert.equal(state.cultivation.realmProgress, 0);
+  // Max scales: base 1000 × (1 + 0.15 × 1) = 1150
+  assert.equal(state.cultivation.realmProgressMax, 1150);
+  assert.deepEqual(layerAdvanced, [
+    { layer: 2, realm: 'Mortal', realmId: 'mortal' },
+  ]);
+});
+
+test('advanceLayer returns false at layer 9', () => {
+  const state = structuredClone(GameState);
+  const system = makeSystem(state, makeDataManager(), { cultivation: { layerFactor: 0.15, layerMax: 9 } });
+
+  // Advance through layers 1..9
+  for (let i = 1; i < 9; i++) {
+    state.cultivation.realmProgress = state.cultivation.realmProgressMax;
+    assert.equal(system.advanceLayer(), true, `advance to layer ${i + 1}`);
+  }
+  assert.equal(state.cultivation.realmLayer, 9);
+
+  // At layer 9 advanceLayer returns false.
+  const before = structuredClone(state.cultivation);
+  assert.equal(system.advanceLayer(), false);
+  assert.deepEqual(state.cultivation, before);
+});
+
+test('layer cost scales progressively: layer 5 = base × (1 + 0.15 × 4)', () => {
+  const state = structuredClone(GameState);
+  const system = makeSystem(state, makeDataManager(), { cultivation: { layerFactor: 0.15, layerMax: 9 } });
+  // Base is 1000 (the mortal default realmProgressMax at layer 1).
+  state.cultivation.realmProgressMax = 1000;
+
+  // Advance to layer 5: 1→2→3→4→5
+  for (let i = 1; i < 5; i++) {
+    state.cultivation.realmProgress = state.cultivation.realmProgressMax;
+    system.advanceLayer();
+  }
+  assert.equal(state.cultivation.realmLayer, 5);
+  // layer 5 = 1000 × (1 + 0.15 × 4) = 1000 × 1.6 = 1600
+  assert.equal(state.cultivation.realmProgressMax, 1600);
+});
+
+test('layer cost at layer 9 = base × 2.20 with layerFactor 0.15', () => {
+  const state = structuredClone(GameState);
+  const system = makeSystem(state, makeDataManager(), { cultivation: { layerFactor: 0.15, layerMax: 9 } });
+  state.cultivation.realmProgressMax = 1000;
+
+  for (let i = 1; i < 9; i++) {
+    state.cultivation.realmProgress = state.cultivation.realmProgressMax;
+    system.advanceLayer();
+  }
+  assert.equal(state.cultivation.realmLayer, 9);
+  // layer 9 = 1000 × (1 + 0.15 × 8) = 1000 × 2.20 = 2200
+  assert.equal(state.cultivation.realmProgressMax, 2200);
+});
+
+test('setRealm resets layer to 1', () => {
+  const state = structuredClone(GameState);
+  const system = makeSystem(state, makeDataManager(), { cultivation: { layerFactor: 0.15, layerMax: 9 } });
+
+  // Advance to layer 3
+  state.cultivation.realmProgress = 1000;
+  system.advanceLayer();
+  state.cultivation.realmProgress = state.cultivation.realmProgressMax;
+  system.advanceLayer();
+  assert.equal(state.cultivation.realmLayer, 3);
+
+  // setRealm resets layer to 1.
+  system.setRealm(1); // Qi Gathering
+  assert.equal(state.cultivation.realmLayer, 1);
+  assert.equal(state.cultivation.realm, 'Qi Gathering');
+});
+
+test('advanceLayer uses default layerFactor 0.15 and layerMax 9 when config is absent', () => {
+  const state = structuredClone(GameState);
+  const system = makeSystem(state, makeDataManager()); // no config
+
+  state.cultivation.realmProgress = 1000;
+  const ok = system.advanceLayer();
+  assert.equal(ok, true);
+  assert.equal(state.cultivation.realmLayer, 2);
+  // base 1000 × (1 + 0.15 × 1) = 1150 (default layerFactor 0.15)
+  assert.equal(state.cultivation.realmProgressMax, 1150);
 });

@@ -42,9 +42,9 @@ import { Storage } from '../core/storage.js';
 /** Envelope schema identifier; distinguishes game saves from arbitrary JSON. */
 export const SAVE_SCHEMA = 'idle-cultivation-game/save';
 /** Current save envelope schema version. Bump only when the envelope shape changes. */
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 /** Current migration code version. Bump whenever a migration is added or changed. */
-const MIGRATION_VERSION = 1;
+const MIGRATION_VERSION = 2;
 
 /**
  * Migration table. Keys are the saveVersion a save currently has; each value
@@ -54,7 +54,27 @@ const MIGRATION_VERSION = 1;
  * @type {Object<number, (save: object) => object>}
  */
 const MIGRATIONS = {
-  // 1: (save) => ({ ...save, state: transform(save.state) }),
+  // v1 → v2: P4 — Nine sub-levels per realm. Old saves without realmLayer
+  // or realmLayerMax get the canonical defaults (layer 1, max 9).
+  1: (save) => {
+    const migrated = { ...save, state: { ...save.state } };
+    if (
+      migrated.state.cultivation === null ||
+      typeof migrated.state.cultivation !== 'object' ||
+      Array.isArray(migrated.state.cultivation)
+    ) {
+      migrated.state.cultivation = {};
+    } else {
+      migrated.state.cultivation = { ...migrated.state.cultivation };
+    }
+    if (migrated.state.cultivation.realmLayer === undefined || migrated.state.cultivation.realmLayer === null) {
+      migrated.state.cultivation.realmLayer = 1;
+    }
+    if (migrated.state.cultivation.realmLayerMax === undefined || migrated.state.cultivation.realmLayerMax === null) {
+      migrated.state.cultivation.realmLayerMax = 9;
+    }
+    return migrated;
+  },
 };
 
 /**

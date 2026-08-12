@@ -261,6 +261,7 @@ export class BreakthroughSystem {
    *            progressMet: boolean, cost: object, costMet: boolean,
    *            bottleneck: Array<{id: string, count: number}>, bottleneckMet: boolean,
    *            tribulationRequired: boolean, tribulationMet: boolean,
+   *            layer: number, layerMax: number, layerMet: boolean,
    *            canAttempt: boolean }} the current requirement snapshot
    *            (cost/bottleneck informational, not gates).
    */
@@ -281,6 +282,9 @@ export class BreakthroughSystem {
     const costMet = this._costMet(cost);
     const bottleneckMet = this._bottleneckMet(bottleneck);
     const tribulation = this._tribulationGate();
+    const layer = _asPositiveInteger(this._state.cultivation.realmLayer, 1);
+    const layerMax = _asPositiveInteger(this._state.cultivation.realmLayerMax, 9);
+    const layerMet = layer >= layerMax;
 
     return {
       realmId,
@@ -293,11 +297,15 @@ export class BreakthroughSystem {
       bottleneckMet,
       tribulationRequired: tribulation.required,
       tribulationMet: tribulation.met,
+      layer,
+      layerMax,
+      layerMet,
       canAttempt:
         Boolean(entry) &&
         !this._atTopRealm() &&
         progressMet &&
-        tribulation.met,
+        tribulation.met &&
+        layerMet,
     };
   }
 
@@ -324,8 +332,11 @@ export class BreakthroughSystem {
    *     still pending (state.tribulations.pending true and survived false —
    *     written by the TribulationSystem on realm changes / face(); old
    *     saves without the slice degrade to gate-open).
+   *   - 'layer' — the cultivator has not yet reached the final sub-layer
+   *     (cultivation.realmLayer < cultivation.realmLayerMax).
    *
-   * The order above is canonical: entry → max-realm → progress → tribulation.
+   * The order above is canonical: entry → max-realm → progress →
+   * tribulation → layer.
    *
    * Accepted: nothing is spent or consumed — the entry's stone cost and item
    * bottleneck are INFORMATIONAL ONLY (P1 playtest fix, user decision
@@ -372,6 +383,14 @@ export class BreakthroughSystem {
     const tribulation = this._tribulationGate();
     if (tribulation.required && !tribulation.met) {
       return { outcome: null, advanced: false, reason: 'tribulation' };
+    }
+
+    // The layer gate: the cultivator must have reached the final sub-layer
+    // (realmLayer === realmLayerMax) before attempting a realm breakthrough.
+    const layer = _asPositiveInteger(this._state.cultivation.realmLayer, 1);
+    const layerMax = _asPositiveInteger(this._state.cultivation.realmLayerMax, 9);
+    if (layer < layerMax) {
+      return { outcome: null, advanced: false, reason: 'layer' };
     }
 
     // Accepted: nothing is spent or consumed — cost and bottleneck are
@@ -771,6 +790,8 @@ function _freshCultivationSlice() {
     realm: 'Mortal',
     realmTier: 0,
     realmStage: 1,
+    realmLayer: 1,
+    realmLayerMax: 9,
     nextRealm: 'Qi Gathering',
     breakthroughCost: null,
     realmProgress: 0,
@@ -947,4 +968,18 @@ function _readPositiveNumber(value, fallback, name) {
 function _asNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * Coerce a value to a positive integer, keeping a floor of 1 (never 0).
+ *
+ * @param {*} value — raw value.
+ * @param {number} floor — minimum value to return when unusable.
+ * @returns {number} the validated value (>= 1).
+ */
+function _asPositiveInteger(value, floor) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 1
+    ? Math.floor(parsed)
+    : floor;
 }

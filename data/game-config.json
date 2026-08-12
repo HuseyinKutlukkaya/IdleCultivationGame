@@ -62,6 +62,11 @@
     "comment": "BreakthroughSystem tuning (Phase 3 — Breakthroughs). progressRate multiplies the qi-driven realm-progress accrual: cultivation.realmProgress gains qiPerSecond × progressRate per second, clamped to the current realm's requiredProgress (data/breakthroughs/breakthroughs.json). Placeholder balancing — Phase 10 Balancing retunes.",
     "progressRate": 1
   },
+  "cultivation": {
+    "comment": "Cultivation tuning (P4 — Nine sub-levels per realm). layerFactor controls the progressive difficulty per sub-layer: layer N's required progress = base × (1 + layerFactor × (N − 1)). At layerFactor 0.15: layer 1 = base, layer 2 = 1.15×, …, layer 9 = 2.20×. layerMax is the fixed number of sub-layers per realm (always 9).",
+    "layerFactor": 0.15,
+    "layerMax": 9
+  },
   "notifications": {
     "comment": "NotificationManager tuning (Phase 2 — First Gameplay). maxQueueSize bounds the in-memory FIFO queue (oldest drops first). types lists every valid notification type id; the Activity Log renders each entry with a log__item--<type> class. Add a type by adding an id here — no code changes required. popupDurationMs is how long a popup stays on screen before auto-dismiss; popupMaxVisible is the maximum number of popups shown concurrently (oldest dismisses first once the cap is reached).",
     "maxQueueSize": 50,

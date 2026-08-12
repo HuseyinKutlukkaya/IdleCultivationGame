@@ -739,6 +739,8 @@ test('cross-wiring: a pending tribulation blocks the breakthrough until it is su
   assert.equal(blockedRequirements.bottleneckMet, true);
   assert.equal(blockedRequirements.tribulationRequired, true);
   assert.equal(blockedRequirements.tribulationMet, false);
+  assert.equal(blockedRequirements.layer, 1); // realmLayer was reset to 1 by setRealm
+  assert.equal(blockedRequirements.layerMet, false);
   assert.equal(blockedRequirements.canAttempt, false);
   assert.deepEqual(breakthroughs.attempt(), {
     outcome: null,
@@ -756,6 +758,7 @@ test('cross-wiring: a pending tribulation blocks the breakthrough until it is su
   // the realm change opens the new realm's soul tribulation.
   assert.deepEqual(tribulations.face(), { outcome: 'survived', survived: true });
   assert.equal(breakthroughs.requirements().tribulationMet, true);
+  state.cultivation.realmLayer = 9; // P4: must be at final layer to attempt
   const result = breakthroughs.attempt();
   assert.deepEqual(result, { outcome: 'perfect', advanced: true });
   assert.equal(state.cultivation.realm, 'Beyond Heaven');

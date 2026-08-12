@@ -148,6 +148,10 @@
                 <div class="game-panel__body">
                   <p class="realm-name" data-bind="cultivation.realm" data-bind-format="{0} Realm">Mortal Realm</p>
                   <div class="stat">
+                    <span class="stat__label">Layer</span>
+                    <span class="stat__value" data-bind="cultivation.realmLayer|cultivation.realmLayerMax" data-bind-format="{0} / {1}">1 / 9</span>
+                  </div>
+                  <div class="stat">
                     <span class="stat__label">Realm progress</span>
                     <span class="stat__value" data-bind="cultivation.realmProgress|cultivation.realmProgressMax" data-bind-format="{0} / {1}">0 / 1,000</span>
                   </div>

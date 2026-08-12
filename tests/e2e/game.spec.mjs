@@ -689,6 +689,7 @@ test('breakthrough system is wired: gates block, a synced attempt advances the r
   // by the unit suite, which drives fake loop:update emissions.
   await page.evaluate(() => {
     window.__game.state.cultivation.realmProgress = 1000;
+    window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
   });
 
   // A full-progress attempt on Mortal costs 0 stones, so no wallet spend —
@@ -785,6 +786,7 @@ test('tribulation system is wired: entering a gated realm blocks the breakthroug
     window.__game.state.cultivation.realmProgress = 2000;
     window.__resources.add('spiritStones', 400);
     window.__inventory.add('spirit-herb', 2);
+    window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
   });
   expect(await page.evaluate(() => window.__breakthroughs.attempt())).toEqual({
     outcome: null,
@@ -949,6 +951,7 @@ test('human playability: a real player can complete the core loop through the UI
   await page.evaluate(() => {
     window.__meditation.stop();
     window.__game.state.cultivation.realmProgress = 1000;
+    window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer to attempt
   });
   await expect(breakthrough).toBeEnabled();
 
@@ -1014,6 +1017,7 @@ test('human playability: a real player can complete the core loop through the UI
     window.__game.state.cultivation.realmProgress = 1500;
     window.__resources.add('spiritStones', 150);
     window.__inventory.add('qi-condensation-pill', 1);
+    window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
   });
   await expect(breakthrough).toBeEnabled();
   await breakthrough.click();
@@ -1031,6 +1035,7 @@ test('human playability: a real player can complete the core loop through the UI
     window.__game.state.cultivation.realmProgress = 2000;
     window.__resources.add('spiritStones', 400);
     window.__inventory.add('spirit-herb', 2);
+    window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
   });
   await expect(breakthrough).toBeEnabled();
   await breakthrough.click();
@@ -1061,6 +1066,7 @@ test('human playability: a real player can complete the core loop through the UI
     window.__game.state.cultivation.realmProgress = 2000;
     window.__resources.add('spiritStones', 400);
     window.__inventory.add('spirit-herb', 2);
+    window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
   });
   await expect(panel.locator('[data-cultivation-reason]')).toHaveText(
     'Face the tribulation first'
@@ -1211,8 +1217,10 @@ test('Cultivation Realm progress bar at full: clicking it rolls a breakthrough a
   const bar = page.locator('[data-cultivation-progress-action]');
   await expect(bar).toBeVisible();
 
+  // P4: must be at the final layer to attempt breakthrough.
   // Set progress to the realm max so the gate is open.
   await page.evaluate(() => {
+    window.__game.state.cultivation.realmLayer = 9;
     window.__game.state.cultivation.realmProgress = 1000;
   });
 

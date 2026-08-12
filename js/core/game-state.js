@@ -82,6 +82,12 @@ function createGameState() {
       realm: 'Mortal',
       realmTier: 0,
       realmStage: 1,
+      // Sub-layer progression within a realm (P4 — Nine sub-levels per
+      // realm). Layer 1–9: each layer requires progressively more progress;
+      // realm breakthrough (+ tribulation) gates on layer 9. Owned/written
+      // by the RealmSystem (js/systems/realms.js). realmLayerMax is always 9.
+      realmLayer: 1,
+      realmLayerMax: 9,
       nextRealm: 'Qi Gathering',
       // Breakthrough progression. Owned/written by the BreakthroughSystem
       // (js/systems/breakthroughs.js): realmProgress accrues every tick from

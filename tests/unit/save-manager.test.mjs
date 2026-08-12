@@ -95,10 +95,10 @@ test('_buildEnvelope produces a fully-populated save envelope', () => {
   const envelope = manager._buildEnvelope();
 
   assert.equal(envelope.schema, SAVE_SCHEMA);
-  assert.equal(envelope.saveVersion, 1);
+  assert.equal(envelope.saveVersion, 2);
   assert.equal(envelope.engineVersion, '0.1.0');
   assert.equal(envelope.contentVersion, 3);
-  assert.equal(envelope.migrationVersion, 1);
+  assert.equal(envelope.migrationVersion, 2);
   assert.equal(typeof envelope.savedAt, 'number');
   assert.ok(envelope.savedAt > 0);
   assert.deepEqual(envelope.state, { qi: 42 });
@@ -155,7 +155,7 @@ test('load() restores a valid save and emits game:restored', () => {
   const manager = makeManager();
   storage.loadValue = {
     schema: SAVE_SCHEMA,
-    saveVersion: 1,
+    saveVersion: 2,
     savedAt: 123,
     state: { qi: 42 },
   };
@@ -163,7 +163,10 @@ test('load() restores a valid save and emits game:restored', () => {
   const ok = manager.load();
 
   assert.equal(ok, true);
-  assert.deepEqual(restoreCalls, [{ qi: 42 }]);
+  // The v2 save passes through without migration; only the original qi: 42
+  // is restored (no cultivation fields are added at v2).
+  assert.equal(restoreCalls.length, 1);
+  assert.equal(restoreCalls[0].qi, 42);
   assert.equal(manager.lastSavedAt, 123);
   assert.deepEqual(eventBus.emitted, [['game:restored', { savedAt: 123 }]]);
 });
@@ -172,7 +175,7 @@ test('load() returns true without emitting when no restore callback is configure
   const manager = makeManager({ restore: undefined });
   storage.loadValue = {
     schema: SAVE_SCHEMA,
-    saveVersion: 1,
+    saveVersion: 2,
     savedAt: 123,
     state: { qi: 42 },
   };
@@ -225,7 +228,7 @@ test('importSave() applies a valid export end-to-end (persist + restore + both e
   const manager = makeManager();
   const exported = JSON.stringify({
     schema: SAVE_SCHEMA,
-    saveVersion: 1,
+    saveVersion: 2,
     savedAt: 456,
     state: { qi: 7 },
   });
@@ -235,8 +238,8 @@ test('importSave() applies a valid export end-to-end (persist + restore + both e
   assert.equal(ok, true);
   // The imported save was persisted as the new active save...
   assert.deepEqual(storage.saved.state, { qi: 7 });
-  assert.equal(storage.saved.saveVersion, 1);
-  assert.equal(storage.saved.migrationVersion, 1);
+  assert.equal(storage.saved.saveVersion, 2);
+  assert.equal(storage.saved.migrationVersion, 2);
   // ...the state was restored...
   assert.deepEqual(restoreCalls, [{ qi: 7 }]);
   assert.equal(manager.lastSavedAt, 456);
@@ -262,7 +265,7 @@ test('importSave() contains a pathologically-nested payload (RangeError → fals
   // never persists.
   const N = 100000;
   const nestedState = '{"a":'.repeat(N) + '1' + '}'.repeat(N);
-  const payload = `{"schema":"${SAVE_SCHEMA}","saveVersion":1,"state":${nestedState}}`;
+  const payload = `{"schema":"${SAVE_SCHEMA}","saveVersion":2,"state":${nestedState}}`;
 
   const ok = manager.importSave(payload);
 
@@ -285,7 +288,7 @@ test('importSave() rejects a poisoned envelope (own __proto__ key) through the p
   const state = JSON.parse('{"__proto__":{"polluted":true}}');
   const poisoned = JSON.stringify({
     schema: SAVE_SCHEMA,
-    saveVersion: 1,
+    saveVersion: 2,
     savedAt: 1,
     state,
   });
@@ -386,7 +389,7 @@ test('_migrate rejects a save from a newer version than this build', (t) => {
   const manager = makeManager();
   const envelope = {
     schema: SAVE_SCHEMA,
-    saveVersion: 2, // > SAVE_VERSION (1) — must never be relabeled as current
+    saveVersion: 3, // > SAVE_VERSION (2)
     savedAt: 1,
     state: { qi: 1 },
   };
@@ -419,7 +422,7 @@ test('_parseEnvelope rejects a state carrying an own "__proto__" key', (t) => {
   // JSON.parse is required: the literal syntax would set the prototype
   // instead of creating the own key the guard must detect.
   const poisoned = JSON.parse(
-    `{"schema":"${SAVE_SCHEMA}","saveVersion":1,"state":{"__proto__":{"polluted":true}}}`
+    `{"schema":"${SAVE_SCHEMA}","saveVersion":2,"state":{"__proto__":{"polluted":true}}}`
   );
 
   const envelope = manager._parseEnvelope(poisoned);
@@ -433,10 +436,10 @@ test('_parseEnvelope rejects state carrying "constructor" or "prototype" keys', 
   const manager = makeManager();
 
   const withConstructor = JSON.parse(
-    `{"schema":"${SAVE_SCHEMA}","saveVersion":1,"state":{"constructor":{"x":1}}}`
+    `{"schema":"${SAVE_SCHEMA}","saveVersion":2,"state":{"constructor":{"x":1}}}`
   );
   const withPrototype = JSON.parse(
-    `{"schema":"${SAVE_SCHEMA}","saveVersion":1,"state":{"prototype":{"y":2}}}`
+    `{"schema":"${SAVE_SCHEMA}","saveVersion":2,"state":{"prototype":{"y":2}}}`
   );
 
   assert.equal(manager._parseEnvelope(withConstructor), null);
@@ -448,7 +451,7 @@ test('_parseEnvelope rejects unsafe keys nested anywhere in the state subtree', 
   const warn = t.mock.method(console, 'warn', () => {});
   const manager = makeManager();
   const nested = JSON.parse(
-    `{"schema":"${SAVE_SCHEMA}","saveVersion":1,"state":{"player":{"title":"safe","prototype":{"z":3}}}}`
+    `{"schema":"${SAVE_SCHEMA}","saveVersion":2,"state":{"player":{"title":"safe","prototype":{"z":3}}}}`
   );
 
   const envelope = manager._parseEnvelope(nested);
@@ -476,7 +479,7 @@ test('_parseEnvelope accepts a well-formed envelope unchanged', (t) => {
   const manager = makeManager();
   const good = {
     schema: SAVE_SCHEMA,
-    saveVersion: 1,
+    saveVersion: 2,
     savedAt: 123,
     state: { qi: 42 },
   };
@@ -485,4 +488,45 @@ test('_parseEnvelope accepts a well-formed envelope unchanged', (t) => {
 
   assert.strictEqual(envelope, good);
   assert.equal(warn.mock.callCount(), 0);
+});
+
+test('a v1 save is migrated to v2 and gains realmLayer/realmLayerMax', () => {
+  const manager = makeManager();
+  storage.loadValue = {
+    schema: SAVE_SCHEMA,
+    saveVersion: 1,
+    savedAt: 123,
+    state: { cultivation: { realm: 'Qi Gathering', realmTier: 1, realmProgress: 500 } },
+    // No realmLayer / realmLayerMax in the old save.
+  };
+
+  const ok = manager.load();
+
+  assert.equal(ok, true);
+  assert.deepEqual(restoreCalls.length, 1);
+  const restored = restoreCalls[0];
+  assert.equal(restored.cultivation.realmLayer, 1);
+  assert.equal(restored.cultivation.realmLayerMax, 9);
+  // Existing fields survive the migration untouched.
+  assert.equal(restored.cultivation.realm, 'Qi Gathering');
+  assert.equal(restored.cultivation.realmTier, 1);
+  assert.equal(restored.cultivation.realmProgress, 500);
+});
+
+test('a v1 save with a malformed cultivation slice still gains realmLayer/realmLayerMax', () => {
+  const manager = makeManager();
+  storage.loadValue = {
+    schema: SAVE_SCHEMA,
+    saveVersion: 1,
+    savedAt: 123,
+    state: { cultivation: null },
+  };
+
+  const ok = manager.load();
+
+  assert.equal(ok, true);
+  assert.deepEqual(restoreCalls.length, 1);
+  const restored = restoreCalls[0];
+  assert.equal(restored.cultivation.realmLayer, 1);
+  assert.equal(restored.cultivation.realmLayerMax, 9);
 });

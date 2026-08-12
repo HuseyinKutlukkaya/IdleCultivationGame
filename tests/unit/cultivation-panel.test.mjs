@@ -296,6 +296,9 @@ function createFakeBreakthroughs(overrides = {}) {
         bottleneckMet: true,
         tribulationRequired: false,
         tribulationMet: true,
+        layer: 1,
+        layerMax: 9,
+        layerMet: false,
         canAttempt: false,
       };
     },
@@ -356,8 +359,16 @@ function createFakeTribulations(overrides = {}) {
 function createFakeState(overrides = {}) {
   return {
     player: { spiritRoot: 'Unawakened', meridians: 0 },
-    cultivation: { realm: 'Mortal', breakthroughCost: 0 },
+    cultivation: { realm: 'Mortal', breakthroughCost: 0, realmLayer: 1, realmLayerMax: 9 },
     ...overrides,
+    // Allow overriding nested cultivation fields without losing defaults.
+    cultivation: {
+      realm: 'Mortal',
+      breakthroughCost: 0,
+      realmLayer: 1,
+      realmLayerMax: 9,
+      ...(overrides.cultivation || {}),
+    },
   };
 }
 
@@ -374,6 +385,9 @@ function ALL_MET_REQUIREMENTS() {
     bottleneckMet: true,
     tribulationRequired: false,
     tribulationMet: true,
+    layer: 9,
+    layerMax: 9,
+    layerMet: true,
     canAttempt: true,
   };
 }
@@ -395,13 +409,23 @@ test('init renders the character readout, buttons and feedback; registers exactl
   assert.ok(character, 'character readout rendered');
   assert.equal(character.textContent, 'Spirit Root: Unawakened · Meridians: 0');
 
+  // Layer readout is always shown.
+  const layer = findNode(body, 'data-cultivation-layer');
+  assert.ok(layer, 'layer readout rendered');
+  assert.equal(layer.textContent, 'Layer 1 / 9');
+
+  // At layer 1 with zero progress: both buttons are hidden.
+  const advanceBtn = findNode(body, 'data-cultivation-advance-layer');
+  assert.ok(advanceBtn, 'advance layer button rendered');
+  assert.equal(advanceBtn.attrs.hidden, 'true', 'advance button hidden (no progress)');
+
   const button = findNode(body, 'data-cultivation-breakthrough');
   assert.ok(button, 'breakthrough button rendered');
   assert.equal(button.textContent, 'Breakthrough');
   assert.equal(
-    button.attrs.disabled,
+    button.attrs.hidden,
     'true',
-    'fresh Mortal realm (zero progress) → button disabled'
+    'breakthrough button hidden (layer < 9)'
   );
   const reason = findNode(body, 'data-cultivation-reason');
   assert.ok(reason, 'reason line rendered');
@@ -607,7 +631,7 @@ test('breakthrough button disabled with the matching gate reason for every block
 
   for (const entry of cases) {
     const { root, body } = createFakeRoot();
-    const state = createFakeState({ cultivation: { realm: 'X', breakthroughCost: 1 } });
+    const state = createFakeState({ cultivation: { realm: 'X', breakthroughCost: 1, realmLayer: 9 } });
     initCultivationPanel({
       eventBus: EventBus,
       state,
@@ -636,7 +660,7 @@ test('breakthrough button disabled with the matching gate reason for every block
 test('breakthrough button disabled with "No path forward" when the realm has no definition', () => {
   // realmId is null (no current realm) → no-definition.
   const { root, body } = createFakeRoot();
-  const state = createFakeState({ cultivation: { realm: 'Mortal', breakthroughCost: null } });
+  const state = createFakeState({ cultivation: { realm: 'Mortal', breakthroughCost: null, realmLayer: 9 } });
   initCultivationPanel({
     eventBus: EventBus,
     state,
@@ -670,7 +694,7 @@ test('breakthrough button enabled with the readiness line when canAttempt() is t
   // readiness label so the player knows the action is live (P1 #5: cost /
   // items gates removed).
   const { root, body } = createFakeRoot();
-  const state = createFakeState();
+  const state = createFakeState({ cultivation: { realmLayer: 9 } });
   initCultivationPanel({
     eventBus: EventBus,
     state,
@@ -1215,7 +1239,7 @@ test('missing breakthroughs degrades: disabled button, applyBreakthrough warns o
     // No warning at init (the panel renders the unavailable action).
     assert.equal(warnCalls.length, 0);
     const button = findNode(body, 'data-cultivation-breakthrough');
-    assert.equal(button.attrs.disabled, 'true', 'no system → button disabled');
+    assert.equal(button.attrs.hidden, 'true', 'no system → button hidden (layer < 9)');
 
     assert.equal(handle.applyBreakthrough(), false);
     assert.equal(warnCalls.length, 1);
@@ -1274,12 +1298,15 @@ test('every subscribed event re-renders the panel from fresh system snapshots', 
               bottleneckMet: true,
               tribulationRequired: false,
               tribulationMet: true,
+              layer: 9,
+              layerMax: 9,
+              layerMet: true,
               canAttempt: false,
             },
     });
     const handle = initCultivationPanel({
       eventBus: EventBus,
-      state: createFakeState(),
+      state: createFakeState({ cultivation: { realmLayer: 9 } }),
       breakthroughs,
       tribulations: createFakeTribulations(),
       root,
@@ -1321,12 +1348,15 @@ test('a resource:changed event re-renders so the gate follows the latest snapsho
       bottleneckMet: true,
       tribulationRequired: false,
       tribulationMet: true,
+      layer: 9,
+      layerMax: 9,
+      layerMet: true,
       canAttempt: costMet,
     }),
   });
   const handle = initCultivationPanel({
     eventBus: EventBus,
-    state: createFakeState(),
+    state: createFakeState({ cultivation: { realmLayer: 9 } }),
     breakthroughs,
     tribulations: createFakeTribulations(),
     root,

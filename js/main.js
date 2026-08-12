@@ -156,6 +156,7 @@ async function bootstrap() {
     const realms = new RealmSystem({
       eventBus: EventBus,
       dataManager,
+      config,
     });
 
     // Qi: single owner of the qi resource. Constructed AFTER the meditation
@@ -428,6 +429,7 @@ async function bootstrap() {
       breakthroughs,
       tribulations,
       notation,
+      realms,
     });
 
     // Inventory panel: renders the carried item stacks as a box grid with

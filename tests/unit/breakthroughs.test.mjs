@@ -288,6 +288,9 @@ test('requirements() reports the current realm gates as a read-only snapshot', (
     bottleneckMet: true,
     tribulationRequired: false,
     tribulationMet: true,
+    layer: 1,
+    layerMax: 9,
+    layerMet: false,
     canAttempt: false,
   });
 
@@ -327,6 +330,7 @@ test('a successful attempt advances the realm, resets progress, syncs the new co
   const state = structuredClone(GameState);
   const { breakthroughs } = makeSystems({ state, random: () => 0 });
   state.cultivation.realmProgress = 1000;
+  state.cultivation.realmLayer = 9; // must be at final layer to attempt
 
   const breakthroughEvents = [];
   const realmChanged = [];
@@ -367,6 +371,7 @@ test('a failed attempt applies the outcome progressLoss and keeps the realm', ()
   // random 0.99 → roll 99 → qi-deviation (loss 1 → progress wiped).
   const { breakthroughs } = makeSystems({ state, random: () => 0.99 });
   state.cultivation.realmProgress = 1000;
+  state.cultivation.realmLayer = 9;
 
   const events = [];
   EventBus.subscribe('realm:breakthrough', (payload) => events.push(payload));
@@ -399,6 +404,7 @@ test('a heavy failure loses half the progress and can never drop below zero', ()
   // random 0.95 → roll 95 → heavy-failure (loss 0.5).
   const { breakthroughs } = makeSystems({ state, random: () => 0.95 });
   state.cultivation.realmProgress = 1000;
+  state.cultivation.realmLayer = 9;
 
   const result = breakthroughs.attempt();
 
@@ -421,6 +427,7 @@ test('attempt() does NOT block on unaffordable cost or unsatisfied bottleneck it
   const { breakthroughs, realms, resources, inventory } = makeSystems({ state });
   realms.setRealm('qi-gathering');
   state.cultivation.realmProgress = 1500;
+  state.cultivation.realmLayer = 9;
 
   // No stones (drain the fresh 50) and no pill — cost/items used to block
   // but are now INFORMATIONAL ONLY (P1 playtest fix). With default
@@ -450,6 +457,7 @@ test('an accepted attempt does NOT consume cost or bottleneck items (information
   });
   realms.setRealm('qi-gathering');
   state.cultivation.realmProgress = 1500;
+  state.cultivation.realmLayer = 9;
   state.cultivation.realmProgressMax = 1500; // the post-success sync value
   inventory.add('qi-condensation-pill', 1);
 
@@ -521,6 +529,7 @@ test('the tribulation gate opens once survived (or when nothing is pending)', ()
   // roll itself proves the gate let the attempt through.
   const { breakthroughs } = makeSystems({ state, random: () => 0.99 });
   state.cultivation.realmProgress = 1000;
+  state.cultivation.realmLayer = 9;
 
   // survived=true → gate open → the attempt proceeds to the roll.
   state.tribulations = { type: 'lightning', pending: true, survived: true };
@@ -545,6 +554,7 @@ test('a malformed state.tribulations degrades to an open gate (never throws)', (
     state.tribulations = malformed;
     state.cultivation.realmProgress = 1000;
     const { breakthroughs } = makeSystems({ state, random: () => 0.99 });
+    state.cultivation.realmLayer = 9; // after RealmSystem boot; must be at layer max
 
     // The gate reads as open and the attempt proceeds to the roll — an old
     // save without the slice (or a hostile one) never blocks a breakthrough.
@@ -602,6 +612,7 @@ test('the weighted outcome roll honors the injected random source', () => {
     const state = structuredClone(GameState);
     const { breakthroughs } = makeSystems({ state, random });
     state.cultivation.realmProgress = 1000;
+    state.cultivation.realmLayer = 9;
 
     const result = breakthroughs.attempt();
     assert.equal(result.outcome, outcome, `random() -> ${outcome}`);
@@ -706,6 +717,9 @@ test('without a dataManager the system degrades neutrally: count 0, no writes, a
     bottleneckMet: true,
     tribulationRequired: false,
     tribulationMet: true,
+    layer: 1,
+    layerMax: 9,
+    layerMet: false,
     canAttempt: false,
   });
   assert.deepEqual(state.cultivation, before);
@@ -753,6 +767,7 @@ test('hostile breakthrough definitions coerce to safe defaults', () => {
   // for the post-advance realm — this hostile dataManager has no
   // qi-gathering entry by design).
   state.cultivation.realmProgress = 1000;
+  state.cultivation.realmLayer = 9;
   const result = breakthroughs.attempt();
   assert.equal(result.reason, undefined);
   assert.equal(result.advanced, true);
@@ -774,6 +789,7 @@ test('an out-of-range progressLoss clamps into 0..1 (never gains progress)', () 
   const dataManager = makeDataManager({ breakthroughs: hostile });
   const { breakthroughs } = makeSystems({ state, dataManager, random: () => 0 });
   state.cultivation.realmProgress = 1000;
+  state.cultivation.realmLayer = 9;
 
   // progressLoss 2 clamps to 1 → progress 1000 - 1000 → floored at 0, and
   // the realm never advanced (a clamped failure can never be a success).
@@ -822,6 +838,7 @@ test('restore-trust: malformed progress values never poison the gates', () => {
   state.cultivation.realmProgress = 1000;
   state.cultivation.realmProgressMax = -5;
   const hostileMax = makeSystems({ state, random: () => 0.95 }).breakthroughs;
+  state.cultivation.realmLayer = 9; // after RealmSystem boot; must be at layer max
   const result = hostileMax.attempt(); // heavy-failure, loss 0.5
   assert.deepEqual(result, { outcome: 'heavy-failure', advanced: false });
   // loss = 0.5 × fallback 1000 (not 0.5 × -5) → progress 500, not 1002.5.
