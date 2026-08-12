@@ -124,201 +124,218 @@
             </span>
           </div>
 
-          <div class="game-grid">
-            <!-- Cultivation Realm -->
-            <article class="game-panel">
-              <header class="game-panel__head">
-                <span class="game-panel__icon" aria-hidden="true">⛰️</span>
-                <h3 class="game-panel__title">Cultivation Realm</h3>
-                <span class="game-panel__tag">Placeholder</span>
-              </header>
-              <div class="game-panel__body">
-                <p class="realm-name" data-bind="cultivation.realm" data-bind-format="{0} Realm">Mortal Realm</p>
-                <div class="stat">
-                  <span class="stat__label">Realm progress</span>
-                  <span class="stat__value" data-bind="cultivation.realmProgress|cultivation.realmProgressMax" data-bind-format="{0} / {1}">0 / 1,000</span>
-                </div>
-                <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="1000" aria-label="Realm progress" tabindex="0" data-bind="cultivation.realmProgress" data-bind-max="cultivation.realmProgressMax" data-bind-mode="progress" data-cultivation-progress-action>
-                  <span class="progress__fill" style="width: 0%"></span>
-                </div>
-                <small class="progress-hint" data-cultivation-progress-hint hidden>Click to attempt breakthrough</small>
-                <div class="stat">
-                  <span class="stat__label">Next realm</span>
-                  <span class="stat__value" data-bind="cultivation.nextRealm">Qi Condensation</span>
-                </div>
-              </div>
-            </article>
+          <!-- Tab bar: navigation between game panels. -->
+          <div class="tab-bar" role="tablist" aria-label="Game panels">
+            <button class="tab" role="tab" data-tab="cultivation" aria-selected="true" aria-controls="tab-cultivation">Cultivation</button>
+            <button class="tab" role="tab" data-tab="techniques" aria-selected="false" aria-controls="tab-techniques">Techniques</button>
+            <button class="tab" role="tab" data-tab="inventory" aria-selected="false" aria-controls="tab-inventory">Inventory</button>
+            <button class="tab" role="tab" data-tab="log" aria-selected="false" aria-controls="tab-log">Log</button>
+            <button class="tab" role="tab" data-tab="settings" aria-selected="false" aria-controls="tab-settings">Settings</button>
+          </div>
 
-            <!-- Cultivation Progress -->
-            <article class="game-panel">
-              <header class="game-panel__head">
-                <span class="game-panel__icon" aria-hidden="true">🧘</span>
-                <h3 class="game-panel__title">Cultivation Progress</h3>
-                <span class="game-panel__tag">Placeholder</span>
-              </header>
-              <div class="game-panel__body">
-                <div class="stat">
-                  <span class="stat__label">Qi</span>
-                  <span class="stat__value" data-bind="cultivation.qi|cultivation.qiMax" data-bind-format="{0} / {1}">0 / 100</span>
+          <div class="tab-panels">
+            <!-- ============================================================
+                 CULTIVATION TAB
+                 ============================================================ -->
+            <div class="game-grid tab-panel" data-tab-panel="cultivation" id="tab-cultivation" role="tabpanel">
+              <!-- Cultivation Realm -->
+              <article class="game-panel">
+                <header class="game-panel__head">
+                  <span class="game-panel__icon" aria-hidden="true">⛰️</span>
+                  <h3 class="game-panel__title">Cultivation Realm</h3>
+                  <span class="game-panel__tag">Placeholder</span>
+                </header>
+                <div class="game-panel__body">
+                  <p class="realm-name" data-bind="cultivation.realm" data-bind-format="{0} Realm">Mortal Realm</p>
+                  <div class="stat">
+                    <span class="stat__label">Realm progress</span>
+                    <span class="stat__value" data-bind="cultivation.realmProgress|cultivation.realmProgressMax" data-bind-format="{0} / {1}">0 / 1,000</span>
+                  </div>
+                  <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="1000" aria-label="Realm progress" tabindex="0" data-bind="cultivation.realmProgress" data-bind-max="cultivation.realmProgressMax" data-bind-mode="progress" data-cultivation-progress-action>
+                    <span class="progress__fill" style="width: 0%"></span>
+                  </div>
+                  <small class="progress-hint" data-cultivation-progress-hint hidden>Click to attempt breakthrough</small>
+                  <div class="stat">
+                    <span class="stat__label">Next realm</span>
+                    <span class="stat__value" data-bind="cultivation.nextRealm">Qi Condensation</span>
+                  </div>
                 </div>
-                <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Qi" data-bind="cultivation.qi" data-bind-max="cultivation.qiMax" data-bind-mode="progress">
-                  <span class="progress__fill" style="width: 0%"></span>
-                </div>
-                <div class="stat">
-                  <span class="stat__label">Qi per second</span>
-                  <span class="stat__value" data-bind="cultivation.qiPerSecond" data-bind-decimals="1">0.0</span>
-                </div>
-                <div class="stat">
-                  <span class="stat__label">Meditations completed</span>
-                  <span class="stat__value" data-bind="statistics.meditationsCompleted">0</span>
-                </div>
-              </div>
-            </article>
+              </article>
 
-            <!-- Cultivation: the Phase-3 play-test surface — the human
-                 player's Breakthrough / Face Tribulation buttons plus the
-                 character readout. The body is populated by
-                 js/ui/cultivation-panel.js at init and re-rendered on the
-                 events it subscribes to; the character/action markup is
-                 intentionally data-bind-free (this panel owns it and reads
-                 state fresh on every render). The realm/progress bindings
-                 live in the Cultivation Realm panel — NOT duplicated here. -->
-            <article class="game-panel" data-cultivation-panel>
-              <header class="game-panel__head">
-                <span class="game-panel__icon" aria-hidden="true">⚡</span>
-                <h3 class="game-panel__title">Cultivation</h3>
-                <span class="game-panel__tag">Placeholder</span>
-              </header>
-              <div class="game-panel__body game-panel__body--cultivation" data-cultivation-body>
-                <!-- Character readout, action buttons and feedback are
-                     rendered by js/ui/cultivation-panel.js. -->
-              </div>
-            </article>
+              <!-- Cultivation Progress -->
+              <article class="game-panel">
+                <header class="game-panel__head">
+                  <span class="game-panel__icon" aria-hidden="true">🧘</span>
+                  <h3 class="game-panel__title">Cultivation Progress</h3>
+                  <span class="game-panel__tag">Placeholder</span>
+                </header>
+                <div class="game-panel__body">
+                  <div class="stat">
+                    <span class="stat__label">Qi</span>
+                    <span class="stat__value" data-bind="cultivation.qi|cultivation.qiMax" data-bind-format="{0} / {1}">0 / 100</span>
+                  </div>
+                  <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Qi" data-bind="cultivation.qi" data-bind-max="cultivation.qiMax" data-bind-mode="progress">
+                    <span class="progress__fill" style="width: 0%"></span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat__label">Qi per second</span>
+                    <span class="stat__value" data-bind="cultivation.qiPerSecond" data-bind-decimals="1">0.0</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat__label">Meditations completed</span>
+                    <span class="stat__value" data-bind="statistics.meditationsCompleted">0</span>
+                  </div>
+                </div>
+              </article>
 
-            <!-- Statistics: lifetime counters driven by js/systems/statistics.js.
-                 playtimeMs uses the new "duration" data-bind-mode so the
-                 renderer formats it as "Xh Ym" / "Xh" / "Xm" / "Xs"; the
-                 other three counters use plain text. The panel keeps the
-                 Meditation counter here AND in Cultivation Progress on
-                 purpose (the two views serve different purposes: a quick
-                 lifetime readout here vs. the active-session context
-                 there). -->
-            <article class="game-panel" data-statistics-panel>
-              <header class="game-panel__head">
-                <span class="game-panel__icon" aria-hidden="true">📊</span>
-                <h3 class="game-panel__title">Statistics</h3>
-                <span class="game-panel__tag">Placeholder</span>
-              </header>
-              <div class="game-panel__body">
-                <div class="stat">
-                  <span class="stat__label">Playtime</span>
-                  <span class="stat__value" data-bind="statistics.playtimeMs" data-bind-mode="duration">0s</span>
+              <!-- Cultivation: the Phase-3 play-test surface — the human
+                   player's Breakthrough / Face Tribulation buttons plus the
+                   character readout. The body is populated by
+                   js/ui/cultivation-panel.js at init and re-rendered on the
+                   events it subscribes to; the character/action markup is
+                   intentionally data-bind-free (this panel owns it and reads
+                   state fresh on every render). The realm/progress bindings
+                   live in the Cultivation Realm panel — NOT duplicated here. -->
+              <article class="game-panel" data-cultivation-panel>
+                <header class="game-panel__head">
+                  <span class="game-panel__icon" aria-hidden="true">⚡</span>
+                  <h3 class="game-panel__title">Cultivation</h3>
+                  <span class="game-panel__tag">Placeholder</span>
+                </header>
+                <div class="game-panel__body game-panel__body--cultivation" data-cultivation-body>
+                  <!-- Character readout, action buttons and feedback are
+                       rendered by js/ui/cultivation-panel.js. -->
                 </div>
-                <div class="stat">
-                  <span class="stat__label">Qi generated</span>
-                  <span class="stat__value" data-bind="statistics.qiGenerated">0</span>
-                </div>
-                <div class="stat">
-                  <span class="stat__label">Meditations</span>
-                  <span class="stat__value" data-bind="statistics.meditationsCompleted">0</span>
-                </div>
-                <div class="stat">
-                  <span class="stat__label">Breakthroughs</span>
-                  <span class="stat__value" data-bind="statistics.breakthroughsTotal">0</span>
-                </div>
-              </div>
-            </article>
+              </article>
 
-            <!-- Resources -->
-            <article class="game-panel">
-              <header class="game-panel__head">
-                <span class="game-panel__icon" aria-hidden="true">💎</span>
-                <h3 class="game-panel__title">Resources</h3>
-                <span class="game-panel__tag">Placeholder</span>
-              </header>
-              <div class="game-panel__body">
-                <div class="stat"><span class="stat__label">Spirit Stones</span><span class="stat__value" data-bind="resources.spiritStones">0</span></div>
-                <div class="stat"><span class="stat__label">Herbs</span><span class="stat__value" data-bind="resources.herbs">0</span></div>
-                <div class="stat"><span class="stat__label">Qi Condensation Pills</span><span class="stat__value" data-bind="resources.qiCondensationPills">0</span></div>
-                <div class="stat"><span class="stat__label">Jade</span><span class="stat__value" data-bind="resources.jade">0</span></div>
-              </div>
-            </article>
+              <!-- Statistics: lifetime counters driven by js/systems/statistics.js.
+                   playtimeMs uses the new "duration" data-bind-mode so the
+                   renderer formats it as "Xh Ym" / "Xh" / "Xm" / "Xs"; the
+                   other three counters use plain text. The panel keeps the
+                   Meditation counter here AND in Cultivation Progress on
+                   purpose (the two views serve different purposes: a quick
+                   lifetime readout here vs. the active-session context
+                   there). -->
+              <article class="game-panel" data-statistics-panel>
+                <header class="game-panel__head">
+                  <span class="game-panel__icon" aria-hidden="true">📊</span>
+                  <h3 class="game-panel__title">Statistics</h3>
+                  <span class="game-panel__tag">Placeholder</span>
+                </header>
+                <div class="game-panel__body">
+                  <div class="stat">
+                    <span class="stat__label">Playtime</span>
+                    <span class="stat__value" data-bind="statistics.playtimeMs" data-bind-mode="duration">0s</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat__label">Qi generated</span>
+                    <span class="stat__value" data-bind="statistics.qiGenerated">0</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat__label">Meditations</span>
+                    <span class="stat__value" data-bind="statistics.meditationsCompleted">0</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat__label">Breakthroughs</span>
+                    <span class="stat__value" data-bind="statistics.breakthroughsTotal">0</span>
+                  </div>
+                </div>
+              </article>
+            </div>
 
-            <!-- Upgrades -->
-            <article class="game-panel" data-upgrades-panel>
-              <header class="game-panel__head">
-                <span class="game-panel__icon" aria-hidden="true">📜</span>
-                <h3 class="game-panel__title">Upgrades</h3>
-                <span class="game-panel__tag">Placeholder</span>
-              </header>
-              <div class="game-panel__body game-panel__body--upgrades">
-                <!-- Upgrade rows are populated by js/ui/upgrades-panel.js from
-                     the data/upgrades/upgrades.json catalog at init time, and
-                     re-rendered after every successful purchase. They are
-                     intentionally NOT hardcoded here — the catalog is the
-                     data-driven source of truth. -->
-              </div>
-            </article>
+            <!-- ============================================================
+                 TECHNIQUES TAB
+                 ============================================================ -->
+            <div class="game-grid tab-panel" data-tab-panel="techniques" id="tab-techniques" role="tabpanel" hidden>
+              <!-- Upgrades -->
+              <article class="game-panel" data-upgrades-panel>
+                <header class="game-panel__head">
+                  <span class="game-panel__icon" aria-hidden="true">📜</span>
+                  <h3 class="game-panel__title">Upgrades</h3>
+                  <span class="game-panel__tag">Placeholder</span>
+                </header>
+                <div class="game-panel__body game-panel__body--upgrades">
+                  <!-- Upgrade rows are populated by js/ui/upgrades-panel.js from
+                       the data/upgrades/upgrades.json catalog at init time, and
+                       re-rendered after every successful purchase. They are
+                       intentionally NOT hardcoded here — the catalog is the
+                       data-driven source of truth. -->
+                </div>
+              </article>
+            </div>
 
-            <!-- Activity Log -->
-            <article class="game-panel game-panel--wide">
-              <header class="game-panel__head">
-                <span class="game-panel__icon" aria-hidden="true">📋</span>
-                <h3 class="game-panel__title">Activity Log</h3>
-                <span class="game-panel__tag">Placeholder</span>
-              </header>
-              <ul class="log" id="activity-log">
-                <li class="log__item"><span class="log__time">--:--</span> <span>System ready — awaiting cultivation.</span></li>
-                <li class="log__item"><span class="log__time">--:--</span> <span>Log entries will appear here.</span></li>
-              </ul>
-            </article>
+            <!-- ============================================================
+                 INVENTORY TAB
+                 ============================================================ -->
+            <div class="game-grid tab-panel" data-tab-panel="inventory" id="tab-inventory" role="tabpanel" hidden>
+              <!-- Inventory -->
+              <article class="game-panel game-panel--wide" data-inventory-panel>
+                <header class="game-panel__head">
+                  <span class="game-panel__icon" aria-hidden="true">🎒</span>
+                  <h3 class="game-panel__title">Inventory</h3>
+                  <span class="game-panel__tag">Placeholder</span>
+                </header>
+                <div class="game-panel__body" data-inventory-body>
+                  <!-- Item grid and pagination are rendered by js/ui/inventory-panel.js. -->
+                </div>
+              </article>
+            </div>
 
-            <!-- Inventory -->
-            <article class="game-panel">
-              <header class="game-panel__head">
-                <span class="game-panel__icon" aria-hidden="true">🎒</span>
-                <h3 class="game-panel__title">Inventory</h3>
-                <span class="game-panel__tag">Placeholder</span>
-              </header>
-              <div class="game-panel__body">
-                <div class="stat"><span class="stat__label">Stacks held</span><span class="stat__value" data-bind="inventory.items.length">0</span></div>
-                <div class="stat"><span class="stat__label">Empty slots</span><span class="stat__value" data-bind="inventory.slots.used" data-bind-max="inventory.slots.total" data-bind-mode="remaining">20</span></div>
-                <p class="setting__hint">Item list rendering (filter/sort/search) arrives with the full inventory.</p>
-              </div>
-            </article>
+            <!-- ============================================================
+                 LOG TAB
+                 ============================================================ -->
+            <div class="game-grid tab-panel" data-tab-panel="log" id="tab-log" role="tabpanel" hidden>
+              <!-- Activity Log -->
+              <article class="game-panel game-panel--wide" id="activity-log-panel">
+                <header class="game-panel__head">
+                  <span class="game-panel__icon" aria-hidden="true">📋</span>
+                  <h3 class="game-panel__title">Activity Log</h3>
+                  <span class="game-panel__tag">Placeholder</span>
+                </header>
+                <ul class="log" id="activity-log">
+                  <li class="log__item"><span class="log__time">--:--</span> <span>System ready — awaiting cultivation.</span></li>
+                  <li class="log__item"><span class="log__time">--:--</span> <span>Log entries will appear here.</span></li>
+                </ul>
+              </article>
+            </div>
 
-            <!-- Settings -->
-            <article class="game-panel" data-settings-panel>
-              <header class="game-panel__head">
-                <span class="game-panel__icon" aria-hidden="true">⚙️</span>
-                <h3 class="game-panel__title">Settings</h3>
-                <span class="game-panel__tag">Placeholder</span>
-              </header>
-              <div class="game-panel__body">
-                <div class="setting">
-                  <span class="setting__label">Offline progress</span>
-                  <button class="switch switch--on" type="button" role="switch" aria-checked="true" aria-label="Toggle Offline progress" data-bind="settings.offlineProgress" data-bind-mode="switch" data-settings-toggle="offlineProgress"></button>
+            <!-- ============================================================
+                 SETTINGS TAB
+                 ============================================================ -->
+            <div class="game-grid tab-panel" data-tab-panel="settings" id="tab-settings" role="tabpanel" hidden>
+              <!-- Settings -->
+              <article class="game-panel" data-settings-panel>
+                <header class="game-panel__head">
+                  <span class="game-panel__icon" aria-hidden="true">⚙️</span>
+                  <h3 class="game-panel__title">Settings</h3>
+                  <span class="game-panel__tag">Placeholder</span>
+                </header>
+                <div class="game-panel__body">
+                  <div class="setting">
+                    <span class="setting__label">Offline progress</span>
+                    <button class="switch switch--on" type="button" role="switch" aria-checked="true" aria-label="Toggle Offline progress" data-bind="settings.offlineProgress" data-bind-mode="switch" data-settings-toggle="offlineProgress"></button>
+                  </div>
+                  <div class="setting">
+                    <span class="setting__label">Sound</span>
+                    <button class="switch" type="button" role="switch" aria-checked="false" aria-label="Toggle Sound" data-bind="settings.sound" data-bind-mode="switch" data-settings-toggle="sound"></button>
+                  </div>
+                  <div class="setting">
+                    <span class="setting__label">Notifications</span>
+                    <button class="switch" type="button" role="switch" aria-checked="false" aria-label="Toggle Notifications" data-bind="settings.notifications" data-bind-mode="switch" data-settings-toggle="notifications"></button>
+                  </div>
+                  <div class="setting">
+                    <label class="setting__label" for="settings-notation-style">Notation style</label>
+                    <select class="setting__control setting__select" id="settings-notation-style" data-settings-select="notationStyle">
+                      <!-- <option>s populated by JS from config.notation.styles -->
+                    </select>
+                  </div>
+                  <div class="setting">
+                    <span class="setting__label">Save management</span>
+                    <button class="btn btn--ghost setting__button" type="button" data-settings-reset>Reset save</button>
+                  </div>
                 </div>
-                <div class="setting">
-                  <span class="setting__label">Sound</span>
-                  <button class="switch" type="button" role="switch" aria-checked="false" aria-label="Toggle Sound" data-bind="settings.sound" data-bind-mode="switch" data-settings-toggle="sound"></button>
-                </div>
-                <div class="setting">
-                  <span class="setting__label">Notifications</span>
-                  <button class="switch" type="button" role="switch" aria-checked="false" aria-label="Toggle Notifications" data-bind="settings.notifications" data-bind-mode="switch" data-settings-toggle="notifications"></button>
-                </div>
-                <div class="setting">
-                  <label class="setting__label" for="settings-notation-style">Notation style</label>
-                  <select class="setting__control setting__select" id="settings-notation-style" data-settings-select="notationStyle">
-                    <!-- <option>s populated by JS from config.notation.styles -->
-                  </select>
-                </div>
-                <div class="setting">
-                  <span class="setting__label">Save management</span>
-                  <button class="btn btn--ghost setting__button" type="button" data-settings-reset>Reset save</button>
-                </div>
-              </div>
-            </article>
+              </article>
+            </div>
           </div>
         </div>
       </section>

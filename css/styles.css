@@ -1144,3 +1144,172 @@ button.switch {
     transform: translateX(0);
   }
 }
+
+/* --------------------------------------------------------------------------
+   17. Tab bar
+   --------------------------------------------------------------------------
+   Anchored to the existing design tokens. Tab buttons match the existing
+   button style tokens; active tab has a bottom border accent. The tab bar
+   sits between the resource bar and the tab-panels container. */
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+.tab {
+  padding: 0.65rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 0;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--color-text);
+  background: var(--color-bg-raised);
+}
+
+.tab--active,
+.tab[aria-selected="true"] {
+  color: var(--color-text-bright);
+  border-bottom-color: var(--color-accent);
+}
+
+.tab-panels {
+  /* Container for the tab panel wrappers — no additional styling needed. */
+}
+
+/* Each tab panel wrapper retains .game-grid for the 3-column layout. */
+.tab-panel[hidden] {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   18. Inventory grid
+   --------------------------------------------------------------------------
+   Anchored to the existing design tokens. A CSS-grid card layout for the
+   inventory panel with responsive columns, category color-coding via
+   data-item-category attribute selectors, and hover highlight. */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.inventory-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: default;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.inventory-item:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 8px rgba(200, 168, 78, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    var(--color-bg-raised);
+}
+
+.inventory-item__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.inventory-item__count {
+  font-size: 0.85rem;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-item__category {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+/* Category color-coding via data-item-category */
+.inventory-item[data-item-category="pill"] .inventory-item__category {
+  color: #7fbf7f;
+}
+
+.inventory-item[data-item-category="herb"] .inventory-item__category {
+  color: #6bbb6b;
+}
+
+.inventory-item[data-item-category="material"] .inventory-item__category {
+  color: #a5a7aa;
+}
+
+.inventory-item[data-item-category="artifact"] .inventory-item__category {
+  color: #c8a84e;
+}
+
+.inventory-item[data-item-category="quest-item"] .inventory-item__category {
+  color: #c87fc8;
+}
+
+.inventory-item__grade {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.inventory-placeholder {
+  text-align: center;
+  padding: var(--space-4) var(--space-2);
+  color: var(--color-text-faint);
+  font-size: 0.9rem;
+  grid-column: 1 / -1;
+}
+
+/* Pagination controls */
+.inventory-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-2);
+}
+
+.inventory-pagination__info {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Responsive: fewer columns on smaller screens */
+@media (max-width: 900px) {
+  .inventory-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .inventory-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

@@ -246,11 +246,15 @@ test('inventory is wired and add()/remove() round-trip real item stacks', async 
     { id: 'spirit-herb', count: 6 },
   ]);
 
-  // The Inventory panel's stacks-held binding reflects the real stack count
-  // after a UI refresh (integer text, locale-safe — no Intl formatting).
-  const stacksHeld = page.locator('[data-bind="inventory.items.length"]').first();
-  await expect(stacksHeld).toBeVisible();
-  await expect(stacksHeld).toHaveText('1');
+  // The Inventory panel's grid renders the surviving stack. Navigate to the
+  // Inventory tab and verify the grid shows one item card (spirit-herb with
+  // count 6) matching the surviving state.
+  await page.locator('[data-tab="inventory"]').click();
+  await expect(page.locator('#tab-inventory')).toBeVisible();
+  const cards = page.locator('.inventory-item');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.nth(0).locator('.inventory-item__name')).toHaveText('Spirit Herb');
+  await expect(cards.nth(0).locator('.inventory-item__count')).toHaveText('\u00d76');
 
   expect(errors).toEqual([]);
 });
@@ -337,10 +341,9 @@ test('Settings panel initializer: toggles flip state, notation select changes th
   // Reset confirmation uses the in-game modal.
   await page.goto('/');
 
-  // SettingsPanel handle is exposed after bootstrap.
-  await expect
-    .poll(() => page.evaluate(() => Boolean(window.__settingsPanel)))
-    .toBe(true);
+  // Navigate to the Settings tab (settings panel is inside it, hidden by default).
+  await page.locator('[data-tab="settings"]').click();
+  await expect(page.locator('[data-settings-panel]')).toBeVisible();
   // The <select> is populated from config.notation.styles — the two shipped
   // styles are present.
   await expect
@@ -548,6 +551,10 @@ test('upgrades system renders data-driven rows, buying one levels it up and grow
   await expect
     .poll(() => page.evaluate(() => window.__upgrades.list().length))
     .toBe(4);
+
+  // Navigate to the Techniques tab (upgrades panel is inside it, hidden by default).
+  await page.locator('[data-tab="techniques"]').click();
+  await expect(page.locator('[data-upgrade-id="foundation-breathing"]')).toBeVisible();
 
   // The Upgrades panel renders a row per upgrade. Each row carries
   // data-upgrade-id (delegation anchor) — verify against the canonical
@@ -1101,6 +1108,10 @@ test('Settings → Reset Save: confirm modal must be accepted, success notificat
 
   await page.goto('/');
 
+  // Navigate to the Settings tab first (panel is hidden by default).
+  await page.locator('[data-tab="settings"]').click();
+  await expect(page.locator('[data-settings-panel]')).toBeVisible();
+
   // Baseline state: the boot seeds the master's parting gift (one info
   // notification). The reset success notification must add an entry on top.
   await expect
@@ -1145,6 +1156,10 @@ test('Settings → Reset Save: dismissing the confirm modal aborts the destructi
   // Any native dialog would be a regression.
 
   await page.goto('/');
+
+  // Navigate to the Settings tab first (panel is hidden by default).
+  await page.locator('[data-tab="settings"]').click();
+  await expect(page.locator('[data-settings-panel]')).toBeVisible();
 
   await expect
     .poll(() => page.evaluate(() => Boolean(window.__notifications)))
@@ -1271,6 +1286,104 @@ test('Cultivation Realm panel: no "Breakthrough cost" stat, no cost / items reas
   // items block reason — only the four canonical gating reasons may appear.
   const panelText = await page.locator('[data-cultivation-panel]').textContent();
   expect(panelText).not.toMatch(/Cost not met|Missing items|Breakthrough cost/);
+
+  expect(errors).toEqual([]);
+});
+
+test('tab navigation: clicking tabs shows and hides panels', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  // Cultivation tab is the default — its panel should be visible, others hidden.
+  await expect(page.locator('#tab-cultivation')).toBeVisible();
+  await expect(page.locator('#tab-techniques')).toBeHidden();
+  await expect(page.locator('#tab-inventory')).toBeHidden();
+  await expect(page.locator('#tab-log')).toBeHidden();
+  await expect(page.locator('#tab-settings')).toBeHidden();
+
+  // The cultivation tab button has aria-selected true.
+  await expect(page.locator('[data-tab="cultivation"]')).toHaveAttribute('aria-selected', 'true');
+
+  // Click the Techniques tab.
+  await page.locator('[data-tab="techniques"]').click();
+  await expect(page.locator('#tab-cultivation')).toBeHidden();
+  await expect(page.locator('#tab-techniques')).toBeVisible();
+  await expect(page.locator('[data-tab="techniques"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-tab="cultivation"]')).toHaveAttribute('aria-selected', 'false');
+
+  // The upgrades panel is inside the Techniques tab and should be visible now.
+  await expect(page.locator('[data-upgrade-id="foundation-breathing"]')).toBeVisible();
+
+  // Click the Inventory tab.
+  await page.locator('[data-tab="inventory"]').click();
+  await expect(page.locator('#tab-inventory')).toBeVisible();
+  await expect(page.locator('#tab-techniques')).toBeHidden();
+
+  // Click the Log tab.
+  await page.locator('[data-tab="log"]').click();
+  await expect(page.locator('#tab-log')).toBeVisible();
+  await expect(page.locator('#activity-log')).toBeVisible();
+
+  // Click the Settings tab.
+  await page.locator('[data-tab="settings"]').click();
+  await expect(page.locator('#tab-settings')).toBeVisible();
+  await expect(page.locator('[data-settings-panel]')).toBeVisible();
+
+  expect(errors).toEqual([]);
+});
+
+test('inventory grid: add items and verify grid rendering', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  // InventorySystem is exposed after bootstrap.
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__inventory)))
+    .toBe(true);
+
+  // Inject items into the inventory.
+  await page.evaluate(() => {
+    window.__inventory.add('qi-condensation-pill', 5);
+    window.__inventory.add('spirit-herb', 3);
+    window.__inventory.add('iron-ore', 12);
+  });
+
+  // Navigate to the Inventory tab.
+  await page.locator('[data-tab="inventory"]').click();
+  await expect(page.locator('#tab-inventory')).toBeVisible();
+
+  // The inventory grid should render item cards.
+  const grid = page.locator('[data-inventory-grid]');
+  await expect(grid).toBeVisible();
+
+  // Three item cards.
+  const cards = page.locator('.inventory-item');
+  await expect(cards).toHaveCount(3);
+
+  // First card: Qi Condensation Pill.
+  const firstCard = cards.nth(0);
+  await expect(firstCard.locator('.inventory-item__name')).toHaveText('Qi Condensation Pill');
+  await expect(firstCard.locator('.inventory-item__count')).toHaveText('\u00d75');
+  await expect(firstCard.locator('.inventory-item__category')).toHaveText('pill');
+  await expect(firstCard.locator('.inventory-item__grade')).toHaveText('Mortal');
+
+  // Second card: Spirit Herb.
+  const secondCard = cards.nth(1);
+  await expect(secondCard.locator('.inventory-item__name')).toHaveText('Spirit Herb');
+  await expect(secondCard.locator('.inventory-item__count')).toHaveText('\u00d73');
+
+  // Third card: Iron Ore.
+  const thirdCard = cards.nth(2);
+  await expect(thirdCard.locator('.inventory-item__name')).toHaveText('Iron Ore');
+  await expect(thirdCard.locator('.inventory-item__count')).toHaveText('\u00d712');
+
+  // Remove items to verify re-render on inventory:changed.
+  await page.evaluate(() => {
+    window.__inventory.remove('spirit-herb', 2);
+  });
+
+  // The DOM re-renders after the emit — spirit herb count should change.
+  await expect(page.locator('.inventory-item').nth(1).locator('.inventory-item__count')).toHaveText('\u00d71');
 
   expect(errors).toEqual([]);
 });

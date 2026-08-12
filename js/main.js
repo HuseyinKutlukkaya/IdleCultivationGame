@@ -37,6 +37,8 @@ import { initScrollReveal } from './ui/reveal.js';
 import { initCultivationPanel } from './ui/cultivation-panel.js';
 import { initSettingsPanel } from './ui/settings-panel.js';
 import { initUpgradesPanel } from './ui/upgrades-panel.js';
+import { initTabs } from './ui/tabs.js';
+import { initInventoryPanel } from './ui/inventory-panel.js';
 
 /**
  * Small boot orchestrator.
@@ -109,6 +111,12 @@ async function bootstrap() {
     });
     const renderer = new Renderer({ notation });
     renderer.init();
+
+    // Tab navigation: find tab buttons and panels, set up click delegation.
+    // Initialized BEFORE any panel initializers so the DOM structure is
+    // already wired when they query their selectors and the initial tab
+    // (cultivation) is the only visible panel from the start.
+    const tabHandle = initTabs({ initialTab: 'cultivation' });
 
     const restored = saveManager.load();
 
@@ -422,6 +430,19 @@ async function bootstrap() {
       notation,
     });
 
+    // Inventory panel: renders the carried item stacks as a box grid with
+    // pagination in the Inventory tab. Wired to the real InventorySystem and
+    // DataManager — the panel reads state only through the injected systems.
+    // Subscribes to 'inventory:changed' and 'ui:refresh' for live re-renders.
+    // Initialized AFTER the InventorySystem and DataManager are built and
+    // BEFORE game.start() so the first tick's 'ui:refresh' reaches a
+    // subscribed listener.
+    const inventoryPanel = initInventoryPanel({
+      inventorySystem: inventory,
+      dataManager,
+      eventBus: EventBus,
+    });
+
     // Master's parting gift: on a FRESH game (no save to restore), narrate
     // the origin endowment that matches state.resources.spiritStones === 50
     // (the only spirit-stone source until Phase 5 introduces sects + stipends).
@@ -466,6 +487,7 @@ async function bootstrap() {
     window.__tribulations = tribulations;
     window.__spiritRoots = spiritRoots;
     window.__cultivationPanel = cultivationPanel;
+    window.__inventoryPanel = inventoryPanel;
 
     const offlineNote =
       restored && offlineSummary.applied && hasGains(offlineSummary)
