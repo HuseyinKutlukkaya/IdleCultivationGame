@@ -36,6 +36,7 @@ import { BreakthroughSystem } from '../../js/systems/breakthroughs.js';
 import { TribulationSystem } from '../../js/systems/tribulations.js';
 import { SpiritRootSystem } from '../../js/systems/spirit-roots.js';
 import { DantianSystem } from '../../js/systems/dantian.js';
+import { BloodlineSystem } from '../../js/systems/bloodlines.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { initActivityLog } from '../../js/ui/activity-log.js';
@@ -163,6 +164,14 @@ const DATA_FILES = {
           uniqueField: 'id',
         },
       },
+      {
+        id: 'bloodlines',
+        files: ['data/bloodlines/bloodlines.json'],
+        validation: {
+          requiredFields: ['id', 'name', 'cultivationSpeedMultiplier', 'qiMaxMultiplier'],
+          uniqueField: 'id',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -267,6 +276,13 @@ const DATA_FILES = {
     definitions: [
       { id: 'cracked', name: 'Cracked Dantian', description: 'A fractured dantian that barely holds qi.', capacityMultiplier: 0.60, densityMultiplier: 0.60, purityMultiplier: 0.60, efficiencyMultiplier: 0.60 },
       { id: 'normal', name: 'Normal Dantian', description: 'A standard-sized dantian — a solid foundation.', capacityMultiplier: 1.00, densityMultiplier: 1.00, purityMultiplier: 1.00, efficiencyMultiplier: 1.00 },
+    ],
+  },
+  'data/bloodlines/bloodlines.json': {
+    meta: {},
+    definitions: [
+      { id: 'ancient-human', name: 'Ancient Human', description: 'The baseline bloodline of every mortal — no innate edge, no weakness.', cultivationSpeedMultiplier: 1.00, qiMaxMultiplier: 1.00 },
+      { id: 'dragon', name: 'Dragon Bloodline', description: 'A sovereign bloodline whose might hastens cultivation and expands the sea of qi.', cultivationSpeedMultiplier: 1.85, qiMaxMultiplier: 1.70 },
     ],
   },
 };
@@ -460,7 +476,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 12 definitions loaded. Game loop running.'
+    'Scaffold ready — 14 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -652,6 +668,31 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(GameState.cultivation.dantianPurityMultiplier, 1);
   assert.equal(GameState.cultivation.dantianEfficiencyMultiplier, 1);
   assert.equal(GameState.player.dantian, 'Normal Dantian');
+  // The Bloodline system is wired with the DataManager: the ladder comes
+  // from the loaded 'bloodlines' collection (2 canned entries — ancient-human
+  // and dragon). The boot leaves the canonical fresh neutral state: the
+  // ancient-human bloodline (all 1.0× multipliers), the cultivation slots at
+  // 1 and the player display name 'Ancient Human' — no roll happens at boot.
+  assert.ok(globalThis.window.__bloodlines instanceof BloodlineSystem);
+  assert.equal(globalThis.window.__bloodlines.count, 2);
+  assert.equal(
+    globalThis.window.__bloodlines.byId('ancient-human').cultivationSpeedMultiplier,
+    1.0
+  );
+  assert.equal(
+    globalThis.window.__bloodlines.byId('dragon').name,
+    'Dragon Bloodline'
+  );
+  assert.equal(globalThis.window.__bloodlines.byId('missing'), null);
+  assert.deepEqual(GameState.bloodlines, {
+    id: 'ancient-human',
+    name: 'Ancient Human',
+    cultivationSpeedMultiplier: 1.0,
+    qiMaxMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.bloodlineSpeedMultiplier, 1);
+  assert.equal(GameState.cultivation.bloodlineQiMaxMultiplier, 1);
+  assert.equal(GameState.player.bloodline, 'Ancient Human');
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -706,6 +747,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/tribulations/tribulations.json',
     'data/spirit-roots/spirit-roots.json',
     'data/dantian/dantian.json',
+    'data/bloodlines/bloodlines.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -793,4 +835,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__tribulations, undefined);
   assert.equal(globalThis.window.__spiritRoots, undefined);
   assert.equal(globalThis.window.__dantian, undefined);
+  assert.equal(globalThis.window.__bloodlines, undefined);
 });

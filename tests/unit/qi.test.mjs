@@ -400,6 +400,8 @@ test('a restored cultivation slice that is null is repaired and never aborts boo
     spiritRootMultiplier: 1,
     meridianCapacityMultiplier: 1,
     meridianFlowMultiplier: 1,
+    bloodlineSpeedMultiplier: 1,
+    bloodlineQiMaxMultiplier: 1,
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
@@ -886,4 +888,137 @@ test('dantian capacity multiplier stacks with realm and meridian capacity multip
   // Rate: 2 qi/s × 1 (realm speed) × 1 (spirit root) × 1 (meridian flow) → the
   // dantian cap factor never touches the rate.
   assert.equal(state.cultivation.qiPerSecond, 2);
+});
+
+test('the bloodline qi-cap multiplier stacks in _computeQiMax', () => {
+  // The BloodlineSystem writes cultivation.bloodlineQiMaxMultiplier from the
+  // current bloodline's qiMaxMultiplier; a factor of 2 doubles the cap.
+  const state = structuredClone(GameState);
+  state.cultivation.bloodlineQiMaxMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 100 (baseMaxQi) × 1 (realm) × 1 (meridian capacity) × 1 (dantian capacity)
+  // × 2 (bloodline qi-cap) → 200.
+  assert.equal(state.cultivation.qiMax, 200);
+
+  // The unmanaged path (no baseMaxQi) keeps the state value untouched.
+  const unmanaged = structuredClone(GameState);
+  unmanaged.cultivation.bloodlineQiMaxMultiplier = 2;
+  makeSystem(makeConfig({ baseMaxQi: undefined }), unmanaged);
+  assert.equal(unmanaged.cultivation.qiMax, 100);
+});
+
+test('the bloodline qi-cap multiplier never touches the per-second rate', () => {
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.bloodlineQiMaxMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 2 qi/s × 1 (realm) × 1 (spirit root) × 1 (meridian flow) × 1 (bloodline
+  // speed) → the bloodline qi-cap multiplier never reaches the rate.
+  assert.equal(state.cultivation.qiPerSecond, 2);
+  assert.equal(state.cultivation.qiMax, 200);
+});
+
+test('the bloodline speed multiplier scales the aggregate rate', () => {
+  // The BloodlineSystem writes cultivation.bloodlineSpeedMultiplier from the
+  // current bloodline's cultivationSpeedMultiplier; a factor of 1.5
+  // multiplies the rate.
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.bloodlineSpeedMultiplier = 1.5;
+
+  makeSystem(makeConfig(), state);
+
+  // 2 qi/s × 1.5 → the constructor sync already exposes 3.
+  assert.equal(state.cultivation.qiPerSecond, 3);
+  // The cap is NOT affected (100 × realm 1 × bloodline qi-cap 1).
+  assert.equal(state.cultivation.qiMax, 100);
+
+  const gained = [];
+  EventBus.subscribe('qi:gained', (payload) => gained.push(payload));
+  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+
+  assert.equal(state.cultivation.qi, 3);
+  assert.equal(state.statistics.qiGenerated, 3);
+  assert.deepEqual(gained[0], { amount: 3, total: 3, sources: ['meditation'] });
+});
+
+test('the bloodline speed multiplier never touches the qi cap', () => {
+  const state = structuredClone(GameState);
+  state.cultivation.realmEffects.qiMaxMultiplier = 2;
+  state.cultivation.bloodlineSpeedMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 100 × 2 (realm only) → 200 — the bloodline speed factor never multiplies in.
+  assert.equal(state.cultivation.qiMax, 200);
+
+  // The unmanaged path keeps the state value untouched too.
+  const unmanaged = structuredClone(GameState);
+  unmanaged.cultivation.realmEffects.qiMaxMultiplier = 2;
+  unmanaged.cultivation.bloodlineSpeedMultiplier = 2;
+  makeSystem(makeConfig({ baseMaxQi: undefined }), unmanaged);
+  assert.equal(unmanaged.cultivation.qiMax, 100);
+});
+
+test('a missing or malformed bloodline qi-cap multiplier is neutral (multiplier 1)', () => {
+  for (const multiplier of [undefined, null, -5, 0, 'bogus', NaN, Infinity]) {
+    EventBus.clear();
+    const state = structuredClone(GameState);
+    if (multiplier === undefined) delete state.cultivation.bloodlineQiMaxMultiplier;
+    else state.cultivation.bloodlineQiMaxMultiplier = multiplier;
+
+    makeSystem(makeConfig(), state);
+
+    assert.equal(state.cultivation.qiMax, 100);
+  }
+});
+
+test('a missing or malformed bloodline speed multiplier is neutral (multiplier 1)', () => {
+  for (const multiplier of [undefined, null, -5, 0, 'bogus', NaN, Infinity]) {
+    EventBus.clear();
+    const state = structuredClone(GameState);
+    if (multiplier === undefined) delete state.cultivation.bloodlineSpeedMultiplier;
+    else state.cultivation.bloodlineSpeedMultiplier = multiplier;
+    state.cultivation.qiSources.meditation = 2;
+
+    makeSystem(makeConfig(), state);
+
+    assert.equal(state.cultivation.qiPerSecond, 2);
+  }
+});
+
+test('all five multipliers stack together — realm, spirit root, meridians and bloodline', () => {
+  // Realm speed, spirit root speed, meridian flow and bloodline speed stack on
+  // the rate; realm qiMax, meridian capacity, dantian capacity and bloodline
+  // qi-cap stack on the cap.
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.realmEffects.qiMaxMultiplier = 1.5;
+  state.cultivation.realmEffects.cultivationSpeedMultiplier = 1.5;
+  state.cultivation.spiritRootMultiplier = 2;
+  state.cultivation.meridianCapacityMultiplier = 2;
+  state.cultivation.meridianFlowMultiplier = 2;
+  state.cultivation.bloodlineQiMaxMultiplier = 2;
+  state.cultivation.bloodlineSpeedMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // Cap: 100 × 1.5 (realm) × 2 (meridian capacity) × 1 (dantian capacity) ×
+  // 2 (bloodline qi-cap) → 600.
+  assert.equal(state.cultivation.qiMax, 600);
+  // Rate: 2 qi/s × 1.5 (realm) × 2 (spirit root) × 2 (meridian flow) ×
+  // 2 (bloodline speed) → 24.
+  assert.equal(state.cultivation.qiPerSecond, 24);
+
+  const gained = [];
+  EventBus.subscribe('qi:gained', (payload) => gained.push(payload));
+  EventBus.emit('loop:update', { deltaMs: TICK_MS, elapsedMs: TICK_MS, tick: 1 });
+
+  assert.equal(state.cultivation.qi, 24);
+  assert.equal(state.statistics.qiGenerated, 24);
+  assert.deepEqual(gained[0], { amount: 24, total: 24, sources: ['meditation'] });
 });

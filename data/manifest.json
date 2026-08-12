@@ -91,6 +91,14 @@
         "requiredFields": ["id", "name", "capacityMultiplier", "densityMultiplier", "purityMultiplier", "efficiencyMultiplier"],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "bloodlines",
+      "files": ["data/bloodlines/bloodlines.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "cultivationSpeedMultiplier", "qiMaxMultiplier"],
+        "uniqueField": "id"
+      }
     }
   ]
 }

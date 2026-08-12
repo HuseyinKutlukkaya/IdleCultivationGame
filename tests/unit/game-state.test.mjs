@@ -36,7 +36,7 @@ test('has the exact default placeholder shape', () => {
       title: '',
       spiritRoot: 'Unawakened',
       physique: 'Ordinary Body',
-      bloodline: 'None',
+      bloodline: 'Ancient Human',
       meridians: 'Normal',
       dantian: 'Normal Dantian',
     },
@@ -66,6 +66,13 @@ test('has the exact default placeholder shape', () => {
       efficiencyMultiplier: 1.0,
     },
 
+    bloodlines: {
+      id: 'ancient-human',
+      name: 'Ancient Human',
+      cultivationSpeedMultiplier: 1.0,
+      qiMaxMultiplier: 1.0,
+    },
+
       cultivation: {
         realm: 'Mortal',
         realmTier: 0,
@@ -90,6 +97,8 @@ test('has the exact default placeholder shape', () => {
         dantianDensityMultiplier: 1,
         dantianPurityMultiplier: 1,
         dantianEfficiencyMultiplier: 1,
+        bloodlineSpeedMultiplier: 1,
+        bloodlineQiMaxMultiplier: 1,
         qi: 0,
         qiMax: 100,
         qiPerSecond: 0,
@@ -172,6 +181,7 @@ test('has the exact default placeholder shape', () => {
 
 test('exposes exactly the eighteen top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
+    'bloodlines',
     'cultivation',
     'dantian',
     'inventory',
@@ -228,6 +238,15 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.cultivation.dantianPurityMultiplier, 1);
   assert.equal(GameState.cultivation.dantianEfficiencyMultiplier, 1);
   assert.equal(GameState.player.dantian, 'Normal Dantian');
+  assert.equal(GameState.player.bloodline, 'Ancient Human');
+  assert.deepEqual(GameState.bloodlines, {
+    id: 'ancient-human',
+    name: 'Ancient Human',
+    cultivationSpeedMultiplier: 1.0,
+    qiMaxMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.bloodlineSpeedMultiplier, 1);
+  assert.equal(GameState.cultivation.bloodlineQiMaxMultiplier, 1);
   // Master's parting gift — fresh-state spirit-stone endowment (50 stones).
   // The other resources still start at zero (no equivalent endowment for
   // herbs/jade/pills yet; those arrive with the Phase-4 alchemical market).
@@ -252,12 +271,13 @@ test('default settings favour offline progress and stay silent by default', () =
   assert.equal(GameState.settings.notationStyle, null);
 });
 
-test('a legacy save without the spirit-root, meridian, physique and dantian keys keeps canonical fresh values after the standard restore merge', () => {
+test('a legacy save without the spirit-root, meridian, physique, dantian and bloodline keys keeps canonical fresh values after the standard restore merge', () => {
   // Saves written before the SpiritRootSystem, MeridianSystem,
-  // PhysiqueSystem and DantianSystem carry no `spiritRoot` / `meridians` /
-  // `physiques` / `dantian` slices and no multiplier slots. Game.restore()
-  // applies a save via deepMerge(GameState, snapshot), so keys the old save
-  // does not carry are left at their current fresh defaults.
+  // PhysiqueSystem, DantianSystem and BloodlineSystem carry no `spiritRoot` /
+  // `meridians` / `physiques` / `dantian` / `bloodlines` slices and no
+  // multiplier slots. Game.restore() applies a save via
+  // deepMerge(GameState, snapshot), so keys the old save does not carry are
+  // left at their current fresh defaults.
   const state = structuredClone(GameState);
   const legacySave = structuredClone(GameState);
   delete legacySave.spiritRoot;
@@ -272,6 +292,9 @@ test('a legacy save without the spirit-root, meridian, physique and dantian keys
   delete legacySave.cultivation.dantianDensityMultiplier;
   delete legacySave.cultivation.dantianPurityMultiplier;
   delete legacySave.cultivation.dantianEfficiencyMultiplier;
+  delete legacySave.bloodlines;
+  delete legacySave.cultivation.bloodlineSpeedMultiplier;
+  delete legacySave.cultivation.bloodlineQiMaxMultiplier;
   legacySave.player.name = 'Ren';
   legacySave.resources.spiritStones = 42;
 
@@ -326,4 +349,14 @@ test('a legacy save without the spirit-root, meridian, physique and dantian keys
   assert.equal(state.cultivation.dantianDensityMultiplier, 1);
   assert.equal(state.cultivation.dantianPurityMultiplier, 1);
   assert.equal(state.cultivation.dantianEfficiencyMultiplier, 1);
+  // Missing bloodline keys keep the canonical fresh values.
+  assert.deepEqual(state.bloodlines, {
+    id: 'ancient-human',
+    name: 'Ancient Human',
+    cultivationSpeedMultiplier: 1.0,
+    qiMaxMultiplier: 1.0,
+  });
+  assert.equal(state.cultivation.bloodlineSpeedMultiplier, 1);
+  assert.equal(state.cultivation.bloodlineQiMaxMultiplier, 1);
+  assert.equal(state.player.bloodline, 'Ancient Human');
 });

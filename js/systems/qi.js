@@ -87,7 +87,13 @@
  *   cultivation.dantianCapacityMultiplier (the slot the DantianSystem
  *   (js/systems/dantian.js) writes from the current dantian's data-driven
  *   capacityMultiplier), with the same neutral-1 coercion as the other cap
- *   factor slots (see _dantianCapacityMultiplier); additional
+ *   factor slots (see _dantianCapacityMultiplier); the BLOODLINE multipliers
+ *   have LANDED: the CAP multiplies by cultivation.bloodlineQiMaxMultiplier
+ *   and the rate by cultivation.bloodlineSpeedMultiplier (the slots the
+ *   BloodlineSystem (js/systems/bloodlines.js) writes from the current
+ *   bloodline's data-driven factors), both with the same neutral-1 coercion
+ *   as the other factor slots (see _bloodlineQiMaxMultiplier and
+ *   _bloodlineSpeedMultiplier); additional
  *   qi sources (herbs, sect income, ...) are declared in
  * config.qi.sources with their own state rate slot.
  */
@@ -218,7 +224,8 @@ export class QiSystem {
       rateSum *
         _realmMultiplier(this._state, 'cultivationSpeedMultiplier') *
         _spiritRootMultiplier(this._state) *
-        _meridianFlowMultiplier(this._state)
+        _meridianFlowMultiplier(this._state) *
+        _bloodlineSpeedMultiplier(this._state)
     );
     this._syncPerSecondRate(rate);
 
@@ -277,7 +284,8 @@ export class QiSystem {
         this._baseMaxQi *
           _realmMultiplier(this._state, 'qiMaxMultiplier') *
           _meridianCapacityMultiplier(this._state) *
-          _dantianCapacityMultiplier(this._state)
+          _dantianCapacityMultiplier(this._state) *
+          _bloodlineQiMaxMultiplier(this._state)
       );
     }
     return _asNumber(this._state.cultivation.qiMax);
@@ -362,7 +370,8 @@ export class QiSystem {
       sum *
         _realmMultiplier(this._state, 'cultivationSpeedMultiplier') *
         _spiritRootMultiplier(this._state) *
-        _meridianFlowMultiplier(this._state)
+        _meridianFlowMultiplier(this._state) *
+        _bloodlineSpeedMultiplier(this._state)
     );
   }
 
@@ -415,6 +424,8 @@ function _freshCultivationSlice() {
     spiritRootMultiplier: 1,
     meridianCapacityMultiplier: 1,
     meridianFlowMultiplier: 1,
+    bloodlineSpeedMultiplier: 1,
+    bloodlineQiMaxMultiplier: 1,
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
@@ -594,6 +605,48 @@ function _meridianFlowMultiplier(state) {
 function _dantianCapacityMultiplier(state) {
   if (!state || !state.cultivation) return 1;
   const parsed = Number(state.cultivation.dantianCapacityMultiplier);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+/**
+ * Read the bloodline qi-cap factor off
+ * state.cultivation.bloodlineQiMaxMultiplier — the slot the BloodlineSystem
+ * (js/systems/bloodlines.js) writes from the current bloodline's data-driven
+ * qiMaxMultiplier. A missing, malformed or non-positive value returns the
+ * neutral factor 1 (never 0, so a hostile save or a missing slot can never
+ * zero out the cap). The bloodline qi-cap factor stacks in _computeQiMax
+ * alongside the realm's qiMaxMultiplier, the meridian capacity multiplier and
+ * the dantian capacity multiplier — a stronger bloodline enlarges the
+ * effective qi capacity. Guards against a null cultivation slice.
+ *
+ * @param {object|null} state — game state object.
+ * @returns {number} the effective multiplier (>= 1).
+ */
+function _bloodlineQiMaxMultiplier(state) {
+  if (!state || !state.cultivation) return 1;
+  const parsed = Number(state.cultivation.bloodlineQiMaxMultiplier);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+/**
+ * Read the bloodline cultivation-speed factor off
+ * state.cultivation.bloodlineSpeedMultiplier — the slot the BloodlineSystem
+ * (js/systems/bloodlines.js) writes from the current bloodline's data-driven
+ * cultivationSpeedMultiplier. A missing, malformed or non-positive value
+ * returns the neutral factor 1 (never 0, so a hostile save or a missing slot
+ * can never zero out a rate). The bloodline speed factor stacks on the
+ * aggregate rate alongside the realm's cultivationSpeedMultiplier, the
+ * spirit-root multiplier and the meridian flow multiplier — a stronger
+ * bloodline quickens cultivation. The bloodline speed factor deliberately
+ * does NOT stack in _computeQiMax (a bloodline speeds up cultivation, it
+ * never enlarges the cap). Guards against a null cultivation slice.
+ *
+ * @param {object|null} state — game state object.
+ * @returns {number} the effective multiplier (>= 1).
+ */
+function _bloodlineSpeedMultiplier(state) {
+  if (!state || !state.cultivation) return 1;
+  const parsed = Number(state.cultivation.bloodlineSpeedMultiplier);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 

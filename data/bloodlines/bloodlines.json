@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 Bloodline data. Placeholder flat ladder — Phase 10 Balancing retunes."
+  },
+  "definitions": [
+    { "id": "ancient-human", "name": "Ancient Human", "description": "The baseline bloodline of every mortal — no innate edge, no weakness.", "cultivationSpeedMultiplier": 1.00, "qiMaxMultiplier": 1.00 },
+    { "id": "tiger", "name": "Tiger Bloodline", "description": "A ferocious bloodline that drives cultivation with relentless momentum.", "cultivationSpeedMultiplier": 1.15, "qiMaxMultiplier": 1.10 },
+    { "id": "turtle", "name": "Turtle Bloodline", "description": "A steady bloodline that deepens the qi reservoirs beyond the norm.", "cultivationSpeedMultiplier": 1.25, "qiMaxMultiplier": 1.20 },
+    { "id": "qilin", "name": "Qilin Bloodline", "description": "An auspicious bloodline that quickens cultivation and swells the dantian.", "cultivationSpeedMultiplier": 1.40, "qiMaxMultiplier": 1.35 },
+    { "id": "phoenix", "name": "Phoenix Bloodline", "description": "A reborn bloodline whose vigour accelerates cultivation and broadens capacity.", "cultivationSpeedMultiplier": 1.60, "qiMaxMultiplier": 1.50 },
+    { "id": "dragon", "name": "Dragon Bloodline", "description": "A sovereign bloodline whose might hastens cultivation and expands the sea of qi.", "cultivationSpeedMultiplier": 1.85, "qiMaxMultiplier": 1.70 },
+    { "id": "celestial", "name": "Celestial Bloodline", "description": "A heaven-touched bloodline that cultivates with uncanny swiftness and vast reserves.", "cultivationSpeedMultiplier": 2.20, "qiMaxMultiplier": 2.00 },
+    { "id": "chaos-blood", "name": "Chaos Bloodline", "description": "A primordial bloodline that bends the laws of cultivation — unrivalled speed and depth.", "cultivationSpeedMultiplier": 2.75, "qiMaxMultiplier": 2.50 }
+  ]
+}

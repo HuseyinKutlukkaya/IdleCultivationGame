@@ -299,7 +299,7 @@ export function initCultivationPanel({
    * hits that).
    *
    * @param {object} gameState — the game state (player slice).
-   * @returns {string} e.g. "Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian".
+   * @returns {string} e.g. "Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human".
    */
   function characterText(gameState) {
     const player = gameState && gameState.player;
@@ -319,7 +319,11 @@ export function initCultivationPanel({
       player && typeof player.dantian === 'string'
         ? String(player.dantian).slice(0, 64)
         : '—';
-    return `Spirit Root: ${rootName} · Physique: ${physique} · Meridians: ${meridians} · Dantian: ${dantian}`;
+    const bloodline =
+      player && typeof player.bloodline === 'string'
+        ? String(player.bloodline).slice(0, 64)
+        : '—';
+    return `Spirit Root: ${rootName} · Physique: ${physique} · Meridians: ${meridians} · Dantian: ${dantian} · Bloodline: ${bloodline}`;
   }
 
   /**

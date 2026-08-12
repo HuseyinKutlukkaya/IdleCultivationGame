@@ -30,7 +30,10 @@
  * @property {number} cultivation.dantianDensityMultiplier — dantian density slot, future-consumer (neutral 1 by default; written by DantianSystem)
  * @property {number} cultivation.dantianPurityMultiplier — dantian purity slot, future-consumer (neutral 1 by default; written by DantianSystem)
  * @property {number} cultivation.dantianEfficiencyMultiplier — dantian efficiency slot, future-consumer (neutral 1 by default; written by DantianSystem)
+ * @property {number} cultivation.bloodlineSpeedMultiplier — bloodline cultivation-speed slot (neutral 1 by default; written by BloodlineSystem)
+ * @property {number} cultivation.bloodlineQiMaxMultiplier — bloodline qi-cap slot (neutral 1 by default; written by BloodlineSystem)
  * @property {Object} dantian — the cultivator's dantian (id, name, capacityMultiplier, densityMultiplier, purityMultiplier, efficiencyMultiplier)
+ * @property {Object} bloodlines — the cultivator's bloodline (id, name, cultivationSpeedMultiplier, qiMaxMultiplier)
  * @property {Object} resources — currency and material counts
  * @property {Object} inventory — carried items
  * @property {Object} techniques — known and active techniques
@@ -80,7 +83,7 @@ function createGameState() {
       title: '',
       spiritRoot: 'Unawakened',
       physique: 'Ordinary Body',
-      bloodline: 'None',
+      bloodline: 'Ancient Human',
       meridians: 'Normal',
       dantian: 'Normal Dantian',
     },
@@ -152,6 +155,8 @@ function createGameState() {
       dantianDensityMultiplier: 1,
       dantianPurityMultiplier: 1,
       dantianEfficiencyMultiplier: 1,
+      bloodlineSpeedMultiplier: 1,
+      bloodlineQiMaxMultiplier: 1,
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
@@ -239,6 +244,23 @@ function createGameState() {
       densityMultiplier: 1.0,
       purityMultiplier: 1.0,
       efficiencyMultiplier: 1.0,
+    },
+
+    bloodlines: {
+      // Owned by the BloodlineSystem (js/systems/bloodlines.js). The
+      // cultivator's ancestral bloodline: id is the data-table key
+      // (data/bloodlines/bloodlines.json — 'ancient-human' in the ladder);
+      // name is the display name mirrored on player.bloodline;
+      // cultivationSpeedMultiplier feeds cultivation.bloodlineSpeedMultiplier
+      // (qi rate — the QiSystem stacks it into the per-second aggregate) and
+      // qiMaxMultiplier feeds cultivation.bloodlineQiMaxMultiplier (qi cap —
+      // the QiSystem stacks it into _computeQiMax alongside the realm/meridian/
+      // dantian factors); both neutral Ancient Human defaults, so fresh games
+      // and old saves stay numerically identical to today.
+      id: 'ancient-human',
+      name: 'Ancient Human',
+      cultivationSpeedMultiplier: 1.0,
+      qiMaxMultiplier: 1.0,
     },
 
     resources: {

@@ -29,6 +29,7 @@ import { SpiritRootSystem } from './systems/spirit-roots.js';
 import { MeridianSystem } from './systems/meridians.js';
 import { PhysiqueSystem } from './systems/physiques.js';
 import { DantianSystem } from './systems/dantian.js';
+import { BloodlineSystem } from './systems/bloodlines.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { TechniqueSystem } from './systems/techniques.js';
@@ -487,6 +488,22 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Bloodline: single owner of the cultivator's bloodline and its
+    // cultivation-speed + qi-cap multiplier slots (data/bloodlines/
+    // bloodlines.json via the DataManager — the canonical 8-state ladder
+    // Ancient Human → Chaos Blood). Constructed AFTER the DataManager load
+    // (the ladder must resolve) and AFTER the QiSystem: the constructor sync
+    // writes cultivation.bloodlineSpeedMultiplier and
+    // cultivation.bloodlineQiMaxMultiplier from the restored bloodline's
+    // factors, and the QiSystem stacks both slots into the rate aggregate
+    // and the qi cap from the first tick. It has NO loop subscription —
+    // bloodlines only change through setBloodline() (the future character-gen
+    // flow, the console and tests), never on a tick.
+    const bloodlines = new BloodlineSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Cultivation panel: the Phase-3 play-test surface — the human player's
     // Breakthrough / Face Tribulation buttons plus the character readout.
     // The "Cultivation Realm" panel shows the realm/progress/cost bindings
@@ -568,6 +585,7 @@ async function bootstrap() {
     window.__meridians = meridians;
     window.__physiques = physiques;
     window.__dantian = dantian;
+    window.__bloodlines = bloodlines;
     window.__cultivationPanel = cultivationPanel;
     window.__inventoryPanel = inventoryPanel;
 
