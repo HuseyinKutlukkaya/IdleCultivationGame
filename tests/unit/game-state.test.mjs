@@ -38,6 +38,7 @@ test('has the exact default placeholder shape', () => {
       physique: 'Ordinary Body',
       bloodline: 'None',
       meridians: 'Normal',
+      dantian: 'Normal Dantian',
     },
 
     meridians: {
@@ -54,6 +55,15 @@ test('has the exact default placeholder shape', () => {
       lifespanMultiplier: 1,
       healthMultiplier: 1,
       powerMultiplier: 1,
+    },
+
+    dantian: {
+      id: 'normal',
+      name: 'Normal Dantian',
+      capacityMultiplier: 1.0,
+      densityMultiplier: 1.0,
+      purityMultiplier: 1.0,
+      efficiencyMultiplier: 1.0,
     },
 
       cultivation: {
@@ -76,6 +86,10 @@ test('has the exact default placeholder shape', () => {
         meridianCapacityMultiplier: 1,
         meridianFlowMultiplier: 1,
         physiqueBreakthroughBonus: 0,
+        dantianCapacityMultiplier: 1,
+        dantianDensityMultiplier: 1,
+        dantianPurityMultiplier: 1,
+        dantianEfficiencyMultiplier: 1,
         qi: 0,
         qiMax: 100,
         qiPerSecond: 0,
@@ -156,9 +170,10 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the seventeen top-level state slices', () => {
+test('exposes exactly the eighteen top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'cultivation',
+    'dantian',
     'inventory',
     'meditation',
     'meridians',
@@ -208,6 +223,11 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.cultivation.meridianCapacityMultiplier, 1);
   assert.equal(GameState.cultivation.meridianFlowMultiplier, 1);
   assert.equal(GameState.cultivation.physiqueBreakthroughBonus, 0);
+  assert.equal(GameState.cultivation.dantianCapacityMultiplier, 1);
+  assert.equal(GameState.cultivation.dantianDensityMultiplier, 1);
+  assert.equal(GameState.cultivation.dantianPurityMultiplier, 1);
+  assert.equal(GameState.cultivation.dantianEfficiencyMultiplier, 1);
+  assert.equal(GameState.player.dantian, 'Normal Dantian');
   // Master's parting gift — fresh-state spirit-stone endowment (50 stones).
   // The other resources still start at zero (no equivalent endowment for
   // herbs/jade/pills yet; those arrive with the Phase-4 alchemical market).
@@ -232,12 +252,12 @@ test('default settings favour offline progress and stay silent by default', () =
   assert.equal(GameState.settings.notationStyle, null);
 });
 
-test('a legacy save without the spirit-root, meridian and physique keys keeps canonical fresh values after the standard restore merge', () => {
-  // Saves written before the SpiritRootSystem, MeridianSystem and
-  // PhysiqueSystem carry no `spiritRoot` / `meridians` / `physiques` slices
-  // and no multiplier slots.  Game.restore() applies a save via
-  // deepMerge(GameState, snapshot), so keys the old save does not carry are
-  // left at their current fresh defaults.
+test('a legacy save without the spirit-root, meridian, physique and dantian keys keeps canonical fresh values after the standard restore merge', () => {
+  // Saves written before the SpiritRootSystem, MeridianSystem,
+  // PhysiqueSystem and DantianSystem carry no `spiritRoot` / `meridians` /
+  // `physiques` / `dantian` slices and no multiplier slots. Game.restore()
+  // applies a save via deepMerge(GameState, snapshot), so keys the old save
+  // does not carry are left at their current fresh defaults.
   const state = structuredClone(GameState);
   const legacySave = structuredClone(GameState);
   delete legacySave.spiritRoot;
@@ -247,6 +267,11 @@ test('a legacy save without the spirit-root, meridian and physique keys keeps ca
   delete legacySave.cultivation.meridianFlowMultiplier;
   delete legacySave.physiques;
   delete legacySave.cultivation.physiqueBreakthroughBonus;
+  delete legacySave.dantian;
+  delete legacySave.cultivation.dantianCapacityMultiplier;
+  delete legacySave.cultivation.dantianDensityMultiplier;
+  delete legacySave.cultivation.dantianPurityMultiplier;
+  delete legacySave.cultivation.dantianEfficiencyMultiplier;
   legacySave.player.name = 'Ren';
   legacySave.resources.spiritStones = 42;
 
@@ -288,4 +313,17 @@ test('a legacy save without the spirit-root, meridian and physique keys keeps ca
     powerMultiplier: 1,
   });
   assert.equal(state.cultivation.physiqueBreakthroughBonus, 0);
+  // Missing dantian keys keep the canonical fresh values.
+  assert.deepEqual(state.dantian, {
+    id: 'normal',
+    name: 'Normal Dantian',
+    capacityMultiplier: 1.0,
+    densityMultiplier: 1.0,
+    purityMultiplier: 1.0,
+    efficiencyMultiplier: 1.0,
+  });
+  assert.equal(state.cultivation.dantianCapacityMultiplier, 1);
+  assert.equal(state.cultivation.dantianDensityMultiplier, 1);
+  assert.equal(state.cultivation.dantianPurityMultiplier, 1);
+  assert.equal(state.cultivation.dantianEfficiencyMultiplier, 1);
 });

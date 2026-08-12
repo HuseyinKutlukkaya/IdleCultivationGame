@@ -80,10 +80,15 @@
  * the meridian multipliers have LANDED: the CAP multiplies by
  * cultivation.meridianCapacityMultiplier and the rate by
  * cultivation.meridianFlowMultiplier (the slots the MeridianSystem
- * (js/systems/meridians.js) writes from the current meridian's data-driven
- * factors), both with the same neutral-1 coercion as the other factor slots
- * (see _meridianCapacityMultiplier and _meridianFlowMultiplier); additional
- * qi sources (herbs, sect income, ...) are declared in
+ *   (js/systems/meridians.js) writes from the current meridian's data-driven
+ *   factors), both with the same neutral-1 coercion as the other factor slots
+ *   (see _meridianCapacityMultiplier and _meridianFlowMultiplier); the DANTIAN
+ *   capacity multiplier has LANDED: the CAP multiplies by
+ *   cultivation.dantianCapacityMultiplier (the slot the DantianSystem
+ *   (js/systems/dantian.js) writes from the current dantian's data-driven
+ *   capacityMultiplier), with the same neutral-1 coercion as the other cap
+ *   factor slots (see _dantianCapacityMultiplier); additional
+ *   qi sources (herbs, sect income, ...) are declared in
  * config.qi.sources with their own state rate slot.
  */
 
@@ -252,7 +257,8 @@ export class QiSystem {
 
   /**
    * The current qi cap. Managed (a baseMaxQi is configured) → the configured
-   * number × the current realm's qiMaxMultiplier (clamped finite); unmanaged
+   * number × the current realm's qiMaxMultiplier × the meridian capacity
+   * multiplier × the dantian capacity multiplier (clamped finite); unmanaged
    * (missing/invalid baseMaxQi) → the state value unchanged. THE hook where
    * realm/technique/pill/formation multipliers stack: each factor multiplies
    * in here and the whole game (tick clamp, renderer progress bars,
@@ -270,7 +276,8 @@ export class QiSystem {
       return _safeFinite(
         this._baseMaxQi *
           _realmMultiplier(this._state, 'qiMaxMultiplier') *
-          _meridianCapacityMultiplier(this._state)
+          _meridianCapacityMultiplier(this._state) *
+          _dantianCapacityMultiplier(this._state)
       );
     }
     return _asNumber(this._state.cultivation.qiMax);
@@ -567,6 +574,26 @@ function _meridianCapacityMultiplier(state) {
 function _meridianFlowMultiplier(state) {
   if (!state || !state.cultivation) return 1;
   const parsed = Number(state.cultivation.meridianFlowMultiplier);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+/**
+ * Read the dantian capacity factor off
+ * state.cultivation.dantianCapacityMultiplier — the slot the DantianSystem
+ * (js/systems/dantian.js) writes from the current dantian's data-driven
+ * capacityMultiplier. A missing, malformed or non-positive value returns the
+ * neutral factor 1 (never 0, so a hostile save or a missing slot can never
+ * zero out the cap). The dantian capacity factor stacks in _computeQiMax
+ * alongside the realm's qiMaxMultiplier and the meridian capacity multiplier
+ * — a larger/better dantian enlarges the effective qi capacity. Guards
+ * against a null cultivation slice.
+ *
+ * @param {object|null} state — game state object.
+ * @returns {number} the effective multiplier (>= 1).
+ */
+function _dantianCapacityMultiplier(state) {
+  if (!state || !state.cultivation) return 1;
+  const parsed = Number(state.cultivation.dantianCapacityMultiplier);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 

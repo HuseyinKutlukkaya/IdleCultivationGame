@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 Dantian data. Placeholder flat ladder — Phase 10 Balancing retunes."
+  },
+  "definitions": [
+    { "id": "cracked",  "name": "Cracked Dantian",  "description": "A fractured dantian that barely holds qi.",          "capacityMultiplier": 0.60, "densityMultiplier": 0.60, "purityMultiplier": 0.60, "efficiencyMultiplier": 0.60 },
+    { "id": "small",    "name": "Small Dantian",     "description": "A cramped dantian — enough to cultivate, barely.",    "capacityMultiplier": 0.80, "densityMultiplier": 0.80, "purityMultiplier": 0.80, "efficiencyMultiplier": 0.80 },
+    { "id": "normal",   "name": "Normal Dantian",    "description": "A standard-sized dantian — a solid foundation.",        "capacityMultiplier": 1.00, "densityMultiplier": 1.00, "purityMultiplier": 1.00, "efficiencyMultiplier": 1.00 },
+    { "id": "large",    "name": "Large Dantian",     "description": "An expanded dantian — qi reserves deepen.",            "capacityMultiplier": 1.40, "densityMultiplier": 1.20, "purityMultiplier": 1.15, "efficiencyMultiplier": 1.10 },
+    { "id": "perfect",  "name": "Perfect Dantian",   "description": "A flawless dantian — qi condenses without waste.",     "capacityMultiplier": 1.80, "densityMultiplier": 1.50, "purityMultiplier": 1.35, "efficiencyMultiplier": 1.25 },
+    { "id": "golden",   "name": "Golden Dantian",    "description": "A dantian tempered to gold — qi burns like a furnace.", "capacityMultiplier": 2.50, "densityMultiplier": 2.00, "purityMultiplier": 1.70, "efficiencyMultiplier": 1.50 },
+    { "id": "universe", "name": "Universe Dantian",  "description": "A dantian that mirrors a universe within — qi is endless.", "capacityMultiplier": 4.00, "densityMultiplier": 3.00, "purityMultiplier": 2.50, "efficiencyMultiplier": 2.00 },
+    { "id": "void",     "name": "Void Dantian",      "description": "A dantian that is the void itself — qi bends to the cultivator's will.", "capacityMultiplier": 6.00, "densityMultiplier": 5.00, "purityMultiplier": 4.00, "efficiencyMultiplier": 3.00 }
+  ]
+}

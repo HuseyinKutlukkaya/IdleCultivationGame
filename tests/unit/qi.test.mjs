@@ -22,7 +22,12 @@
  * multiplies the aggregate rate with the same neutral-1 coercion while the
  * CAP is deliberately NOT affected — a spirit root speeds up cultivation,
  * it never enlarges the cap; the realm speed multiplier AND the spirit-root
- * multiplier stack multiplicatively) and destroy() unsubscription.
+ * multiplier stack multiplicatively), the dantian-capacity-multiplier
+ * stacking (cultivation.dantianCapacityMultiplier multiplies the managed cap
+ * alongside the realm's qiMaxMultiplier and the meridian capacity multiplier
+ * — a larger/better dantian enlarges the qi capacity; the dantian capacity
+ * multiplier never touches the per-second rate) and destroy()
+ * unsubscription.
  *
  * Each test injects a fresh deep clone of GameState (so the shared singleton
  * stays pristine) and the shared EventBus (cleared in beforeEach so event
@@ -819,4 +824,66 @@ test('all four multipliers stack together — realm, spirit root and meridians',
   assert.equal(state.cultivation.qi, 12);
   assert.equal(state.statistics.qiGenerated, 12);
   assert.deepEqual(gained[0], { amount: 12, total: 12, sources: ['meditation'] });
+});
+
+test('the dantian capacity multiplier stacks in _computeQiMax', () => {
+  // The DantianSystem writes cultivation.dantianCapacityMultiplier from the
+  // current dantian's capacityMultiplier; a factor of 2 doubles the cap.
+  const state = structuredClone(GameState);
+  state.cultivation.dantianCapacityMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 100 (baseMaxQi) × 1 (realm) × 1 (meridian capacity) × 2 (dantian capacity) → 200.
+  assert.equal(state.cultivation.qiMax, 200);
+
+  // The unmanaged path (no baseMaxQi) keeps the state value untouched.
+  const unmanaged = structuredClone(GameState);
+  unmanaged.cultivation.dantianCapacityMultiplier = 2;
+  makeSystem(makeConfig({ baseMaxQi: undefined }), unmanaged);
+  assert.equal(unmanaged.cultivation.qiMax, 100);
+});
+
+test('the dantian capacity multiplier never touches the per-second rate', () => {
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.dantianCapacityMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // 2 qi/s × 1 (realm) × 1 (spirit root) × 1 (meridian flow) → the dantian
+  // capacity multiplier never reaches the rate.
+  assert.equal(state.cultivation.qiPerSecond, 2);
+  assert.equal(state.cultivation.qiMax, 200);
+});
+
+test('a missing or malformed dantian capacity multiplier is neutral (multiplier 1)', () => {
+  for (const multiplier of [undefined, null, -5, 0, 'bogus', NaN, Infinity]) {
+    EventBus.clear();
+    const state = structuredClone(GameState);
+    if (multiplier === undefined) delete state.cultivation.dantianCapacityMultiplier;
+    else state.cultivation.dantianCapacityMultiplier = multiplier;
+
+    makeSystem(makeConfig(), state);
+
+    assert.equal(state.cultivation.qiMax, 100);
+  }
+});
+
+test('dantian capacity multiplier stacks with realm and meridian capacity multipliers', () => {
+  // All three cap factors multiply together: realm qiMax, meridian capacity
+  // and dantian capacity.
+  const state = structuredClone(GameState);
+  state.cultivation.qiSources.meditation = 2;
+  state.cultivation.realmEffects.qiMaxMultiplier = 1.5;
+  state.cultivation.meridianCapacityMultiplier = 2;
+  state.cultivation.dantianCapacityMultiplier = 2;
+
+  makeSystem(makeConfig(), state);
+
+  // Cap: 100 × 1.5 (realm) × 2 (meridian capacity) × 2 (dantian capacity) → 600.
+  assert.equal(state.cultivation.qiMax, 600);
+  // Rate: 2 qi/s × 1 (realm speed) × 1 (spirit root) × 1 (meridian flow) → the
+  // dantian cap factor never touches the rate.
+  assert.equal(state.cultivation.qiPerSecond, 2);
 });

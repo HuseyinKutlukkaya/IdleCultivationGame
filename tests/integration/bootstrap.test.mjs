@@ -35,6 +35,7 @@ import { UpgradeSystem } from '../../js/systems/upgrades.js';
 import { BreakthroughSystem } from '../../js/systems/breakthroughs.js';
 import { TribulationSystem } from '../../js/systems/tribulations.js';
 import { SpiritRootSystem } from '../../js/systems/spirit-roots.js';
+import { DantianSystem } from '../../js/systems/dantian.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { initActivityLog } from '../../js/ui/activity-log.js';
@@ -154,6 +155,14 @@ const DATA_FILES = {
           uniqueField: 'id',
         },
       },
+      {
+        id: 'dantian',
+        files: ['data/dantian/dantian.json'],
+        validation: {
+          requiredFields: ['id', 'name', 'capacityMultiplier', 'densityMultiplier', 'purityMultiplier', 'efficiencyMultiplier'],
+          uniqueField: 'id',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -230,7 +239,7 @@ const DATA_FILES = {
       },
     ],
   },
-  'data/spirit-roots/spirit-roots.json': {
+    'data/spirit-roots/spirit-roots.json': {
     meta: {},
     definitions: [
       {
@@ -251,6 +260,13 @@ const DATA_FILES = {
         speedMultiplier: 2.7,
         weight: 1,
       },
+    ],
+  },
+  'data/dantian/dantian.json': {
+    meta: {},
+    definitions: [
+      { id: 'cracked', name: 'Cracked Dantian', description: 'A fractured dantian that barely holds qi.', capacityMultiplier: 0.60, densityMultiplier: 0.60, purityMultiplier: 0.60, efficiencyMultiplier: 0.60 },
+      { id: 'normal', name: 'Normal Dantian', description: 'A standard-sized dantian — a solid foundation.', capacityMultiplier: 1.00, densityMultiplier: 1.00, purityMultiplier: 1.00, efficiencyMultiplier: 1.00 },
     ],
   },
 };
@@ -444,7 +460,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 10 definitions loaded. Game loop running.'
+    'Scaffold ready — 12 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -607,6 +623,35 @@ test('successful bootstrap wires the app globals and reports the definition coun
   });
   assert.equal(GameState.cultivation.spiritRootMultiplier, 1);
   assert.equal(GameState.player.spiritRoot, 'Unawakened');
+  // The Dantian system is wired with the DataManager: the ladder comes from
+  // the loaded 'dantian' collection (2 canned entries — cracked and normal).
+  // The boot leaves the canonical fresh neutral state: the normal dantian
+  // (id 'normal', all 1.0× multipliers), the cultivation slots at 1 and the
+  // player display name 'Normal Dantian' — no roll happens at boot.
+  assert.ok(globalThis.window.__dantian instanceof DantianSystem);
+  assert.equal(globalThis.window.__dantian.count, 2);
+  assert.equal(
+    globalThis.window.__dantian.byId('cracked').capacityMultiplier,
+    0.60
+  );
+  assert.equal(
+    globalThis.window.__dantian.byId('normal').name,
+    'Normal Dantian'
+  );
+  assert.equal(globalThis.window.__dantian.byId('missing'), null);
+  assert.deepEqual(GameState.dantian, {
+    id: 'normal',
+    name: 'Normal Dantian',
+    capacityMultiplier: 1.0,
+    densityMultiplier: 1.0,
+    purityMultiplier: 1.0,
+    efficiencyMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.dantianCapacityMultiplier, 1);
+  assert.equal(GameState.cultivation.dantianDensityMultiplier, 1);
+  assert.equal(GameState.cultivation.dantianPurityMultiplier, 1);
+  assert.equal(GameState.cultivation.dantianEfficiencyMultiplier, 1);
+  assert.equal(GameState.player.dantian, 'Normal Dantian');
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -660,6 +705,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/breakthroughs/breakthroughs.json',
     'data/tribulations/tribulations.json',
     'data/spirit-roots/spirit-roots.json',
+    'data/dantian/dantian.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -746,4 +792,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__breakthroughs, undefined);
   assert.equal(globalThis.window.__tribulations, undefined);
   assert.equal(globalThis.window.__spiritRoots, undefined);
+  assert.equal(globalThis.window.__dantian, undefined);
 });

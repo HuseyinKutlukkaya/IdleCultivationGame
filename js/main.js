@@ -28,6 +28,7 @@ import { TribulationSystem } from './systems/tribulations.js';
 import { SpiritRootSystem } from './systems/spirit-roots.js';
 import { MeridianSystem } from './systems/meridians.js';
 import { PhysiqueSystem } from './systems/physiques.js';
+import { DantianSystem } from './systems/dantian.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { TechniqueSystem } from './systems/techniques.js';
@@ -471,6 +472,21 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Dantian: single owner of the cultivator's dantian and its qi-storage
+    // multiplier slots (data/dantian/dantian.json via the DataManager — the
+    // canonical 8-state ladder Cracked → Void). Constructed AFTER the
+    // DataManager load (the ladder must resolve) and AFTER the QiSystem: the
+    // constructor sync writes cultivation.dantianCapacityMultiplier (plus the
+    // three future-consumer slots) from the restored dantian's factors, and
+    // the QiSystem stacks the capacity multiplier into the qi cap alongside
+    // the meridian and realm factors. It has NO loop subscription — dantian
+    // only changes through setDantian() (the future character-gen flow, the
+    // console and tests), never on a tick.
+    const dantian = new DantianSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Cultivation panel: the Phase-3 play-test surface — the human player's
     // Breakthrough / Face Tribulation buttons plus the character readout.
     // The "Cultivation Realm" panel shows the realm/progress/cost bindings
@@ -551,6 +567,7 @@ async function bootstrap() {
     window.__spiritRoots = spiritRoots;
     window.__meridians = meridians;
     window.__physiques = physiques;
+    window.__dantian = dantian;
     window.__cultivationPanel = cultivationPanel;
     window.__inventoryPanel = inventoryPanel;
 

@@ -26,6 +26,11 @@
  * @property {number} cultivation.meridianCapacityMultiplier — meridian qi-cap slot (neutral 1 by default; written by MeridianSystem)
  * @property {number} cultivation.meridianFlowMultiplier — meridian qi-rate slot (neutral 1 by default; written by MeridianSystem)
  * @property {number} cultivation.physiqueBreakthroughBonus — physique breakthrough-success bonus slot (neutral 0 by default; written by PhysiqueSystem)
+ * @property {number} cultivation.dantianCapacityMultiplier — dantian qi-cap slot (neutral 1 by default; written by DantianSystem)
+ * @property {number} cultivation.dantianDensityMultiplier — dantian density slot, future-consumer (neutral 1 by default; written by DantianSystem)
+ * @property {number} cultivation.dantianPurityMultiplier — dantian purity slot, future-consumer (neutral 1 by default; written by DantianSystem)
+ * @property {number} cultivation.dantianEfficiencyMultiplier — dantian efficiency slot, future-consumer (neutral 1 by default; written by DantianSystem)
+ * @property {Object} dantian — the cultivator's dantian (id, name, capacityMultiplier, densityMultiplier, purityMultiplier, efficiencyMultiplier)
  * @property {Object} resources — currency and material counts
  * @property {Object} inventory — carried items
  * @property {Object} techniques — known and active techniques
@@ -77,6 +82,7 @@ function createGameState() {
       physique: 'Ordinary Body',
       bloodline: 'None',
       meridians: 'Normal',
+      dantian: 'Normal Dantian',
     },
 
     cultivation: {
@@ -142,6 +148,10 @@ function createGameState() {
       // rates); a missing/malformed value is coerced to 0 by the
       // BreakthroughSystem.
       physiqueBreakthroughBonus: 0,
+      dantianCapacityMultiplier: 1,
+      dantianDensityMultiplier: 1,
+      dantianPurityMultiplier: 1,
+      dantianEfficiencyMultiplier: 1,
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
@@ -211,6 +221,24 @@ function createGameState() {
       lifespanMultiplier: 1,
       healthMultiplier: 1,
       powerMultiplier: 1,
+    },
+
+    dantian: {
+      // Owned by the DantianSystem (js/systems/dantian.js). The cultivator's
+      // qi-storage organ: id is the data-table key
+      // (data/dantian/dantian.json — 'normal' in the ladder); name is the
+      // display name mirrored on player.dantian; capacityMultiplier feeds
+      // cultivation.dantianCapacityMultiplier (qi cap — the QiSystem stacks
+      // it into _computeQiMax alongside the meridian and realm factors);
+      // densityMultiplier / purityMultiplier / efficiencyMultiplier are
+      // future-consumer slots — all neutral Normal defaults, so fresh games
+      // and old saves stay numerically identical to today.
+      id: 'normal',
+      name: 'Normal Dantian',
+      capacityMultiplier: 1.0,
+      densityMultiplier: 1.0,
+      purityMultiplier: 1.0,
+      efficiencyMultiplier: 1.0,
     },
 
     resources: {

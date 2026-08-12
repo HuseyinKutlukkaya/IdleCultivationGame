@@ -83,6 +83,14 @@
         "requiredFields": ["id", "name", "breakthroughBonus", "lifespanMultiplier", "healthMultiplier", "powerMultiplier"],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "dantian",
+      "files": ["data/dantian/dantian.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "capacityMultiplier", "densityMultiplier", "purityMultiplier", "efficiencyMultiplier"],
+        "uniqueField": "id"
+      }
     }
   ]
 }
