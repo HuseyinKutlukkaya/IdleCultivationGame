@@ -81,10 +81,10 @@ E2E updates on every package (renderer/save paths touched throughout).
 - [x] Breakthroughs (requirements, results, bottlenecks) — done (js/systems/breakthroughs.js + data/breakthroughs/breakthroughs.json)
 - [x] Tribulations — done (js/systems/tribulations.js + data/tribulations/tribulations.json)
 - [x] Spirit Roots — done (js/systems/spirit-roots.js + data/spirit-roots/spirit-roots.json)
-- [ ] Meridians (starts after the first playtest + revision cycle — see Cross-Cutting Gates)
-- [ ] Physiques
-- [ ] Dantian (qi storage capacity, density, purity — DESIGN.md character system)
-- [ ] Bloodlines
+- [x] Meridians — done (js/systems/meridians.js + data/meridians/meridians.json)
+- [x] Physiques — done (js/systems/physiques.js + data/physiques/physiques.json)
+- [x] Dantian — done (js/systems/dantian.js + data/dantian/dantian.json)
+- [x] Bloodlines — done (js/systems/bloodlines.js + data/bloodlines/bloodlines.json)
 - [ ] Soul (stability, purity, willpower, comprehension — DESIGN.md character system)
 - [ ] Talents / Comprehension
 - [ ] Destiny & Luck (hidden luck, calamities vs. fortunate encounters — DESIGN.md character systems)

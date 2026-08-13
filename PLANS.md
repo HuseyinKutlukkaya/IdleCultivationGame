@@ -237,6 +237,41 @@ tuning, tests. Append a new dated bullet when the next feature is designed.
   (loads ladder, writes both slots, neutral coercion, hostile-state fallback),
   qi unit tests for the two new stacking slots, game-state slice test.
 
+- **2026-08-13 — Soul (Phase 3, next after Bloodlines).**
+  Data-driven spiritual-strength ladder mirroring the BloodlineSystem precedent
+  exactly: data → system-owned state slice → future-consumer multiplier slots →
+  display name. JSON: `data/soul/soul.json` + a `data/manifest.json` collection
+  entry (validation.requiredFields: `id`, `name`, `stabilityMultiplier`,
+  `purityMultiplier`, `willpowerMultiplier`, `comprehensionMultiplier`;
+  validation.uniqueField: `id`); one entry per ladder tier, file order = the
+  placeholder ladder Shattered → Chaos Soul. Each entry: id, name, description,
+  plus the four DESIGN.md Soul attributes as multipliers. State: new
+  `state.soul` slice owned by the SoulSystem (canonical shape
+  `{ id, name, stabilityMultiplier, purityMultiplier, willpowerMultiplier,
+  comprehensionMultiplier }`); the `player.soul` display-name string (default
+  `Stable Soul` — same precedent as player.spiritRoot / player.bloodline).
+  Multiplier slots: SoulSystem writes `cultivation.soulStabilityMultiplier`,
+  `cultivation.soulPurityMultiplier`, `cultivation.soulWillpowerMultiplier` and
+  `cultivation.soulComprehensionMultiplier` — FUTURE-CONSUMER slots (DESIGN.md
+  "Soul affects enlightenment"; Dao/technique-efficiency consumers land later,
+  same precedent as dantian's density/purity/efficiency slots, which are
+  written today and read by no system yet). NO existing consumer today, so
+  qi.js and breakthroughs.js are deliberately NOT touched. All four slots use
+  the existing neutral-1 coercion — a missing/malformed/<=0 factor reads as 1,
+  so a hostile save can never poison a future consumer. No events, no UI
+  beyond the cultivation-panel character readout's `player.soul` display name,
+  no character-gen roll yet (matches Bloodlines). Old saves stay identical:
+  the default Stable Soul state reads 1.0×1.0×1.0×1.0. Tuning table (flat
+  placeholder ladder, monotonic per column — Phase 10 Balancing retunes):
+  Shattered 0.70/0.70/0.60/0.70, Fragile 0.85/0.85/0.80/0.85,
+  Stable 1.00/1.00/1.00/1.00, Firm 1.15/1.10/1.20/1.10,
+  Radiant 1.35/1.25/1.50/1.25, Grand 1.60/1.45/1.90/1.45,
+  Chaos Soul 2.00/1.70/2.50/1.70 (stability/purity/willpower/comprehension).
+  Tests in the same commit: data-validation (manifest entry + ladder shape),
+  SoulSystem unit tests (loads ladder, writes all four slots, neutral coercion,
+  hostile-state fallback), game-state slice test, cultivation-panel readout
+  test, bootstrap integration + E2E readout updates.
+
 ## Testing Checklist
 Application loads · no console errors · no network errors · save works ·
 reload works · offline calculation works · GitHub Pages compatible.
