@@ -31,6 +31,8 @@ import { PhysiqueSystem } from './systems/physiques.js';
 import { DantianSystem } from './systems/dantian.js';
 import { BloodlineSystem } from './systems/bloodlines.js';
 import { SoulSystem } from './systems/soul.js';
+import { TalentSystem } from './systems/talents.js';
+import { ComprehensionSystem } from './systems/comprehension.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { TechniqueSystem } from './systems/techniques.js';
@@ -522,6 +524,42 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Talent: single owner of the cultivator's talent and its future-consumer
+    // learning-speed slot (data/talents/talents.json via the DataManager —
+    // the canonical 7-state ladder Dull → Prodigy). Constructed AFTER the
+    // DataManager load (the ladder must resolve): the constructor sync writes
+    // cultivation.talentLearningSpeedMultiplier from the restored talent's
+    // learningSpeedMultiplier. NO system reads that slot yet (DESIGN.md
+    // "Talent affects learning"; the technique/alchemy/formation/Dao
+    // consumers land later) — qi.js, techniques.js and breakthroughs.js are
+    // deliberately untouched, unlike bloodlines. It has NO loop subscription —
+    // talents only change through setTalent() (the future character-gen flow,
+    // the console and tests), never on a tick.
+    const talents = new TalentSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
+    // Comprehension: single owner of the cultivator's comprehension and its
+    // three future-consumer multiplier slots (data/comprehension/
+    // comprehension.json via the DataManager — the canonical 7-state ladder
+    // Shallow → Dao Heart). Constructed AFTER the DataManager load (the
+    // ladder must resolve): the constructor sync writes
+    // cultivation.comprehensionDaoProgressMultiplier /
+    // cultivation.comprehensionTechniqueEfficiencyMultiplier /
+    // cultivation.comprehensionBreakthroughEfficiencyMultiplier from the
+    // restored comprehension's factors. NO system reads those slots yet
+    // (DESIGN.md "Comprehension allows faster Dao progress, better technique
+    // efficiency, reduced breakthrough requirements"; the Dao/technique-
+    // efficiency consumers land later) — qi.js, techniques.js and
+    // breakthroughs.js are deliberately untouched. It has NO loop
+    // subscription — comprehension only changes through setComprehension()
+    // (the future character-gen flow, the console and tests), never on a tick.
+    const comprehension = new ComprehensionSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Cultivation panel: the Phase-3 play-test surface — the human player's
     // Breakthrough / Face Tribulation buttons plus the character readout.
     // The "Cultivation Realm" panel shows the realm/progress/cost bindings
@@ -605,6 +643,8 @@ async function bootstrap() {
     window.__dantian = dantian;
     window.__bloodlines = bloodlines;
     window.__soul = soul;
+    window.__talents = talents;
+    window.__comprehension = comprehension;
     window.__cultivationPanel = cultivationPanel;
     window.__inventoryPanel = inventoryPanel;
 

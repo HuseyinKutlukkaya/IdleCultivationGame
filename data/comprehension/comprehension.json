@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 Comprehension data. Placeholder flat ladder — Phase 10 Balancing retunes."
+  },
+  "definitions": [
+    { "id": "shallow", "name": "Shallow", "description": "A surface understanding of the Dao — deep truths slip through the mind like water through fingers.", "daoProgressMultiplier": 0.70, "techniqueEfficiencyMultiplier": 0.70, "breakthroughEfficiencyMultiplier": 0.70 },
+    { "id": "limited", "name": "Limited", "description": "A narrow understanding that grasps only the most straightforward teachings.", "daoProgressMultiplier": 0.85, "techniqueEfficiencyMultiplier": 0.85, "breakthroughEfficiencyMultiplier": 0.85 },
+    { "id": "standard", "name": "Standard", "description": "An ordinary comprehension of the Dao — enough to follow the common path.", "daoProgressMultiplier": 1.00, "techniqueEfficiencyMultiplier": 1.00, "breakthroughEfficiencyMultiplier": 1.00 },
+    { "id": "insightful", "name": "Insightful", "description": "A perceptive mind that pierces beneath the surface of every teaching.", "daoProgressMultiplier": 1.15, "techniqueEfficiencyMultiplier": 1.10, "breakthroughEfficiencyMultiplier": 1.10 },
+    { "id": "penetrating", "name": "Penetrating", "description": "An understanding that cuts to the heart of any technique or principle.", "daoProgressMultiplier": 1.35, "techniqueEfficiencyMultiplier": 1.25, "breakthroughEfficiencyMultiplier": 1.20 },
+    { "id": "enlightened", "name": "Enlightened", "description": "A profound comprehension — the mysteries of the Dao unfold almost unbidden.", "daoProgressMultiplier": 1.60, "techniqueEfficiencyMultiplier": 1.45, "breakthroughEfficiencyMultiplier": 1.35 },
+    { "id": "dao-heart", "name": "Dao Heart", "description": "An unshakeable understanding of the Way — principles and techniques resolve themselves before it.", "daoProgressMultiplier": 2.00, "techniqueEfficiencyMultiplier": 1.70, "breakthroughEfficiencyMultiplier": 1.55 }
+  ]
+}

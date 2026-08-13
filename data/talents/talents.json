@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 Talent data. Placeholder flat ladder — Phase 10 Balancing retunes."
+  },
+  "definitions": [
+    { "id": "dull", "name": "Dull", "description": "A slow, unremarkable learner — new arts take hold only through great effort.", "learningSpeedMultiplier": 0.70 },
+    { "id": "slow", "name": "Slow", "description": "A deliberate learner who needs time and repetition before lessons stick.", "learningSpeedMultiplier": 0.85 },
+    { "id": "ordinary", "name": "Ordinary", "description": "An average aptitude for learning — no gift, but no hindrance either.", "learningSpeedMultiplier": 1.00 },
+    { "id": "bright", "name": "Bright", "description": "A quick mind that picks up techniques and crafts with noticeable ease.", "learningSpeedMultiplier": 1.20 },
+    { "id": "gifted", "name": "Gifted", "description": "A naturally talented learner whose insight shortens the path to mastery.", "learningSpeedMultiplier": 1.50 },
+    { "id": "genius", "name": "Genius", "description": "A rare intellect that grasps profound arts after a single glance.", "learningSpeedMultiplier": 1.90 },
+    { "id": "prodigy", "name": "Prodigy", "description": "An unheard-of talent — the Dao itself seems to bend toward their understanding.", "learningSpeedMultiplier": 2.50 }
+  ]
+}

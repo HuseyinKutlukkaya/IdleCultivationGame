@@ -38,6 +38,8 @@ test('has the exact default placeholder shape', () => {
       physique: 'Ordinary Body',
       bloodline: 'Ancient Human',
       soul: 'Stable Soul',
+      talent: 'Ordinary',
+      comprehension: 'Standard',
       meridians: 'Normal',
       dantian: 'Normal Dantian',
     },
@@ -83,6 +85,20 @@ test('has the exact default placeholder shape', () => {
       comprehensionMultiplier: 1.0,
     },
 
+    talents: {
+      id: 'ordinary',
+      name: 'Ordinary',
+      learningSpeedMultiplier: 1.0,
+    },
+
+    comprehension: {
+      id: 'standard',
+      name: 'Standard',
+      daoProgressMultiplier: 1.0,
+      techniqueEfficiencyMultiplier: 1.0,
+      breakthroughEfficiencyMultiplier: 1.0,
+    },
+
       cultivation: {
         realm: 'Mortal',
         realmTier: 0,
@@ -113,6 +129,10 @@ test('has the exact default placeholder shape', () => {
         soulPurityMultiplier: 1,
         soulWillpowerMultiplier: 1,
         soulComprehensionMultiplier: 1,
+        talentLearningSpeedMultiplier: 1,
+        comprehensionDaoProgressMultiplier: 1,
+        comprehensionTechniqueEfficiencyMultiplier: 1,
+        comprehensionBreakthroughEfficiencyMultiplier: 1,
         qi: 0,
         qiMax: 100,
         qiPerSecond: 0,
@@ -193,9 +213,10 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the nineteen top-level state slices', () => {
+test('exposes exactly the twenty-one top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'bloodlines',
+    'comprehension',
     'cultivation',
     'dantian',
     'inventory',
@@ -210,6 +231,7 @@ test('exposes exactly the nineteen top-level state slices', () => {
     'soul',
     'spiritRoot',
     'statistics',
+    'talents',
     'techniques',
     'tribulations',
     'upgrades',
@@ -275,6 +297,24 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.cultivation.soulWillpowerMultiplier, 1);
   assert.equal(GameState.cultivation.soulComprehensionMultiplier, 1);
   assert.equal(GameState.player.soul, 'Stable Soul');
+  assert.deepEqual(GameState.talents, {
+    id: 'ordinary',
+    name: 'Ordinary',
+    learningSpeedMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.talentLearningSpeedMultiplier, 1);
+  assert.equal(GameState.player.talent, 'Ordinary');
+  assert.deepEqual(GameState.comprehension, {
+    id: 'standard',
+    name: 'Standard',
+    daoProgressMultiplier: 1.0,
+    techniqueEfficiencyMultiplier: 1.0,
+    breakthroughEfficiencyMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.comprehensionDaoProgressMultiplier, 1);
+  assert.equal(GameState.cultivation.comprehensionTechniqueEfficiencyMultiplier, 1);
+  assert.equal(GameState.cultivation.comprehensionBreakthroughEfficiencyMultiplier, 1);
+  assert.equal(GameState.player.comprehension, 'Standard');
   // Master's parting gift — fresh-state spirit-stone endowment (50 stones).
   // The other resources still start at zero (no equivalent endowment for
   // herbs/jade/pills yet; those arrive with the Phase-4 alchemical market).
@@ -299,11 +339,12 @@ test('default settings favour offline progress and stay silent by default', () =
   assert.equal(GameState.settings.notationStyle, null);
 });
 
-test('a legacy save without the spirit-root, meridian, physique, dantian, bloodline and soul keys keeps canonical fresh values after the standard restore merge', () => {
+test('a legacy save without the spirit-root, meridian, physique, dantian, bloodline, soul, talent and comprehension keys keeps canonical fresh values after the standard restore merge', () => {
   // Saves written before the SpiritRootSystem, MeridianSystem,
-  // PhysiqueSystem, DantianSystem, BloodlineSystem and SoulSystem carry no
-  // `spiritRoot` / `meridians` / `physiques` / `dantian` / `bloodlines` /
-  // `soul` slices and no multiplier slots. Game.restore() applies a save via
+  // PhysiqueSystem, DantianSystem, BloodlineSystem, SoulSystem, TalentSystem
+  // and ComprehensionSystem carry no `spiritRoot` / `meridians` / `physiques`
+  // / `dantian` / `bloodlines` / `soul` / `talents` / `comprehension` slices
+  // and no multiplier slots. Game.restore() applies a save via
   // deepMerge(GameState, snapshot), so keys the old save does not carry are
   // left at their current fresh defaults.
   const state = structuredClone(GameState);
@@ -328,6 +369,12 @@ test('a legacy save without the spirit-root, meridian, physique, dantian, bloodl
   delete legacySave.cultivation.soulPurityMultiplier;
   delete legacySave.cultivation.soulWillpowerMultiplier;
   delete legacySave.cultivation.soulComprehensionMultiplier;
+  delete legacySave.talents;
+  delete legacySave.cultivation.talentLearningSpeedMultiplier;
+  delete legacySave.comprehension;
+  delete legacySave.cultivation.comprehensionDaoProgressMultiplier;
+  delete legacySave.cultivation.comprehensionTechniqueEfficiencyMultiplier;
+  delete legacySave.cultivation.comprehensionBreakthroughEfficiencyMultiplier;
   legacySave.player.name = 'Ren';
   legacySave.resources.spiritStones = 42;
 
@@ -406,4 +453,24 @@ test('a legacy save without the spirit-root, meridian, physique, dantian, bloodl
   assert.equal(state.cultivation.soulWillpowerMultiplier, 1);
   assert.equal(state.cultivation.soulComprehensionMultiplier, 1);
   assert.equal(state.player.soul, 'Stable Soul');
+  // Missing talent keys keep the canonical fresh values.
+  assert.deepEqual(state.talents, {
+    id: 'ordinary',
+    name: 'Ordinary',
+    learningSpeedMultiplier: 1.0,
+  });
+  assert.equal(state.cultivation.talentLearningSpeedMultiplier, 1);
+  assert.equal(state.player.talent, 'Ordinary');
+  // Missing comprehension keys keep the canonical fresh values.
+  assert.deepEqual(state.comprehension, {
+    id: 'standard',
+    name: 'Standard',
+    daoProgressMultiplier: 1.0,
+    techniqueEfficiencyMultiplier: 1.0,
+    breakthroughEfficiencyMultiplier: 1.0,
+  });
+  assert.equal(state.cultivation.comprehensionDaoProgressMultiplier, 1);
+  assert.equal(state.cultivation.comprehensionTechniqueEfficiencyMultiplier, 1);
+  assert.equal(state.cultivation.comprehensionBreakthroughEfficiencyMultiplier, 1);
+  assert.equal(state.player.comprehension, 'Standard');
 });

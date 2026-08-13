@@ -38,6 +38,8 @@ import { SpiritRootSystem } from '../../js/systems/spirit-roots.js';
 import { DantianSystem } from '../../js/systems/dantian.js';
 import { BloodlineSystem } from '../../js/systems/bloodlines.js';
 import { SoulSystem } from '../../js/systems/soul.js';
+import { TalentSystem } from '../../js/systems/talents.js';
+import { ComprehensionSystem } from '../../js/systems/comprehension.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { initActivityLog } from '../../js/ui/activity-log.js';
@@ -181,6 +183,22 @@ const DATA_FILES = {
           uniqueField: 'id',
         },
       },
+      {
+        id: 'talents',
+        files: ['data/talents/talents.json'],
+        validation: {
+          requiredFields: ['id', 'name', 'learningSpeedMultiplier'],
+          uniqueField: 'id',
+        },
+      },
+      {
+        id: 'comprehension',
+        files: ['data/comprehension/comprehension.json'],
+        validation: {
+          requiredFields: ['id', 'name', 'daoProgressMultiplier', 'techniqueEfficiencyMultiplier', 'breakthroughEfficiencyMultiplier'],
+          uniqueField: 'id',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -299,6 +317,18 @@ const DATA_FILES = {
     definitions: [
       { id: 'stable', name: 'Stable Soul', description: 'A balanced soul — the steady foundation every cultivator builds upon.', stabilityMultiplier: 1.00, purityMultiplier: 1.00, willpowerMultiplier: 1.00, comprehensionMultiplier: 1.00 },
       { id: 'chaos-soul', name: 'Chaos Soul', description: 'A primordial, all-consuming soul that bends the very laws of spirit.', stabilityMultiplier: 2.00, purityMultiplier: 1.70, willpowerMultiplier: 2.50, comprehensionMultiplier: 1.70 },
+    ],
+  },
+  'data/talents/talents.json': {
+    meta: {},
+    definitions: [
+      { id: 'ordinary', name: 'Ordinary', description: 'The baseline talent every mortal is born with — no innate edge, no weakness.', learningSpeedMultiplier: 1.0 },
+    ],
+  },
+  'data/comprehension/comprehension.json': {
+    meta: {},
+    definitions: [
+      { id: 'standard', name: 'Standard', description: 'The baseline comprehension every mortal is born with — a steady, unremarkable mind.', daoProgressMultiplier: 1.0, techniqueEfficiencyMultiplier: 1.0, breakthroughEfficiencyMultiplier: 1.0 },
     ],
   },
 };
@@ -492,7 +522,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 16 definitions loaded. Game loop running.'
+    'Scaffold ready — 18 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -738,6 +768,49 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(GameState.cultivation.soulWillpowerMultiplier, 1);
   assert.equal(GameState.cultivation.soulComprehensionMultiplier, 1);
   assert.equal(GameState.player.soul, 'Stable Soul');
+  // The Talent system is wired with the DataManager: the ladder comes from
+  // the loaded 'talents' collection (1 canned entry — ordinary). The boot
+  // leaves the canonical fresh neutral state: the ordinary talent (1.0×
+  // learning speed), the future-consumer cultivation slot at 1 and the
+  // player display name 'Ordinary' — no roll happens at boot.
+  assert.ok(globalThis.window.__talents instanceof TalentSystem);
+  assert.equal(globalThis.window.__talents.count, 1);
+  assert.equal(
+    globalThis.window.__talents.byId('ordinary').learningSpeedMultiplier,
+    1.0
+  );
+  assert.equal(globalThis.window.__talents.byId('missing'), null);
+  assert.deepEqual(GameState.talents, {
+    id: 'ordinary',
+    name: 'Ordinary',
+    learningSpeedMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.talentLearningSpeedMultiplier, 1);
+  assert.equal(GameState.player.talent, 'Ordinary');
+  // The Comprehension system is wired with the DataManager: the ladder comes
+  // from the loaded 'comprehension' collection (1 canned entry — standard).
+  // The boot leaves the canonical fresh neutral state: the standard
+  // comprehension (all 1.0× multipliers), the three future-consumer
+  // cultivation slots at 1 and the player display name 'Standard' — no roll
+  // happens at boot.
+  assert.ok(globalThis.window.__comprehension instanceof ComprehensionSystem);
+  assert.equal(globalThis.window.__comprehension.count, 1);
+  assert.equal(
+    globalThis.window.__comprehension.byId('standard').daoProgressMultiplier,
+    1.0
+  );
+  assert.equal(globalThis.window.__comprehension.byId('missing'), null);
+  assert.deepEqual(GameState.comprehension, {
+    id: 'standard',
+    name: 'Standard',
+    daoProgressMultiplier: 1.0,
+    techniqueEfficiencyMultiplier: 1.0,
+    breakthroughEfficiencyMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.comprehensionDaoProgressMultiplier, 1);
+  assert.equal(GameState.cultivation.comprehensionTechniqueEfficiencyMultiplier, 1);
+  assert.equal(GameState.cultivation.comprehensionBreakthroughEfficiencyMultiplier, 1);
+  assert.equal(GameState.player.comprehension, 'Standard');
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -794,6 +867,8 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/dantian/dantian.json',
     'data/bloodlines/bloodlines.json',
     'data/soul/soul.json',
+    'data/talents/talents.json',
+    'data/comprehension/comprehension.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -883,4 +958,6 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__dantian, undefined);
   assert.equal(globalThis.window.__bloodlines, undefined);
   assert.equal(globalThis.window.__soul, undefined);
+  assert.equal(globalThis.window.__talents, undefined);
+  assert.equal(globalThis.window.__comprehension, undefined);
 });

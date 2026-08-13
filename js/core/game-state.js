@@ -36,9 +36,15 @@
  * @property {number} cultivation.soulPurityMultiplier — soul purity slot, future-consumer (neutral 1 by default; written by SoulSystem)
  * @property {number} cultivation.soulWillpowerMultiplier — soul willpower slot, future-consumer (neutral 1 by default; written by SoulSystem)
  * @property {number} cultivation.soulComprehensionMultiplier — soul comprehension slot, future-consumer (neutral 1 by default; written by SoulSystem)
+ * @property {number} cultivation.talentLearningSpeedMultiplier — talent learning-speed slot, future-consumer (neutral 1 by default; written by TalentSystem)
+ * @property {number} cultivation.comprehensionDaoProgressMultiplier — comprehension Dao-progress slot, future-consumer (neutral 1 by default; written by ComprehensionSystem)
+ * @property {number} cultivation.comprehensionTechniqueEfficiencyMultiplier — comprehension technique-efficiency slot, future-consumer (neutral 1 by default; written by ComprehensionSystem)
+ * @property {number} cultivation.comprehensionBreakthroughEfficiencyMultiplier — comprehension breakthrough-efficiency slot, future-consumer (neutral 1 by default; written by ComprehensionSystem)
  * @property {Object} dantian — the cultivator's dantian (id, name, capacityMultiplier, densityMultiplier, purityMultiplier, efficiencyMultiplier)
  * @property {Object} bloodlines — the cultivator's bloodline (id, name, cultivationSpeedMultiplier, qiMaxMultiplier)
  * @property {Object} soul — the cultivator's soul (id, name, stabilityMultiplier, purityMultiplier, willpowerMultiplier, comprehensionMultiplier)
+ * @property {Object} talents — the cultivator's talent (id, name, learningSpeedMultiplier)
+ * @property {Object} comprehension — the cultivator's comprehension (id, name, daoProgressMultiplier, techniqueEfficiencyMultiplier, breakthroughEfficiencyMultiplier)
  * @property {Object} resources — currency and material counts
  * @property {Object} inventory — carried items
  * @property {Object} techniques — known and active techniques
@@ -90,6 +96,8 @@ function createGameState() {
       physique: 'Ordinary Body',
       bloodline: 'Ancient Human',
       soul: 'Stable Soul',
+      talent: 'Ordinary',
+      comprehension: 'Standard',
       meridians: 'Normal',
       dantian: 'Normal Dantian',
     },
@@ -176,6 +184,27 @@ function createGameState() {
       soulPurityMultiplier: 1,
       soulWillpowerMultiplier: 1,
       soulComprehensionMultiplier: 1,
+      // Talent learning-speed slot (consumer pattern like
+      // soulStabilityMultiplier, FUTURE-CONSUMER today): written by the
+      // TalentSystem (js/systems/talents.js) from the current talent's
+      // data-driven learningSpeedMultiplier. No system reads it yet —
+      // DESIGN.md "Talent affects learning"; the technique/alchemy/formation/
+      // Dao consumers land later. Fresh default 1 (neutral — exactly today's
+      // rates); a missing/malformed value is coerced to 1 by the TalentSystem.
+      talentLearningSpeedMultiplier: 1,
+      // Comprehension multiplier slots (consumer pattern like
+      // soulStabilityMultiplier, FUTURE-CONSUMER today): written by the
+      // ComprehensionSystem (js/systems/comprehension.js) from the current
+      // comprehension's data-driven daoProgressMultiplier /
+      // techniqueEfficiencyMultiplier / breakthroughEfficiencyMultiplier.
+      // No system reads them yet — DESIGN.md "Comprehension allows faster Dao
+      // progress, better technique efficiency, reduced breakthrough
+      // requirements"; the Dao/technique-efficiency consumers land later.
+      // Fresh default 1 (neutral — exactly today's rates); a
+      // missing/malformed value is coerced to 1 by the ComprehensionSystem.
+      comprehensionDaoProgressMultiplier: 1,
+      comprehensionTechniqueEfficiencyMultiplier: 1,
+      comprehensionBreakthroughEfficiencyMultiplier: 1,
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
@@ -298,6 +327,40 @@ function createGameState() {
       purityMultiplier: 1.0,
       willpowerMultiplier: 1.0,
       comprehensionMultiplier: 1.0,
+    },
+
+    talents: {
+      // Owned by the TalentSystem (js/systems/talents.js). The cultivator's
+      // innate learning aptitude: id is the data-table key
+      // (data/talents/talents.json — 'ordinary' in the ladder); name is the
+      // display name mirrored on player.talent; learningSpeedMultiplier feeds
+      // cultivation.talentLearningSpeedMultiplier (the future-consumer slot —
+      // no system reads it yet; DESIGN.md "Talent affects learning"; the
+      // technique/alchemy/formation/Dao consumers land later); all neutral
+      // Ordinary defaults, so fresh games and old saves stay numerically
+      // identical to today.
+      id: 'ordinary',
+      name: 'Ordinary',
+      learningSpeedMultiplier: 1.0,
+    },
+
+    comprehension: {
+      // Owned by the ComprehensionSystem (js/systems/comprehension.js). The
+      // cultivator's understanding of the Dao: id is the data-table key
+      // (data/comprehension/comprehension.json — 'standard' in the ladder);
+      // name is the display name mirrored on player.comprehension;
+      // daoProgressMultiplier / techniqueEfficiencyMultiplier /
+      // breakthroughEfficiencyMultiplier feed the three future-consumer
+      // cultivation slots (no system reads them yet — DESIGN.md "Comprehension
+      // allows faster Dao progress, better technique efficiency, reduced
+      // breakthrough requirements"; the Dao/technique-efficiency consumers
+      // land later); all neutral Standard defaults, so fresh games and old
+      // saves stay numerically identical to today.
+      id: 'standard',
+      name: 'Standard',
+      daoProgressMultiplier: 1.0,
+      techniqueEfficiencyMultiplier: 1.0,
+      breakthroughEfficiencyMultiplier: 1.0,
     },
 
     resources: {

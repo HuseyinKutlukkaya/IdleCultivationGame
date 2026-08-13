@@ -5,8 +5,9 @@
  * the breakthroughs + tribulations loop REACHABLE BY A HUMAN PLAYER through
  * real buttons. The panel renders:
  *   - a character readout (player.spiritRoot + player.physique +
- *     player.meridians + player.dantian + player.bloodline + player.soul,
- *     read fresh from state on every render),
+ *     player.meridians + player.dantian + player.bloodline + player.soul +
+ *     player.talent + player.comprehension, read fresh from state on every
+ *     render),
  *   - a "Breakthrough" button enabled exactly when
  *     breakthroughs.canAttempt() is true and, when disabled, a readiness
  *     reason line derived from breakthroughs.requirements() — only the four
@@ -299,7 +300,7 @@ export function initCultivationPanel({
    * hits that).
    *
    * @param {object} gameState — the game state (player slice).
-   * @returns {string} e.g. "Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul".
+   * @returns {string} e.g. "Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: Ordinary · Comprehension: Standard".
    */
   function characterText(gameState) {
     const player = gameState && gameState.player;
@@ -327,7 +328,15 @@ export function initCultivationPanel({
       player && typeof player.soul === 'string'
         ? String(player.soul).slice(0, 64)
         : '—';
-    return `Spirit Root: ${rootName} · Physique: ${physique} · Meridians: ${meridians} · Dantian: ${dantian} · Bloodline: ${bloodline} · Soul: ${soul}`;
+    const talent =
+      player && typeof player.talent === 'string'
+        ? String(player.talent).slice(0, 64)
+        : '—';
+    const comprehension =
+      player && typeof player.comprehension === 'string'
+        ? String(player.comprehension).slice(0, 64)
+        : '—';
+    return `Spirit Root: ${rootName} · Physique: ${physique} · Meridians: ${meridians} · Dantian: ${dantian} · Bloodline: ${bloodline} · Soul: ${soul} · Talent: ${talent} · Comprehension: ${comprehension}`;
   }
 
   /**

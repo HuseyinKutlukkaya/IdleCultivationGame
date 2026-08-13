@@ -114,6 +114,28 @@
         ],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "talents",
+      "files": ["data/talents/talents.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "learningSpeedMultiplier"],
+        "uniqueField": "id"
+      }
+    },
+    {
+      "id": "comprehension",
+      "files": ["data/comprehension/comprehension.json"],
+      "validation": {
+        "requiredFields": [
+          "id",
+          "name",
+          "daoProgressMultiplier",
+          "techniqueEfficiencyMultiplier",
+          "breakthroughEfficiencyMultiplier"
+        ],
+        "uniqueField": "id"
+      }
     }
   ]
 }
