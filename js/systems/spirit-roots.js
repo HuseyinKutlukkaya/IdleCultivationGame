@@ -82,7 +82,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, coerceMultiplier, freshCultivationSlice, freshPlayerSlice } from '../core/game-state.js';
 
 /** The five canonical DESIGN.md spirit-root attribute keys. */
 const ATTRIBUTE_KEYS = ['purity', 'stability', 'growth', 'mutation', 'compatibility'];
@@ -193,7 +193,7 @@ export class SpiritRootSystem {
       growth: _coerceAttribute(root.growth),
       mutation: _coerceAttribute(root.mutation),
       compatibility: _coerceAttribute(root.compatibility),
-      speedMultiplier: _coerceMultiplier(root.speedMultiplier),
+      speedMultiplier: coerceMultiplier(root.speedMultiplier),
     };
   }
 
@@ -359,7 +359,7 @@ export class SpiritRootSystem {
       growth: coercedAttributes.growth,
       mutation: coercedAttributes.mutation,
       compatibility: coercedAttributes.compatibility,
-      speedMultiplier: _coerceMultiplier(definition.speedMultiplier),
+      speedMultiplier: coerceMultiplier(definition.speedMultiplier),
       weight,
     };
   }
@@ -374,7 +374,7 @@ export class SpiritRootSystem {
    * @returns {void}
    */
   _syncMultiplier() {
-    this._state.cultivation.spiritRootMultiplier = _coerceMultiplier(
+    this._state.cultivation.spiritRootMultiplier = coerceMultiplier(
       this._state.spiritRoot.speedMultiplier
     );
   }
@@ -392,8 +392,8 @@ export class SpiritRootSystem {
    */
   _ensureSlices() {
     this._ensureSlice('spiritRoot', _freshSpiritRootSlice);
-    this._ensureSlice('cultivation', _freshCultivationSlice);
-    this._ensureSlice('player', _freshPlayerSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
+    this._ensureSlice('player', freshPlayerSlice);
   }
 
   /**
@@ -441,56 +441,6 @@ function _freshSpiritRootSlice() {
 }
 
 /**
- * The canonical fresh cultivation slice (mirrors core/game-state.js exactly,
- * INCLUDING spiritRootMultiplier: 1). Used as the restore-trust fallback when
- * a restored cultivation slice is unusable (null, a primitive or an array) —
- * a broken top-level slice must never abort boot or throw per call.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    spiritRootMultiplier: 1,
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0, upgrades: 0 },
-    breakthroughs: 0,
-  };
-}
-
-/**
- * The canonical fresh player slice (mirrors core/game-state.js). Used as the
- * restore-trust fallback when a restored player slice is unusable — roll()
- * writes player.spiritRoot, so a broken player slice must never throw there.
- *
- * @returns {object} the canonical player slice.
- */
-function _freshPlayerSlice() {
-  return {
-    name: 'Unnamed Cultivator',
-    title: '',
-    spiritRoot: 'Unawakened',
-    physique: 'Common',
-    bloodline: 'None',
-    meridians: 'Normal',
-  };
-}
-
-/**
  * Coerce a spirit root tier: a finite number is kept, anything unusable
  * reads as 0 (the worst ladder tier — neutral, never a poison).
  *
@@ -529,21 +479,6 @@ function _coerceAttribute(value) {
   if (parsed < 0) return 0;
   if (parsed > 1) return 1;
   return parsed;
-}
-
-/**
- * Coerce a cultivation-speed multiplier (a spirit root's speedMultiplier or
- * the cultivation slot): a finite number > 0 is kept, anything unusable
- * (NaN, Infinity, negative, 0) reads as the neutral 1 — a hostile value can
- * never zero a rate or push Infinity (the QiSystem's _safeFinite clamp then
- * applies to the full rate product).
- *
- * @param {*} value — raw multiplier from the definition or state.
- * @returns {number} the multiplier value (> 0).
- */
-function _coerceMultiplier(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
 /**

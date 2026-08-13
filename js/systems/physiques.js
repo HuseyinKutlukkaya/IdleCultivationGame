@@ -69,7 +69,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, coerceMultiplier, freshCultivationSlice, freshPlayerSlice } from '../core/game-state.js';
 
 export class PhysiqueSystem {
   /**
@@ -167,9 +167,9 @@ export class PhysiqueSystem {
           ? physique.name
           : 'Ordinary Body',
       breakthroughBonus: _coerceBonus(physique.breakthroughBonus),
-      lifespanMultiplier: _coerceMultiplier(physique.lifespanMultiplier),
-      healthMultiplier: _coerceMultiplier(physique.healthMultiplier),
-      powerMultiplier: _coerceMultiplier(physique.powerMultiplier),
+      lifespanMultiplier: coerceMultiplier(physique.lifespanMultiplier),
+      healthMultiplier: coerceMultiplier(physique.healthMultiplier),
+      powerMultiplier: coerceMultiplier(physique.powerMultiplier),
     };
   }
 
@@ -289,9 +289,9 @@ export class PhysiqueSystem {
           ? definition.name
           : definition.id,
       breakthroughBonus: _coerceBonus(definition.breakthroughBonus),
-      lifespanMultiplier: _coerceMultiplier(definition.lifespanMultiplier),
-      healthMultiplier: _coerceMultiplier(definition.healthMultiplier),
-      powerMultiplier: _coerceMultiplier(definition.powerMultiplier),
+      lifespanMultiplier: coerceMultiplier(definition.lifespanMultiplier),
+      healthMultiplier: coerceMultiplier(definition.healthMultiplier),
+      powerMultiplier: coerceMultiplier(definition.powerMultiplier),
     };
   }
 
@@ -328,8 +328,8 @@ export class PhysiqueSystem {
    */
   _ensureSlices() {
     this._ensureSlice('physiques', _freshPhysiquesSlice);
-    this._ensureSlice('cultivation', _freshCultivationSlice);
-    this._ensureSlice('player', _freshPlayerSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
+    this._ensureSlice('player', freshPlayerSlice);
   }
 
   /**
@@ -372,62 +372,6 @@ function _freshPhysiquesSlice() {
 }
 
 /**
- * The canonical fresh cultivation slice (mirrors core/game-state.js exactly,
- * INCLUDING physiqueBreakthroughBonus: 0). Used as the restore-trust fallback
- * when a restored cultivation slice is unusable (null, a primitive or an
- * array) — a broken top-level slice must never abort boot or throw per call.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    realmLayer: 1,
-    realmLayerMax: 9,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    spiritRootMultiplier: 1,
-    meridianCapacityMultiplier: 1,
-    meridianFlowMultiplier: 1,
-    physiqueBreakthroughBonus: 0,
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0, upgrades: 0, techniques: 0 },
-    breakthroughs: 0,
-  };
-}
-
-/**
- * The canonical fresh player slice (mirrors core/game-state.js). Used as the
- * restore-trust fallback when a restored player slice is unusable —
- * setPhysique() writes player.physique, so a broken player slice must never
- * throw there.
- *
- * @returns {object} the canonical player slice.
- */
-function _freshPlayerSlice() {
-  return {
-    name: 'Unnamed Cultivator',
-    title: '',
-    spiritRoot: 'Unawakened',
-    physique: 'Ordinary Body',
-    bloodline: 'None',
-    meridians: 'Normal',
-  };
-}
-
-/**
  * Coerce a breakthough-bonus value: a finite number >= 0 is kept, anything
  * unusable (NaN, Infinity, negative) reads as the neutral 0 — a hostile
  * value can never shift the success weight beyond the data contract.
@@ -438,17 +382,4 @@ function _freshPlayerSlice() {
 function _coerceBonus(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-}
-
-/**
- * Coerce a multiplier value: a finite number > 0 is kept, anything unusable
- * (NaN, Infinity, negative, 0) reads as the neutral 1 — a hostile value can
- * never zero a cap or push Infinity.
- *
- * @param {*} value — raw multiplier from the definition or state.
- * @returns {number} the multiplier value (> 0).
- */
-function _coerceMultiplier(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }

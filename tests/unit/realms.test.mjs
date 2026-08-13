@@ -32,40 +32,21 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { EventBus } from '../../js/core/event-bus.js';
-import { GameState } from '../../js/core/game-state.js';
+import { GameState, freshCultivationSlice } from '../../js/core/game-state.js';
 import { DataManager } from '../../js/core/data-manager.js';
 import { RealmSystem } from '../../js/systems/realms.js';
 
 /**
- * The canonical fresh cultivation slice (mirrors core/game-state.js and the
- * local fallback in js/systems/realms.js). Used as the expected shape in the
- * restore-trust and resolution assertions.
+ * The canonical fresh cultivation slice — the single source of truth imported
+ * from core/game-state.js (the same factory js/systems/realms.js now uses as
+ * its restore-trust fallback). Used as the expected shape in the restore-trust
+ * assertions; the factory's own canonical-ness (deep-equality with the state
+ * construction) is guarded by tests/unit/slice-factories.test.mjs.
  *
  * @returns {object} the canonical cultivation slice.
  */
 function freshCultivation() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    realmLayer: 1,
-    realmLayerMax: 9,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0 },
-    breakthroughs: 0,
-  };
+  return freshCultivationSlice();
 }
 
 /** Reset the shared bus before every test. */

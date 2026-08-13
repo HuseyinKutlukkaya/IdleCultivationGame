@@ -103,7 +103,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, freshCultivationSlice, freshStatisticsSlice } from '../core/game-state.js';
 
 /** The canonical outcome ids (DESIGN.md 'Breakthroughs'; death is v1-excluded). */
 const SUCCESS_OUTCOMES = new Set([
@@ -791,8 +791,8 @@ export class BreakthroughSystem {
    * @returns {void}
    */
   _ensureSlices() {
-    this._ensureSlice('cultivation', _freshCultivationSlice);
-    this._ensureSlice('statistics', _freshStatisticsSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
+    this._ensureSlice('statistics', freshStatisticsSlice);
   }
 
   /**
@@ -811,55 +811,6 @@ export class BreakthroughSystem {
     }
     return this._state[name];
   }
-}
-
-/**
- * The canonical fresh cultivation slice (mirrors core/game-state.js). Used
- * as the restore-trust fallback when a restored cultivation slice is
- * unusable (null, a primitive or an array) — a broken top-level slice must
- * never abort boot or throw per tick.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    realmLayer: 1,
-    realmLayerMax: 9,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0, upgrades: 0 },
-    breakthroughs: 0,
-  };
-}
-
-/**
- * The canonical fresh statistics slice (mirrors core/game-state.js). Used as
- * the restore-trust fallback when a restored statistics slice is unusable
- * (null, a primitive or an array).
- *
- * @returns {object} the canonical statistics slice.
- */
-function _freshStatisticsSlice() {
-  return {
-    playtimeMs: 0,
-    meditationsCompleted: 0,
-    breakthroughsTotal: 0,
-    qiGenerated: 0,
-  };
 }
 
 /**

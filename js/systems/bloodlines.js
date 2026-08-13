@@ -69,7 +69,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, coerceMultiplier, freshCultivationSlice, freshPlayerSlice } from '../core/game-state.js';
 
 export class BloodlineSystem {
   /**
@@ -165,8 +165,8 @@ export class BloodlineSystem {
         typeof bloodline.name === 'string' && bloodline.name !== ''
           ? bloodline.name
           : 'Ancient Human',
-      cultivationSpeedMultiplier: _coerceMultiplier(bloodline.cultivationSpeedMultiplier),
-      qiMaxMultiplier: _coerceMultiplier(bloodline.qiMaxMultiplier),
+      cultivationSpeedMultiplier: coerceMultiplier(bloodline.cultivationSpeedMultiplier),
+      qiMaxMultiplier: coerceMultiplier(bloodline.qiMaxMultiplier),
     };
   }
 
@@ -282,8 +282,8 @@ export class BloodlineSystem {
         typeof definition.name === 'string' && definition.name !== ''
           ? definition.name
           : definition.id,
-      cultivationSpeedMultiplier: _coerceMultiplier(definition.cultivationSpeedMultiplier),
-      qiMaxMultiplier: _coerceMultiplier(definition.qiMaxMultiplier),
+      cultivationSpeedMultiplier: coerceMultiplier(definition.cultivationSpeedMultiplier),
+      qiMaxMultiplier: coerceMultiplier(definition.qiMaxMultiplier),
     };
   }
 
@@ -297,10 +297,10 @@ export class BloodlineSystem {
    * @returns {void}
    */
   _syncMultipliers() {
-    this._state.cultivation.bloodlineSpeedMultiplier = _coerceMultiplier(
+    this._state.cultivation.bloodlineSpeedMultiplier = coerceMultiplier(
       this._state.bloodlines.cultivationSpeedMultiplier
     );
-    this._state.cultivation.bloodlineQiMaxMultiplier = _coerceMultiplier(
+    this._state.cultivation.bloodlineQiMaxMultiplier = coerceMultiplier(
       this._state.bloodlines.qiMaxMultiplier
     );
   }
@@ -318,8 +318,8 @@ export class BloodlineSystem {
    */
   _ensureSlices() {
     this._ensureSlice('bloodlines', _freshBloodlinesSlice);
-    this._ensureSlice('cultivation', _freshCultivationSlice);
-    this._ensureSlice('player', _freshPlayerSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
+    this._ensureSlice('player', freshPlayerSlice);
   }
 
   /**
@@ -356,81 +356,4 @@ function _freshBloodlinesSlice() {
     cultivationSpeedMultiplier: 1.0,
     qiMaxMultiplier: 1.0,
   };
-}
-
-/**
- * The canonical fresh cultivation slice (mirrors core/game-state.js exactly,
- * INCLUDING bloodlineSpeedMultiplier: 1 and bloodlineQiMaxMultiplier: 1).
- * Used as the restore-trust fallback when a restored cultivation slice is
- * unusable (null, a primitive or an array) — a broken top-level slice must
- * never abort boot or throw per call.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    realmLayer: 1,
-    realmLayerMax: 9,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    spiritRootMultiplier: 1,
-    meridianCapacityMultiplier: 1,
-    meridianFlowMultiplier: 1,
-    physiqueBreakthroughBonus: 0,
-    dantianCapacityMultiplier: 1,
-    dantianDensityMultiplier: 1,
-    dantianPurityMultiplier: 1,
-    dantianEfficiencyMultiplier: 1,
-    bloodlineSpeedMultiplier: 1,
-    bloodlineQiMaxMultiplier: 1,
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0, upgrades: 0, techniques: 0 },
-    breakthroughs: 0,
-  };
-}
-
-/**
- * The canonical fresh player slice (mirrors core/game-state.js). Used as the
- * restore-trust fallback when a restored player slice is unusable —
- * setBloodline() writes player.bloodline, so a broken player slice must never
- * throw there.
- *
- * @returns {object} the canonical player slice.
- */
-function _freshPlayerSlice() {
-  return {
-    name: 'Unnamed Cultivator',
-    title: '',
-    spiritRoot: 'Unawakened',
-    physique: 'Ordinary Body',
-    bloodline: 'Ancient Human',
-    meridians: 'Normal',
-    dantian: 'Normal Dantian',
-  };
-}
-
-/**
- * Coerce a multiplier value: a finite number > 0 is kept, anything unusable
- * (NaN, Infinity, negative, 0) reads as the neutral 1 — a hostile value can
- * never zero a cap or push Infinity.
- *
- * @param {*} value — raw multiplier from the definition or state.
- * @returns {number} the multiplier value (> 0).
- */
-function _coerceMultiplier(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }

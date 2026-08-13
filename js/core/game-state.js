@@ -445,6 +445,121 @@ function createGameState() {
 }
 
 /**
+ * The canonical fresh cultivation slice — the single source of truth for the
+ * restore-trust fallback (mirrors the `cultivation` block above field-for-
+ * field, including the realmEffects and qiSources nested objects and every
+ * multiplier slot). Every gameplay system imports this factory instead of
+ * declaring a local copy, so the fallback shape can never silently diverge
+ * from the canonical state. Used to repair a restored cultivation slice that
+ * is unusable (null, a primitive or an array) — a broken top-level slice must
+ * never abort boot.
+ *
+ * @returns {object} a NEW canonical cultivation slice.
+ */
+export function freshCultivationSlice() {
+  return {
+    realm: 'Mortal',
+    realmTier: 0,
+    realmStage: 1,
+    realmLayer: 1,
+    realmLayerMax: 9,
+    nextRealm: 'Qi Gathering',
+    breakthroughCost: null,
+    realmProgress: 0,
+    realmProgressMax: 1000,
+    realmEffects: {
+      qiMaxMultiplier: 1,
+      cultivationSpeedMultiplier: 1,
+      powerMultiplier: 1,
+      lifespanYears: 100,
+    },
+    spiritRootMultiplier: 1,
+    meridianCapacityMultiplier: 1,
+    meridianFlowMultiplier: 1,
+    physiqueBreakthroughBonus: 0,
+    dantianCapacityMultiplier: 1,
+    dantianDensityMultiplier: 1,
+    dantianPurityMultiplier: 1,
+    dantianEfficiencyMultiplier: 1,
+    bloodlineSpeedMultiplier: 1,
+    bloodlineQiMaxMultiplier: 1,
+    soulStabilityMultiplier: 1,
+    soulPurityMultiplier: 1,
+    soulWillpowerMultiplier: 1,
+    soulComprehensionMultiplier: 1,
+    talentLearningSpeedMultiplier: 1,
+    comprehensionDaoProgressMultiplier: 1,
+    comprehensionTechniqueEfficiencyMultiplier: 1,
+    comprehensionBreakthroughEfficiencyMultiplier: 1,
+    qi: 0,
+    qiMax: 100,
+    qiPerSecond: 0,
+    qiSources: { meditation: 0, upgrades: 0, techniques: 0 },
+    breakthroughs: 0,
+  };
+}
+
+/**
+ * The canonical fresh player slice — the single source of truth for the
+ * restore-trust fallback (mirrors the `player` block above field-for-field).
+ * Every gameplay system imports this factory instead of declaring a local
+ * copy, so the fallback shape can never silently diverge from the canonical
+ * state. Used to repair a restored player slice that is unusable (null, a
+ * primitive or an array).
+ *
+ * @returns {object} a NEW canonical player slice.
+ */
+export function freshPlayerSlice() {
+  return {
+    name: 'Unnamed Cultivator',
+    title: '',
+    spiritRoot: 'Unawakened',
+    physique: 'Ordinary Body',
+    bloodline: 'Ancient Human',
+    soul: 'Stable Soul',
+    talent: 'Ordinary',
+    comprehension: 'Standard',
+    meridians: 'Normal',
+    dantian: 'Normal Dantian',
+  };
+}
+
+/**
+ * The canonical fresh statistics slice — the single source of truth for the
+ * restore-trust fallback (mirrors the `statistics` block above field-for-
+ * field). Every gameplay system imports this factory instead of declaring a
+ * local copy. Used to repair a restored statistics slice that is unusable
+ * (null, a primitive or an array).
+ *
+ * @returns {object} a NEW canonical statistics slice.
+ */
+export function freshStatisticsSlice() {
+  return {
+    playtimeMs: 0,
+    meditationsCompleted: 0,
+    breakthroughsTotal: 0,
+    qiGenerated: 0,
+  };
+}
+
+/**
+ * Coerce a multiplier value to the neutral factor 1 semantics shared by every
+ * gameplay system (realm effects, spirit roots, meridians, physiques,
+ * dantian, bloodlines, soul, talents, comprehension): a finite number > 0 is
+ * kept, anything unusable (missing, null, NaN, Infinity, negative, 0, a
+ * non-numeric string) reads as the neutral 1 — a hostile save or a missing
+ * slot can never zero out a cap or rate or push Infinity (consumer systems
+ * apply their own overflow clamps on top).
+ *
+ * @param {*} value — raw multiplier from a definition or state.
+ * @returns {number} the multiplier value (> 0).
+ */
+export function coerceMultiplier(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+/**
  * Singleton instance shared across the application.
  * Every gameplay and UI module should read/write this same object.
  */

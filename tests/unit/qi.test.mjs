@@ -382,11 +382,14 @@ test('a restored cultivation slice that is null is repaired and never aborts boo
 
   const system = makeSystem(makeConfig(), state); // must not throw
 
-  // Repaired to the canonical fresh cultivation slice (see core/game-state.js).
+  // Repaired to the canonical fresh cultivation slice (the factory imported
+  // from core/game-state.js — see tests/unit/slice-factories.test.mjs).
   assert.deepEqual(state.cultivation, {
     realm: 'Mortal',
     realmTier: 0,
     realmStage: 1,
+    realmLayer: 1,
+    realmLayerMax: 9,
     nextRealm: 'Qi Gathering',
     breakthroughCost: null,
     realmProgress: 0,
@@ -400,12 +403,25 @@ test('a restored cultivation slice that is null is repaired and never aborts boo
     spiritRootMultiplier: 1,
     meridianCapacityMultiplier: 1,
     meridianFlowMultiplier: 1,
+    physiqueBreakthroughBonus: 0,
+    dantianCapacityMultiplier: 1,
+    dantianDensityMultiplier: 1,
+    dantianPurityMultiplier: 1,
+    dantianEfficiencyMultiplier: 1,
     bloodlineSpeedMultiplier: 1,
     bloodlineQiMaxMultiplier: 1,
+    soulStabilityMultiplier: 1,
+    soulPurityMultiplier: 1,
+    soulWillpowerMultiplier: 1,
+    soulComprehensionMultiplier: 1,
+    talentLearningSpeedMultiplier: 1,
+    comprehensionDaoProgressMultiplier: 1,
+    comprehensionTechniqueEfficiencyMultiplier: 1,
+    comprehensionBreakthroughEfficiencyMultiplier: 1,
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
-    qiSources: { meditation: 0 },
+    qiSources: { meditation: 0, upgrades: 0, techniques: 0 },
     breakthroughs: 0,
   });
 
@@ -428,7 +444,7 @@ test('restored primitive cultivation and null statistics slices are repaired', (
   // writes through it); the statistics slice is repaired on the first tick.
   assert.equal(typeof state.cultivation, 'object');
   assert.equal(Array.isArray(state.cultivation), false);
-  assert.deepEqual(state.cultivation.qiSources, { meditation: 0 });
+  assert.deepEqual(state.cultivation.qiSources, { meditation: 0, upgrades: 0, techniques: 0 });
   assert.equal(state.statistics, null);
 
   // Gains flow normally after repair — the tick repairs statistics too.

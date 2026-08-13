@@ -67,7 +67,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, coerceMultiplier, freshCultivationSlice, freshPlayerSlice } from '../core/game-state.js';
 
 export class TalentSystem {
   /**
@@ -159,7 +159,7 @@ export class TalentSystem {
       id: typeof talent.id === 'string' && talent.id !== '' ? talent.id : 'ordinary',
       name:
         typeof talent.name === 'string' && talent.name !== '' ? talent.name : 'Ordinary',
-      learningSpeedMultiplier: _coerceMultiplier(talent.learningSpeedMultiplier),
+      learningSpeedMultiplier: coerceMultiplier(talent.learningSpeedMultiplier),
     };
   }
 
@@ -273,7 +273,7 @@ export class TalentSystem {
         typeof definition.name === 'string' && definition.name !== ''
           ? definition.name
           : definition.id,
-      learningSpeedMultiplier: _coerceMultiplier(definition.learningSpeedMultiplier),
+      learningSpeedMultiplier: coerceMultiplier(definition.learningSpeedMultiplier),
     };
   }
 
@@ -287,7 +287,7 @@ export class TalentSystem {
    * @returns {void}
    */
   _syncMultiplier() {
-    this._state.cultivation.talentLearningSpeedMultiplier = _coerceMultiplier(
+    this._state.cultivation.talentLearningSpeedMultiplier = coerceMultiplier(
       this._state.talents.learningSpeedMultiplier
     );
   }
@@ -305,8 +305,8 @@ export class TalentSystem {
    */
   _ensureSlices() {
     this._ensureSlice('talents', _freshTalentSlice);
-    this._ensureSlice('cultivation', _freshCultivationSlice);
-    this._ensureSlice('player', _freshPlayerSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
+    this._ensureSlice('player', freshPlayerSlice);
   }
 
   /**
@@ -341,93 +341,4 @@ function _freshTalentSlice() {
     name: 'Ordinary',
     learningSpeedMultiplier: 1.0,
   };
-}
-
-/**
- * The canonical fresh cultivation slice (mirrors core/game-state.js exactly,
- * INCLUDING talentLearningSpeedMultiplier: 1, comprehensionDaoProgressMultiplier:
- * 1, comprehensionTechniqueEfficiencyMultiplier: 1 and
- * comprehensionBreakthroughEfficiencyMultiplier: 1). Used as the restore-trust
- * fallback when a restored cultivation slice is unusable (null, a primitive or
- * an array) — a broken top-level slice must never abort boot or throw per call.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    realmLayer: 1,
-    realmLayerMax: 9,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    spiritRootMultiplier: 1,
-    meridianCapacityMultiplier: 1,
-    meridianFlowMultiplier: 1,
-    physiqueBreakthroughBonus: 0,
-    dantianCapacityMultiplier: 1,
-    dantianDensityMultiplier: 1,
-    dantianPurityMultiplier: 1,
-    dantianEfficiencyMultiplier: 1,
-    bloodlineSpeedMultiplier: 1,
-    bloodlineQiMaxMultiplier: 1,
-    soulStabilityMultiplier: 1,
-    soulPurityMultiplier: 1,
-    soulWillpowerMultiplier: 1,
-    soulComprehensionMultiplier: 1,
-    talentLearningSpeedMultiplier: 1,
-    comprehensionDaoProgressMultiplier: 1,
-    comprehensionTechniqueEfficiencyMultiplier: 1,
-    comprehensionBreakthroughEfficiencyMultiplier: 1,
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0, upgrades: 0, techniques: 0 },
-    breakthroughs: 0,
-  };
-}
-
-/**
- * The canonical fresh player slice (mirrors core/game-state.js). Used as the
- * restore-trust fallback when a restored player slice is unusable —
- * setTalent() writes player.talent, so a broken player slice must never throw
- * there.
- *
- * @returns {object} the canonical player slice.
- */
-function _freshPlayerSlice() {
-  return {
-    name: 'Unnamed Cultivator',
-    title: '',
-    spiritRoot: 'Unawakened',
-    physique: 'Ordinary Body',
-    bloodline: 'Ancient Human',
-    soul: 'Stable Soul',
-    talent: 'Ordinary',
-    comprehension: 'Standard',
-    meridians: 'Normal',
-    dantian: 'Normal Dantian',
-  };
-}
-
-/**
- * Coerce a multiplier value: a finite number > 0 is kept, anything unusable
- * (NaN, Infinity, negative, 0) reads as the neutral 1 — a hostile value can
- * never zero a cap or push Infinity.
- *
- * @param {*} value — raw multiplier from the definition or state.
- * @returns {number} the multiplier value (> 0).
- */
-function _coerceMultiplier(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }

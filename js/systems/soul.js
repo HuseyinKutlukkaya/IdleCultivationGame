@@ -71,7 +71,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, coerceMultiplier, freshCultivationSlice, freshPlayerSlice } from '../core/game-state.js';
 
 export class SoulSystem {
   /**
@@ -169,10 +169,10 @@ export class SoulSystem {
         typeof soul.name === 'string' && soul.name !== ''
           ? soul.name
           : 'Stable Soul',
-      stabilityMultiplier: _coerceMultiplier(soul.stabilityMultiplier),
-      purityMultiplier: _coerceMultiplier(soul.purityMultiplier),
-      willpowerMultiplier: _coerceMultiplier(soul.willpowerMultiplier),
-      comprehensionMultiplier: _coerceMultiplier(soul.comprehensionMultiplier),
+      stabilityMultiplier: coerceMultiplier(soul.stabilityMultiplier),
+      purityMultiplier: coerceMultiplier(soul.purityMultiplier),
+      willpowerMultiplier: coerceMultiplier(soul.willpowerMultiplier),
+      comprehensionMultiplier: coerceMultiplier(soul.comprehensionMultiplier),
     };
   }
 
@@ -296,10 +296,10 @@ export class SoulSystem {
         typeof definition.name === 'string' && definition.name !== ''
           ? definition.name
           : definition.id,
-      stabilityMultiplier: _coerceMultiplier(definition.stabilityMultiplier),
-      purityMultiplier: _coerceMultiplier(definition.purityMultiplier),
-      willpowerMultiplier: _coerceMultiplier(definition.willpowerMultiplier),
-      comprehensionMultiplier: _coerceMultiplier(definition.comprehensionMultiplier),
+      stabilityMultiplier: coerceMultiplier(definition.stabilityMultiplier),
+      purityMultiplier: coerceMultiplier(definition.purityMultiplier),
+      willpowerMultiplier: coerceMultiplier(definition.willpowerMultiplier),
+      comprehensionMultiplier: coerceMultiplier(definition.comprehensionMultiplier),
     };
   }
 
@@ -313,16 +313,16 @@ export class SoulSystem {
    * @returns {void}
    */
   _syncMultipliers() {
-    this._state.cultivation.soulStabilityMultiplier = _coerceMultiplier(
+    this._state.cultivation.soulStabilityMultiplier = coerceMultiplier(
       this._state.soul.stabilityMultiplier
     );
-    this._state.cultivation.soulPurityMultiplier = _coerceMultiplier(
+    this._state.cultivation.soulPurityMultiplier = coerceMultiplier(
       this._state.soul.purityMultiplier
     );
-    this._state.cultivation.soulWillpowerMultiplier = _coerceMultiplier(
+    this._state.cultivation.soulWillpowerMultiplier = coerceMultiplier(
       this._state.soul.willpowerMultiplier
     );
-    this._state.cultivation.soulComprehensionMultiplier = _coerceMultiplier(
+    this._state.cultivation.soulComprehensionMultiplier = coerceMultiplier(
       this._state.soul.comprehensionMultiplier
     );
   }
@@ -340,8 +340,8 @@ export class SoulSystem {
    */
   _ensureSlices() {
     this._ensureSlice('soul', _freshSoulSlice);
-    this._ensureSlice('cultivation', _freshCultivationSlice);
-    this._ensureSlice('player', _freshPlayerSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
+    this._ensureSlice('player', freshPlayerSlice);
   }
 
   /**
@@ -380,87 +380,4 @@ function _freshSoulSlice() {
     willpowerMultiplier: 1.0,
     comprehensionMultiplier: 1.0,
   };
-}
-
-/**
- * The canonical fresh cultivation slice (mirrors core/game-state.js exactly,
- * INCLUDING soulStabilityMultiplier: 1, soulPurityMultiplier: 1,
- * soulWillpowerMultiplier: 1 and soulComprehensionMultiplier: 1). Used as the
- * restore-trust fallback when a restored cultivation slice is unusable (null,
- * a primitive or an array) — a broken top-level slice must never abort boot
- * or throw per call.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    realmLayer: 1,
-    realmLayerMax: 9,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    spiritRootMultiplier: 1,
-    meridianCapacityMultiplier: 1,
-    meridianFlowMultiplier: 1,
-    physiqueBreakthroughBonus: 0,
-    dantianCapacityMultiplier: 1,
-    dantianDensityMultiplier: 1,
-    dantianPurityMultiplier: 1,
-    dantianEfficiencyMultiplier: 1,
-    bloodlineSpeedMultiplier: 1,
-    bloodlineQiMaxMultiplier: 1,
-    soulStabilityMultiplier: 1,
-    soulPurityMultiplier: 1,
-    soulWillpowerMultiplier: 1,
-    soulComprehensionMultiplier: 1,
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0, upgrades: 0, techniques: 0 },
-    breakthroughs: 0,
-  };
-}
-
-/**
- * The canonical fresh player slice (mirrors core/game-state.js). Used as the
- * restore-trust fallback when a restored player slice is unusable —
- * setSoul() writes player.soul, so a broken player slice must never throw
- * there.
- *
- * @returns {object} the canonical player slice.
- */
-function _freshPlayerSlice() {
-  return {
-    name: 'Unnamed Cultivator',
-    title: '',
-    spiritRoot: 'Unawakened',
-    physique: 'Ordinary Body',
-    bloodline: 'Ancient Human',
-    soul: 'Stable Soul',
-    meridians: 'Normal',
-    dantian: 'Normal Dantian',
-  };
-}
-
-/**
- * Coerce a multiplier value: a finite number > 0 is kept, anything unusable
- * (NaN, Infinity, negative, 0) reads as the neutral 1 — a hostile value can
- * never zero a cap or push Infinity.
- *
- * @param {*} value — raw multiplier from the definition or state.
- * @returns {number} the multiplier value (> 0).
- */
-function _coerceMultiplier(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }

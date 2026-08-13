@@ -341,12 +341,16 @@ test('a restored malformed cultivation slice is repaired on construction', () =>
 
   const system = makeSystem(makeConfig(), state); // must not throw
 
-  // Repaired to the canonical fresh cultivation slice; the constructor's slot
-  // sync wrote the effective rate into it (fresh state is active at rate 2).
+  // Repaired to the canonical fresh cultivation slice (the factory imported
+  // from core/game-state.js — see tests/unit/slice-factories.test.mjs); the
+  // constructor's slot sync wrote the effective rate into it (fresh state is
+  // active at rate 2).
   assert.deepEqual(state.cultivation, {
     realm: 'Mortal',
     realmTier: 0,
     realmStage: 1,
+    realmLayer: 1,
+    realmLayerMax: 9,
     nextRealm: 'Qi Gathering',
     breakthroughCost: null,
     realmProgress: 0,
@@ -357,10 +361,28 @@ test('a restored malformed cultivation slice is repaired on construction', () =>
       powerMultiplier: 1,
       lifespanYears: 100,
     },
+    spiritRootMultiplier: 1,
+    meridianCapacityMultiplier: 1,
+    meridianFlowMultiplier: 1,
+    physiqueBreakthroughBonus: 0,
+    dantianCapacityMultiplier: 1,
+    dantianDensityMultiplier: 1,
+    dantianPurityMultiplier: 1,
+    dantianEfficiencyMultiplier: 1,
+    bloodlineSpeedMultiplier: 1,
+    bloodlineQiMaxMultiplier: 1,
+    soulStabilityMultiplier: 1,
+    soulPurityMultiplier: 1,
+    soulWillpowerMultiplier: 1,
+    soulComprehensionMultiplier: 1,
+    talentLearningSpeedMultiplier: 1,
+    comprehensionDaoProgressMultiplier: 1,
+    comprehensionTechniqueEfficiencyMultiplier: 1,
+    comprehensionBreakthroughEfficiencyMultiplier: 1,
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
-    qiSources: { meditation: 2 },
+    qiSources: { meditation: 2, upgrades: 0, techniques: 0 },
     breakthroughs: 0,
   });
 

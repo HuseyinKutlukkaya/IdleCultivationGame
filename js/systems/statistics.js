@@ -54,7 +54,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, freshStatisticsSlice } from '../core/game-state.js';
 
 /** Keys the snapshot rolls up and `get(...)` accepts. The system WRITES
  * only `playtimeMs`; the other three are read-only mirrors of the
@@ -252,27 +252,10 @@ export class StatisticsSystem {
   _ensureSlice() {
     const current = this._state.statistics;
     if (current === null || typeof current !== 'object' || Array.isArray(current)) {
-      this._state.statistics = _freshStatisticsSlice();
+      this._state.statistics = freshStatisticsSlice();
     }
     return this._state.statistics;
   }
-}
-
-/**
- * The canonical fresh statistics slice (mirrors core/game-state.js). Used
- * as the restore-trust fallback when a restored statistics slice is
- * unusable (null, a primitive or an array) — a broken top-level slice
- * must never abort boot or throw per-tick.
- *
- * @returns {object} the canonical statistics slice.
- */
-function _freshStatisticsSlice() {
-  return {
-    playtimeMs: 0,
-    meditationsCompleted: 0,
-    breakthroughsTotal: 0,
-    qiGenerated: 0,
-  };
 }
 
 /**

@@ -70,7 +70,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, coerceMultiplier, freshCultivationSlice, freshPlayerSlice } from '../core/game-state.js';
 
 export class MeridianSystem {
   /**
@@ -165,8 +165,8 @@ export class MeridianSystem {
         typeof meridian.name === 'string' && meridian.name !== ''
           ? meridian.name
           : 'Normal',
-      capacityMultiplier: _coerceMultiplier(meridian.capacityMultiplier),
-      flowMultiplier: _coerceMultiplier(meridian.flowMultiplier),
+      capacityMultiplier: coerceMultiplier(meridian.capacityMultiplier),
+      flowMultiplier: coerceMultiplier(meridian.flowMultiplier),
     };
   }
 
@@ -280,8 +280,8 @@ export class MeridianSystem {
         typeof definition.name === 'string' && definition.name !== ''
           ? definition.name
           : definition.id,
-      capacityMultiplier: _coerceMultiplier(definition.capacityMultiplier),
-      flowMultiplier: _coerceMultiplier(definition.flowMultiplier),
+      capacityMultiplier: coerceMultiplier(definition.capacityMultiplier),
+      flowMultiplier: coerceMultiplier(definition.flowMultiplier),
     };
   }
 
@@ -295,10 +295,10 @@ export class MeridianSystem {
    * @returns {void}
    */
   _syncMultipliers() {
-    this._state.cultivation.meridianCapacityMultiplier = _coerceMultiplier(
+    this._state.cultivation.meridianCapacityMultiplier = coerceMultiplier(
       this._state.meridians.capacityMultiplier
     );
-    this._state.cultivation.meridianFlowMultiplier = _coerceMultiplier(
+    this._state.cultivation.meridianFlowMultiplier = coerceMultiplier(
       this._state.meridians.flowMultiplier
     );
   }
@@ -316,8 +316,8 @@ export class MeridianSystem {
    */
   _ensureSlices() {
     this._ensureSlice('meridians', _freshMeridiansSlice);
-    this._ensureSlice('cultivation', _freshCultivationSlice);
-    this._ensureSlice('player', _freshPlayerSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
+    this._ensureSlice('player', freshPlayerSlice);
   }
 
   /**
@@ -353,72 +353,4 @@ function _freshMeridiansSlice() {
     capacityMultiplier: 1.0,
     flowMultiplier: 1.0,
   };
-}
-
-/**
- * The canonical fresh cultivation slice (mirrors core/game-state.js exactly,
- * INCLUDING meridianCapacityMultiplier: 1 and meridianFlowMultiplier: 1).
- * Used as the restore-trust fallback when a restored cultivation slice is
- * unusable (null, a primitive or an array) — a broken top-level slice must
- * never abort boot or throw per call.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    spiritRootMultiplier: 1,
-    meridianCapacityMultiplier: 1,
-    meridianFlowMultiplier: 1,
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0, upgrades: 0, techniques: 0 },
-    breakthroughs: 0,
-  };
-}
-
-/**
- * The canonical fresh player slice (mirrors core/game-state.js). Used as the
- * restore-trust fallback when a restored player slice is unusable —
- * setState() writes player.meridians, so a broken player slice must never
- * throw there.
- *
- * @returns {object} the canonical player slice.
- */
-function _freshPlayerSlice() {
-  return {
-    name: 'Unnamed Cultivator',
-    title: '',
-    spiritRoot: 'Unawakened',
-    physique: 'Common',
-    bloodline: 'None',
-    meridians: 'Normal',
-  };
-}
-
-/**
- * Coerce a multiplier value: a finite number > 0 is kept, anything unusable
- * (NaN, Infinity, negative, 0) reads as the neutral 1 — a hostile value can
- * never zero a rate/cap or push Infinity (the QiSystem's _safeFinite clamp
- * then applies to the full rate/cap product).
- *
- * @param {*} value — raw multiplier from the definition or state.
- * @returns {number} the multiplier value (> 0).
- */
-function _coerceMultiplier(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }

@@ -20,7 +20,7 @@
  * from the definitions. A MISSING 'realms' collection is silent (an empty
  * ladder — every read returns neutral values and setRealm rejects), and a
  * definition missing an effect field coerces to a neutral default (see
- * _coerceMultiplier / _coerceLifespan).
+ * coerceMultiplier / _coerceLifespan).
  *
  * State owned (writes): cultivation.realm (display name),
  * cultivation.realmTier (numeric tier 0..14), cultivation.nextRealm (the
@@ -62,7 +62,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, coerceMultiplier, freshCultivationSlice } from '../core/game-state.js';
 
 export class RealmSystem {
   /**
@@ -227,7 +227,7 @@ export class RealmSystem {
    *          zero out the qi cap. 1 when the ladder is empty.
    */
   get qiMaxMultiplier() {
-    return this._currentEffect('qiMaxMultiplier', _coerceMultiplier);
+    return this._currentEffect('qiMaxMultiplier', coerceMultiplier);
   }
 
   /**
@@ -237,7 +237,7 @@ export class RealmSystem {
    *          empty.
    */
   get cultivationSpeedMultiplier() {
-    return this._currentEffect('cultivationSpeedMultiplier', _coerceMultiplier);
+    return this._currentEffect('cultivationSpeedMultiplier', coerceMultiplier);
   }
 
   /**
@@ -246,7 +246,7 @@ export class RealmSystem {
    *          non-finite. 1 when the ladder is empty.
    */
   get powerMultiplier() {
-    return this._currentEffect('powerMultiplier', _coerceMultiplier);
+    return this._currentEffect('powerMultiplier', coerceMultiplier);
   }
 
   /**
@@ -383,7 +383,7 @@ export class RealmSystem {
       typeof cultivation !== 'object' ||
       Array.isArray(cultivation)
     ) {
-      this._state.cultivation = _freshCultivationSlice();
+      this._state.cultivation = freshCultivationSlice();
     }
   }
 
@@ -492,7 +492,7 @@ export class RealmSystem {
    * cultivation slice: the display name (UI binds it), the numeric tier
    * (the progression key), the next realm's display name (null at the top
    * of the ladder — the renderer renders null as "—") and the four effect
-   * slots with defensive coercion (see _coerceMultiplier / _coerceLifespan
+   * slots with defensive coercion (see coerceMultiplier / _coerceLifespan
    * — a definition that lacks effect fields, e.g. a minimal canned fixture,
    * lands neutral defaults instead of undefined).
    *
@@ -506,11 +506,11 @@ export class RealmSystem {
     const next = this._byTier.get(definition.tier + 1);
     this._state.cultivation.nextRealm = next ? next.name : null;
     this._state.cultivation.realmEffects = {
-      qiMaxMultiplier: _coerceMultiplier(definition.qiMaxMultiplier),
-      cultivationSpeedMultiplier: _coerceMultiplier(
+      qiMaxMultiplier: coerceMultiplier(definition.qiMaxMultiplier),
+      cultivationSpeedMultiplier: coerceMultiplier(
         definition.cultivationSpeedMultiplier
       ),
-      powerMultiplier: _coerceMultiplier(definition.powerMultiplier),
+      powerMultiplier: coerceMultiplier(definition.powerMultiplier),
       lifespanYears: _coerceLifespan(definition.lifespanYears),
     };
   }
@@ -529,53 +529,6 @@ export class RealmSystem {
     if (!current) return coerce(undefined);
     return coerce(current[key]);
   }
-}
-
-/**
- * The canonical fresh cultivation slice (mirrors core/game-state.js). Used
- * as the restore-trust fallback when a restored cultivation slice is
- * unusable (null, a primitive or an array) — a broken top-level slice must
- * never abort boot. The qiSources shape stays the local per-file fallback
- * ({ meditation: 0 }), same as qi.js/meditation.js.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    realmLayer: 1,
-    realmLayerMax: 9,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0 },
-    breakthroughs: 0,
-  };
-}
-
-/**
- * Coerce a realm effect multiplier. A missing, non-positive or non-finite
- * value defaults to 1 (the neutral "no effect" factor — never 0, so a
- * malformed definition or hostile save can never zero out a cap or rate).
- *
- * @param {*} value — raw multiplier value from the definition.
- * @returns {number} the validated multiplier (>= 1).
- */
-function _coerceMultiplier(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
 /**

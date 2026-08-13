@@ -87,7 +87,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, freshCultivationSlice } from '../core/game-state.js';
 
 /** The canonical tribulation type ids (DESIGN.md 'Tribulations'; combined
  * tribulations are v1-excluded). */
@@ -608,7 +608,7 @@ export class TribulationSystem {
    */
   _ensureSlices() {
     this._ensureSlice('tribulations', _freshTribulationsSlice);
-    this._ensureSlice('cultivation', _freshCultivationSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
   }
 
   /**
@@ -640,37 +640,6 @@ export class TribulationSystem {
  */
 function _freshTribulationsSlice() {
   return { type: null, pending: false, survived: false };
-}
-
-/**
- * The canonical fresh cultivation slice (mirrors core/game-state.js exactly).
- * Used as the restore-trust fallback when a restored cultivation slice is
- * unusable (null, a primitive or an array) — a broken top-level slice must
- * never abort boot or throw per call.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0, upgrades: 0 },
-    breakthroughs: 0,
-  };
 }
 
 /**

@@ -99,7 +99,7 @@
  */
 
 import { EventBus } from '../core/event-bus.js';
-import { GameState } from '../core/game-state.js';
+import { GameState, freshCultivationSlice, freshStatisticsSlice } from '../core/game-state.js';
 
 /** Keys that alias the prototype chain and must never be traversed. */
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -144,7 +144,7 @@ export class QiSystem {
     // Restore-trust: a malformed cultivation slice (null, a primitive or an
     // array) restored from an attacker-shaped save must never abort boot —
     // repair it to the canonical fresh slice before the cap/rate sync below.
-    this._ensureSlice('cultivation', _freshCultivationSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
 
     // Reflect the derived cap and the current aggregate source rate
     // immediately — a restored session shows the right cap/rate before the
@@ -204,8 +204,8 @@ export class QiSystem {
     // Restore-trust before ANY read/write: repair a malformed restored slice
     // (null, a primitive or an array) to the canonical fresh shape. A healthy
     // slice keeps its own fields — extra/missing ones are the deep-merge's job.
-    this._ensureSlice('cultivation', _freshCultivationSlice);
-    this._ensureSlice('statistics', _freshStatisticsSlice);
+    this._ensureSlice('cultivation', freshCultivationSlice);
+    this._ensureSlice('statistics', freshStatisticsSlice);
 
     // Aggregate the RAW source rates first — the active-sources list must
     // reflect which sources contributed (the realm, spirit-root and meridian
@@ -396,58 +396,6 @@ export class QiSystem {
     }
     return current;
   }
-}
-
-/**
- * The canonical fresh cultivation slice (mirrors core/game-state.js). Used as
- * the restore-trust fallback when a restored cultivation slice is unusable
- * (null, a primitive or an array) — a broken top-level slice must never abort
- * boot or throw per-tick.
- *
- * @returns {object} the canonical cultivation slice.
- */
-function _freshCultivationSlice() {
-  return {
-    realm: 'Mortal',
-    realmTier: 0,
-    realmStage: 1,
-    nextRealm: 'Qi Gathering',
-    breakthroughCost: null,
-    realmProgress: 0,
-    realmProgressMax: 1000,
-    realmEffects: {
-      qiMaxMultiplier: 1,
-      cultivationSpeedMultiplier: 1,
-      powerMultiplier: 1,
-      lifespanYears: 100,
-    },
-    spiritRootMultiplier: 1,
-    meridianCapacityMultiplier: 1,
-    meridianFlowMultiplier: 1,
-    bloodlineSpeedMultiplier: 1,
-    bloodlineQiMaxMultiplier: 1,
-    qi: 0,
-    qiMax: 100,
-    qiPerSecond: 0,
-    qiSources: { meditation: 0 },
-    breakthroughs: 0,
-  };
-}
-
-/**
- * The canonical fresh statistics slice (mirrors core/game-state.js). Used as
- * the restore-trust fallback when a restored statistics slice is unusable
- * (null, a primitive or an array).
- *
- * @returns {object} the canonical statistics slice.
- */
-function _freshStatisticsSlice() {
-  return {
-    playtimeMs: 0,
-    meditationsCompleted: 0,
-    breakthroughsTotal: 0,
-    qiGenerated: 0,
-  };
 }
 
 /**
