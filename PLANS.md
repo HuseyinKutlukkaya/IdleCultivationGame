@@ -272,6 +272,52 @@ tuning, tests. Append a new dated bullet when the next feature is designed.
   hostile-state fallback), game-state slice test, cultivation-panel readout
   test, bootstrap integration + E2E readout updates.
 
+- **2026-08-13 — Talents / Comprehension (Phase 3, next after Soul).**
+  Two sibling character systems mirroring the SoulSystem precedent exactly:
+  data → system-owned state slice → FUTURE-CONSUMER multiplier slots → display
+  name. DESIGN.md lists them as distinct character systems with NO explicit
+  grade ladders and NO existing consumers (Dao / technique-efficiency land in
+  Phase 9+), so both ship as future-consumer systems — exactly like Soul.
+  JSON: `data/talents/talents.json` + a `data/manifest.json` collection entry
+  (validation.requiredFields: `id`, `name`, `learningSpeedMultiplier`;
+  uniqueField: `id`) and `data/comprehension/comprehension.json` + manifest
+  entry (requiredFields: `id`, `name`, `daoProgressMultiplier`,
+  `techniqueEfficiencyMultiplier`, `breakthroughEfficiencyMultiplier`;
+  uniqueField: `id`). One entry per DESIGN.md trait tier, file order = the
+  placeholder ladder (see tuning). State: new `state.talents` slice owned by
+  the TalentSystem (canonical shape `{ id, name, learningSpeedMultiplier }`)
+  and new `state.comprehension` slice owned by the ComprehensionSystem
+  (canonical shape `{ id, name, daoProgressMultiplier,
+  techniqueEfficiencyMultiplier, breakthroughEfficiencyMultiplier }`); the
+  `player.talent` and `player.comprehension` display-name strings (defaults
+  `Ordinary` and `Standard` — the data `name` fields, same precedent as
+  player.spiritRoot / player.soul). Multiplier slots: TalentSystem writes
+  `cultivation.talentLearningSpeedMultiplier`; ComprehensionSystem writes
+  `cultivation.comprehensionDaoProgressMultiplier`,
+  `cultivation.comprehensionTechniqueEfficiencyMultiplier` and
+  `cultivation.comprehensionBreakthroughEfficiencyMultiplier` — FUTURE-CONSUMER
+  slots (DESIGN.md "Talent affects learning", "Comprehension allows faster Dao
+  progress, better technique efficiency, reduced breakthrough requirements";
+  the consumers land in Phase 9 Dao / technique-efficiency work). NO existing
+  consumer today, so qi.js, techniques.js, breakthroughs.js are deliberately
+  NOT touched. All slots use the existing neutral-1 coercion — a
+  missing/malformed/<=0 factor reads as 1, so a hostile save can never poison
+  a future consumer. No events, no UI beyond the cultivation-panel character
+  readout's `player.talent` / `player.comprehension` display names, no
+  character-gen roll yet (matches Soul). Old saves stay identical: the default
+  states read 1.0 for every slot. Tuning table (flat placeholder ladders,
+  monotonic per column — Phase 10 Balancing retunes): Talents: Dull
+  0.70, Slow 0.85, Ordinary 1.00, Bright 1.20, Gifted 1.50, Genius 1.90,
+  Prodigy 2.50 (learningSpeed). Comprehension: Shallow 0.70/0.70/0.70,
+  Limited 0.85/0.85/0.85, Standard 1.00/1.00/1.00, Insightful 1.15/1.10/1.10,
+  Penetrating 1.35/1.25/1.20, Enlightened 1.60/1.45/1.35,
+  Dao Heart 2.00/1.70/1.55 (daoProgress/techniqueEfficiency/
+  breakthroughEfficiency). Tests in the same commit: data-validation (manifest
+  entries + ladder shapes), TalentSystem + ComprehensionSystem unit tests
+  (load ladder, write their slots, neutral coercion, hostile-state fallback),
+  game-state slice tests, cultivation-panel readout tests, bootstrap
+  integration + E2E readout updates.
+
 ## Testing Checklist
 Application loads · no console errors · no network errors · save works ·
 reload works · offline calculation works · GitHub Pages compatible.

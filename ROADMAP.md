@@ -86,7 +86,7 @@ E2E updates on every package (renderer/save paths touched throughout).
 - [x] Dantian — done (js/systems/dantian.js + data/dantian/dantian.json)
 - [x] Bloodlines — done (js/systems/bloodlines.js + data/bloodlines/bloodlines.json)
 - [x] Soul — done (js/systems/soul.js + data/soul/soul.json)
-- [ ] Talents / Comprehension
+- [x] Talents / Comprehension — done (js/systems/talents.js + data/talents/talents.json; js/systems/comprehension.js + data/comprehension/comprehension.json)
 - [ ] Destiny & Luck (hidden luck, calamities vs. fortunate encounters — DESIGN.md character systems)
 - [ ] Milestones (threshold rewards: first X qi, first breakthrough, ...)
 
