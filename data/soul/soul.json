@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 Soul data. Placeholder flat ladder — Phase 10 Balancing retunes."
+  },
+  "definitions": [
+    { "id": "shattered", "name": "Shattered Soul", "description": "A soul scarred by trauma and neglect — its light dim, its will frayed.", "stabilityMultiplier": 0.70, "purityMultiplier": 0.70, "willpowerMultiplier": 0.60, "comprehensionMultiplier": 0.70 },
+    { "id": "fragile", "name": "Fragile Soul", "description": "A brittle soul that startles easily — whole, yet quick to waver.", "stabilityMultiplier": 0.85, "purityMultiplier": 0.85, "willpowerMultiplier": 0.80, "comprehensionMultiplier": 0.85 },
+    { "id": "stable", "name": "Stable Soul", "description": "A balanced soul — the steady foundation every cultivator builds upon.", "stabilityMultiplier": 1.00, "purityMultiplier": 1.00, "willpowerMultiplier": 1.00, "comprehensionMultiplier": 1.00 },
+    { "id": "firm", "name": "Firm Soul", "description": "A resolute soul whose conviction steadies the mind and sharpens intent.", "stabilityMultiplier": 1.15, "purityMultiplier": 1.10, "willpowerMultiplier": 1.20, "comprehensionMultiplier": 1.10 },
+    { "id": "radiant", "name": "Radiant Soul", "description": "A luminous soul that burns bright — its willpower blazing like a newborn sun.", "stabilityMultiplier": 1.35, "purityMultiplier": 1.25, "willpowerMultiplier": 1.50, "comprehensionMultiplier": 1.25 },
+    { "id": "grand", "name": "Grand Soul", "description": "A majestic soul whose presence commands awe — depth and strength in harmony.", "stabilityMultiplier": 1.60, "purityMultiplier": 1.45, "willpowerMultiplier": 1.90, "comprehensionMultiplier": 1.45 },
+    { "id": "chaos-soul", "name": "Chaos Soul", "description": "A primordial, all-consuming soul that bends the very laws of spirit.", "stabilityMultiplier": 2.00, "purityMultiplier": 1.70, "willpowerMultiplier": 2.50, "comprehensionMultiplier": 1.70 }
+  ]
+}

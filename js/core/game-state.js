@@ -32,8 +32,13 @@
  * @property {number} cultivation.dantianEfficiencyMultiplier — dantian efficiency slot, future-consumer (neutral 1 by default; written by DantianSystem)
  * @property {number} cultivation.bloodlineSpeedMultiplier — bloodline cultivation-speed slot (neutral 1 by default; written by BloodlineSystem)
  * @property {number} cultivation.bloodlineQiMaxMultiplier — bloodline qi-cap slot (neutral 1 by default; written by BloodlineSystem)
+ * @property {number} cultivation.soulStabilityMultiplier — soul stability slot, future-consumer (neutral 1 by default; written by SoulSystem)
+ * @property {number} cultivation.soulPurityMultiplier — soul purity slot, future-consumer (neutral 1 by default; written by SoulSystem)
+ * @property {number} cultivation.soulWillpowerMultiplier — soul willpower slot, future-consumer (neutral 1 by default; written by SoulSystem)
+ * @property {number} cultivation.soulComprehensionMultiplier — soul comprehension slot, future-consumer (neutral 1 by default; written by SoulSystem)
  * @property {Object} dantian — the cultivator's dantian (id, name, capacityMultiplier, densityMultiplier, purityMultiplier, efficiencyMultiplier)
  * @property {Object} bloodlines — the cultivator's bloodline (id, name, cultivationSpeedMultiplier, qiMaxMultiplier)
+ * @property {Object} soul — the cultivator's soul (id, name, stabilityMultiplier, purityMultiplier, willpowerMultiplier, comprehensionMultiplier)
  * @property {Object} resources — currency and material counts
  * @property {Object} inventory — carried items
  * @property {Object} techniques — known and active techniques
@@ -84,6 +89,7 @@ function createGameState() {
       spiritRoot: 'Unawakened',
       physique: 'Ordinary Body',
       bloodline: 'Ancient Human',
+      soul: 'Stable Soul',
       meridians: 'Normal',
       dantian: 'Normal Dantian',
     },
@@ -157,6 +163,19 @@ function createGameState() {
       dantianEfficiencyMultiplier: 1,
       bloodlineSpeedMultiplier: 1,
       bloodlineQiMaxMultiplier: 1,
+      // Soul multiplier slots (consumer pattern like bloodlineSpeedMultiplier,
+      // FUTURE-CONSUMER today): written by the SoulSystem (js/systems/soul.js)
+      // from the current soul's data-driven stabilityMultiplier /
+      // purityMultiplier / willpowerMultiplier / comprehensionMultiplier.
+      // No system reads them yet — DESIGN.md "Soul affects enlightenment";
+      // the Dao/technique-efficiency consumers land later (same precedent as
+      // the dantian density/purity/efficiency slots, written today and read
+      // by no system yet). Fresh default 1 (neutral — exactly today's rates);
+      // a missing/malformed value is coerced to 1 by the SoulSystem.
+      soulStabilityMultiplier: 1,
+      soulPurityMultiplier: 1,
+      soulWillpowerMultiplier: 1,
+      soulComprehensionMultiplier: 1,
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
@@ -261,6 +280,24 @@ function createGameState() {
       name: 'Ancient Human',
       cultivationSpeedMultiplier: 1.0,
       qiMaxMultiplier: 1.0,
+    },
+
+    soul: {
+      // Owned by the SoulSystem (js/systems/soul.js). The cultivator's
+      // spiritual strength: id is the data-table key
+      // (data/soul/soul.json — 'stable' in the ladder); name is the display
+      // name mirrored on player.soul; stabilityMultiplier / purityMultiplier /
+      // willpowerMultiplier / comprehensionMultiplier feed the four
+      // future-consumer cultivation slots (no system reads them yet —
+      // DESIGN.md "Soul affects enlightenment"; the Dao/technique-efficiency
+      // consumers land later); all neutral Stable Soul defaults, so fresh
+      // games and old saves stay numerically identical to today.
+      id: 'stable',
+      name: 'Stable Soul',
+      stabilityMultiplier: 1.0,
+      purityMultiplier: 1.0,
+      willpowerMultiplier: 1.0,
+      comprehensionMultiplier: 1.0,
     },
 
     resources: {

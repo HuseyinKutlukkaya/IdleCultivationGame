@@ -922,11 +922,12 @@ test('human playability: a real player can complete the core loop through the UI
   // The character readout renders the fresh-state cultivator: the canonical
   // pre-roll display name 'Unawakened' from player.spiritRoot, the physique
   // name from player.physique, the meridian name from player.meridians, the
-  // dantian name from player.dantian and the bloodline name from
-  // player.bloodline (assert state-derived text, not Intl-formatted numbers —
-  // see tests/README.md E2E rules).
+  // dantian name from player.dantian, the bloodline name from
+  // player.bloodline and the soul name from player.soul (assert
+  // state-derived text, not Intl-formatted numbers — see tests/README.md E2E
+  // rules).
   await expect(panel.locator('[data-cultivation-character]')).toHaveText(
-    'Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human'
+    'Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul'
   );
 
   // Fresh boot at Mortal with zero realm progress: the Breakthrough button

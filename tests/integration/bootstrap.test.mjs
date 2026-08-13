@@ -37,6 +37,7 @@ import { TribulationSystem } from '../../js/systems/tribulations.js';
 import { SpiritRootSystem } from '../../js/systems/spirit-roots.js';
 import { DantianSystem } from '../../js/systems/dantian.js';
 import { BloodlineSystem } from '../../js/systems/bloodlines.js';
+import { SoulSystem } from '../../js/systems/soul.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { initActivityLog } from '../../js/ui/activity-log.js';
@@ -172,6 +173,14 @@ const DATA_FILES = {
           uniqueField: 'id',
         },
       },
+      {
+        id: 'soul',
+        files: ['data/soul/soul.json'],
+        validation: {
+          requiredFields: ['id', 'name', 'stabilityMultiplier', 'purityMultiplier', 'willpowerMultiplier', 'comprehensionMultiplier'],
+          uniqueField: 'id',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -283,6 +292,13 @@ const DATA_FILES = {
     definitions: [
       { id: 'ancient-human', name: 'Ancient Human', description: 'The baseline bloodline of every mortal — no innate edge, no weakness.', cultivationSpeedMultiplier: 1.00, qiMaxMultiplier: 1.00 },
       { id: 'dragon', name: 'Dragon Bloodline', description: 'A sovereign bloodline whose might hastens cultivation and expands the sea of qi.', cultivationSpeedMultiplier: 1.85, qiMaxMultiplier: 1.70 },
+    ],
+  },
+  'data/soul/soul.json': {
+    meta: {},
+    definitions: [
+      { id: 'stable', name: 'Stable Soul', description: 'A balanced soul — the steady foundation every cultivator builds upon.', stabilityMultiplier: 1.00, purityMultiplier: 1.00, willpowerMultiplier: 1.00, comprehensionMultiplier: 1.00 },
+      { id: 'chaos-soul', name: 'Chaos Soul', description: 'A primordial, all-consuming soul that bends the very laws of spirit.', stabilityMultiplier: 2.00, purityMultiplier: 1.70, willpowerMultiplier: 2.50, comprehensionMultiplier: 1.70 },
     ],
   },
 };
@@ -476,7 +492,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 14 definitions loaded. Game loop running.'
+    'Scaffold ready — 16 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -693,6 +709,35 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(GameState.cultivation.bloodlineSpeedMultiplier, 1);
   assert.equal(GameState.cultivation.bloodlineQiMaxMultiplier, 1);
   assert.equal(GameState.player.bloodline, 'Ancient Human');
+  // The Soul system is wired with the DataManager: the ladder comes from the
+  // loaded 'soul' collection (2 canned entries — stable and chaos-soul). The
+  // boot leaves the canonical fresh neutral state: the stable soul (all 1.0×
+  // multipliers), the four future-consumer cultivation slots at 1 and the
+  // player display name 'Stable Soul' — no roll happens at boot.
+  assert.ok(globalThis.window.__soul instanceof SoulSystem);
+  assert.equal(globalThis.window.__soul.count, 2);
+  assert.equal(
+    globalThis.window.__soul.byId('stable').stabilityMultiplier,
+    1.0
+  );
+  assert.equal(
+    globalThis.window.__soul.byId('chaos-soul').name,
+    'Chaos Soul'
+  );
+  assert.equal(globalThis.window.__soul.byId('missing'), null);
+  assert.deepEqual(GameState.soul, {
+    id: 'stable',
+    name: 'Stable Soul',
+    stabilityMultiplier: 1.0,
+    purityMultiplier: 1.0,
+    willpowerMultiplier: 1.0,
+    comprehensionMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.soulStabilityMultiplier, 1);
+  assert.equal(GameState.cultivation.soulPurityMultiplier, 1);
+  assert.equal(GameState.cultivation.soulWillpowerMultiplier, 1);
+  assert.equal(GameState.cultivation.soulComprehensionMultiplier, 1);
+  assert.equal(GameState.player.soul, 'Stable Soul');
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -748,6 +793,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/spirit-roots/spirit-roots.json',
     'data/dantian/dantian.json',
     'data/bloodlines/bloodlines.json',
+    'data/soul/soul.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -836,4 +882,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__spiritRoots, undefined);
   assert.equal(globalThis.window.__dantian, undefined);
   assert.equal(globalThis.window.__bloodlines, undefined);
+  assert.equal(globalThis.window.__soul, undefined);
 });

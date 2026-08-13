@@ -37,6 +37,7 @@ test('has the exact default placeholder shape', () => {
       spiritRoot: 'Unawakened',
       physique: 'Ordinary Body',
       bloodline: 'Ancient Human',
+      soul: 'Stable Soul',
       meridians: 'Normal',
       dantian: 'Normal Dantian',
     },
@@ -73,6 +74,15 @@ test('has the exact default placeholder shape', () => {
       qiMaxMultiplier: 1.0,
     },
 
+    soul: {
+      id: 'stable',
+      name: 'Stable Soul',
+      stabilityMultiplier: 1.0,
+      purityMultiplier: 1.0,
+      willpowerMultiplier: 1.0,
+      comprehensionMultiplier: 1.0,
+    },
+
       cultivation: {
         realm: 'Mortal',
         realmTier: 0,
@@ -99,6 +109,10 @@ test('has the exact default placeholder shape', () => {
         dantianEfficiencyMultiplier: 1,
         bloodlineSpeedMultiplier: 1,
         bloodlineQiMaxMultiplier: 1,
+        soulStabilityMultiplier: 1,
+        soulPurityMultiplier: 1,
+        soulWillpowerMultiplier: 1,
+        soulComprehensionMultiplier: 1,
         qi: 0,
         qiMax: 100,
         qiPerSecond: 0,
@@ -179,7 +193,7 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the eighteen top-level state slices', () => {
+test('exposes exactly the nineteen top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'bloodlines',
     'cultivation',
@@ -193,6 +207,7 @@ test('exposes exactly the eighteen top-level state slices', () => {
     'resources',
     'sect',
     'settings',
+    'soul',
     'spiritRoot',
     'statistics',
     'techniques',
@@ -247,6 +262,19 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   });
   assert.equal(GameState.cultivation.bloodlineSpeedMultiplier, 1);
   assert.equal(GameState.cultivation.bloodlineQiMaxMultiplier, 1);
+  assert.deepEqual(GameState.soul, {
+    id: 'stable',
+    name: 'Stable Soul',
+    stabilityMultiplier: 1.0,
+    purityMultiplier: 1.0,
+    willpowerMultiplier: 1.0,
+    comprehensionMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.soulStabilityMultiplier, 1);
+  assert.equal(GameState.cultivation.soulPurityMultiplier, 1);
+  assert.equal(GameState.cultivation.soulWillpowerMultiplier, 1);
+  assert.equal(GameState.cultivation.soulComprehensionMultiplier, 1);
+  assert.equal(GameState.player.soul, 'Stable Soul');
   // Master's parting gift — fresh-state spirit-stone endowment (50 stones).
   // The other resources still start at zero (no equivalent endowment for
   // herbs/jade/pills yet; those arrive with the Phase-4 alchemical market).
@@ -271,11 +299,11 @@ test('default settings favour offline progress and stay silent by default', () =
   assert.equal(GameState.settings.notationStyle, null);
 });
 
-test('a legacy save without the spirit-root, meridian, physique, dantian and bloodline keys keeps canonical fresh values after the standard restore merge', () => {
+test('a legacy save without the spirit-root, meridian, physique, dantian, bloodline and soul keys keeps canonical fresh values after the standard restore merge', () => {
   // Saves written before the SpiritRootSystem, MeridianSystem,
-  // PhysiqueSystem, DantianSystem and BloodlineSystem carry no `spiritRoot` /
-  // `meridians` / `physiques` / `dantian` / `bloodlines` slices and no
-  // multiplier slots. Game.restore() applies a save via
+  // PhysiqueSystem, DantianSystem, BloodlineSystem and SoulSystem carry no
+  // `spiritRoot` / `meridians` / `physiques` / `dantian` / `bloodlines` /
+  // `soul` slices and no multiplier slots. Game.restore() applies a save via
   // deepMerge(GameState, snapshot), so keys the old save does not carry are
   // left at their current fresh defaults.
   const state = structuredClone(GameState);
@@ -295,6 +323,11 @@ test('a legacy save without the spirit-root, meridian, physique, dantian and blo
   delete legacySave.bloodlines;
   delete legacySave.cultivation.bloodlineSpeedMultiplier;
   delete legacySave.cultivation.bloodlineQiMaxMultiplier;
+  delete legacySave.soul;
+  delete legacySave.cultivation.soulStabilityMultiplier;
+  delete legacySave.cultivation.soulPurityMultiplier;
+  delete legacySave.cultivation.soulWillpowerMultiplier;
+  delete legacySave.cultivation.soulComprehensionMultiplier;
   legacySave.player.name = 'Ren';
   legacySave.resources.spiritStones = 42;
 
@@ -359,4 +392,18 @@ test('a legacy save without the spirit-root, meridian, physique, dantian and blo
   assert.equal(state.cultivation.bloodlineSpeedMultiplier, 1);
   assert.equal(state.cultivation.bloodlineQiMaxMultiplier, 1);
   assert.equal(state.player.bloodline, 'Ancient Human');
+  // Missing soul keys keep the canonical fresh values.
+  assert.deepEqual(state.soul, {
+    id: 'stable',
+    name: 'Stable Soul',
+    stabilityMultiplier: 1.0,
+    purityMultiplier: 1.0,
+    willpowerMultiplier: 1.0,
+    comprehensionMultiplier: 1.0,
+  });
+  assert.equal(state.cultivation.soulStabilityMultiplier, 1);
+  assert.equal(state.cultivation.soulPurityMultiplier, 1);
+  assert.equal(state.cultivation.soulWillpowerMultiplier, 1);
+  assert.equal(state.cultivation.soulComprehensionMultiplier, 1);
+  assert.equal(state.player.soul, 'Stable Soul');
 });

@@ -99,6 +99,21 @@
         "requiredFields": ["id", "name", "cultivationSpeedMultiplier", "qiMaxMultiplier"],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "soul",
+      "files": ["data/soul/soul.json"],
+      "validation": {
+        "requiredFields": [
+          "id",
+          "name",
+          "stabilityMultiplier",
+          "purityMultiplier",
+          "willpowerMultiplier",
+          "comprehensionMultiplier"
+        ],
+        "uniqueField": "id"
+      }
     }
   ]
 }

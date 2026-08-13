@@ -30,6 +30,7 @@ import { MeridianSystem } from './systems/meridians.js';
 import { PhysiqueSystem } from './systems/physiques.js';
 import { DantianSystem } from './systems/dantian.js';
 import { BloodlineSystem } from './systems/bloodlines.js';
+import { SoulSystem } from './systems/soul.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { TechniqueSystem } from './systems/techniques.js';
@@ -504,6 +505,23 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Soul: single owner of the cultivator's soul and its four
+    // future-consumer multiplier slots (data/soul/soul.json via the
+    // DataManager — the canonical 7-state ladder Shattered → Chaos Soul).
+    // Constructed AFTER the DataManager load (the ladder must resolve): the
+    // constructor sync writes cultivation.soulStabilityMultiplier /
+    // cultivation.soulPurityMultiplier / cultivation.soulWillpowerMultiplier /
+    // cultivation.soulComprehensionMultiplier from the restored soul's
+    // factors. NO system reads those slots yet (DESIGN.md "Soul affects
+    // enlightenment"; the Dao/technique-efficiency consumers land later) —
+    // qi.js is deliberately untouched, unlike bloodlines. It has NO loop
+    // subscription — souls only change through setSoul() (the future
+    // character-gen flow, the console and tests), never on a tick.
+    const soul = new SoulSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Cultivation panel: the Phase-3 play-test surface — the human player's
     // Breakthrough / Face Tribulation buttons plus the character readout.
     // The "Cultivation Realm" panel shows the realm/progress/cost bindings
@@ -586,6 +604,7 @@ async function bootstrap() {
     window.__physiques = physiques;
     window.__dantian = dantian;
     window.__bloodlines = bloodlines;
+    window.__soul = soul;
     window.__cultivationPanel = cultivationPanel;
     window.__inventoryPanel = inventoryPanel;
 
