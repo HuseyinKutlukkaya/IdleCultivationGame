@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 Destiny data. Placeholder flat ladder — Phase 10 Balancing retunes."
+  },
+  "definitions": [
+    { "id": "doomed", "name": "Doomed", "description": "A fate that courts disaster — calamity shadows every step, and fortune slips through the fingers like mist.", "fortuneMultiplier": 0.55, "calamityMultiplier": 0.60 },
+    { "id": "ill-fated", "name": "Ill-Fated", "description": "Bad omens follow wherever they walk; promising doors tend to close just before they arrive.", "fortuneMultiplier": 0.75, "calamityMultiplier": 0.80 },
+    { "id": "mundane", "name": "Mundane", "description": "A common lot shared by most cultivators — no special favor, no unusual curse, just the long road ahead.", "fortuneMultiplier": 1.00, "calamityMultiplier": 1.00 },
+    { "id": "favored", "name": "Favored", "description": "The heavens seem to smile on their path — lucky encounters and useful opportunities appear with pleasing regularity.", "fortuneMultiplier": 1.25, "calamityMultiplier": 1.20 },
+    { "id": "blessed", "name": "Blessed", "description": "Fortune bends toward them like a loyal servant; hidden treasures and rare teachers find their way to their door.", "fortuneMultiplier": 1.60, "calamityMultiplier": 1.45 },
+    { "id": "heavenly-favored", "name": "Heavenly-Favored", "description": "The will of heaven itself seems to arrange the world around them — calamities veer away and opportunities abound.", "fortuneMultiplier": 2.00, "calamityMultiplier": 1.75 },
+    { "id": "son-of-heaven", "name": "Son of Heaven", "description": "A destiny as vast as the sky — the heavens themselves conspire on their behalf, and calamity dare not touch them.", "fortuneMultiplier": 2.50, "calamityMultiplier": 2.10 }
+  ]
+}

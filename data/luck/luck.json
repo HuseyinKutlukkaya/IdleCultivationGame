@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "Phase-3 Luck data. Placeholder flat ladder — Phase 10 Balancing retunes."
+  },
+  "definitions": [
+    { "id": "jinxed", "name": "Jinxed", "description": "A jinx clings to their hands — crafts crack, drops disappoint, and fortune's gifts arrive broken or hollow.", "craftingMultiplier": 0.60, "dropMultiplier": 0.55 },
+    { "id": "unlucky", "name": "Unlucky", "description": "Luck runs against them; the good things of the world are usually just out of reach.", "craftingMultiplier": 0.80, "dropMultiplier": 0.75 },
+    { "id": "average", "name": "Average", "description": "No more and no less fortunate than the next cultivator — the ordinary odds of an ordinary life.", "craftingMultiplier": 1.00, "dropMultiplier": 1.00 },
+    { "id": "lucky", "name": "Lucky", "description": "A glint of fortune follows their hands — crafts come out right and rare finds turn up at just the right time.", "craftingMultiplier": 1.20, "dropMultiplier": 1.25 },
+    { "id": "fortunate", "name": "Fortunate", "description": "Fortune smiles upon their ventures — good results and valuable finds arrive noticeably more often than not.", "craftingMultiplier": 1.45, "dropMultiplier": 1.60 },
+    { "id": "heaven-blessed", "name": "Heaven-Blessed", "description": "Heaven itself blesses their endeavors — fine crafts, rare drops and secret opportunities gather around them.", "craftingMultiplier": 1.75, "dropMultiplier": 2.00 },
+    { "id": "fortunes-darling", "name": "Fortune's Darling", "description": "Fortune itself dotes on them like a favored child — the extraordinary becomes their everyday norm.", "craftingMultiplier": 2.10, "dropMultiplier": 2.50 }
+  ]
+}

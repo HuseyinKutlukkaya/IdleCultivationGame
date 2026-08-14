@@ -6,8 +6,8 @@
  * real buttons. The panel renders:
  *   - a character readout (player.spiritRoot + player.physique +
  *     player.meridians + player.dantian + player.bloodline + player.soul +
- *     player.talent + player.comprehension, read fresh from state on every
- *     render),
+ *     player.talent + player.comprehension + player.destiny + player.luck,
+ *     read fresh from state on every render),
  *   - a "Breakthrough" button enabled exactly when
  *     breakthroughs.canAttempt() is true and, when disabled, a readiness
  *     reason line derived from breakthroughs.requirements() — only the four
@@ -300,7 +300,7 @@ export function initCultivationPanel({
    * hits that).
    *
    * @param {object} gameState — the game state (player slice).
-   * @returns {string} e.g. "Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: Ordinary · Comprehension: Standard".
+   * @returns {string} e.g. "Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: Ordinary · Comprehension: Standard · Destiny: Mundane · Luck: Average".
    */
   function characterText(gameState) {
     const player = gameState && gameState.player;
@@ -336,7 +336,15 @@ export function initCultivationPanel({
       player && typeof player.comprehension === 'string'
         ? String(player.comprehension).slice(0, 64)
         : '—';
-    return `Spirit Root: ${rootName} · Physique: ${physique} · Meridians: ${meridians} · Dantian: ${dantian} · Bloodline: ${bloodline} · Soul: ${soul} · Talent: ${talent} · Comprehension: ${comprehension}`;
+    const destiny =
+      player && typeof player.destiny === 'string'
+        ? String(player.destiny).slice(0, 64)
+        : '—';
+    const luck =
+      player && typeof player.luck === 'string'
+        ? String(player.luck).slice(0, 64)
+        : '—';
+    return `Spirit Root: ${rootName} · Physique: ${physique} · Meridians: ${meridians} · Dantian: ${dantian} · Bloodline: ${bloodline} · Soul: ${soul} · Talent: ${talent} · Comprehension: ${comprehension} · Destiny: ${destiny} · Luck: ${luck}`;
   }
 
   /**

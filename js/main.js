@@ -33,6 +33,8 @@ import { BloodlineSystem } from './systems/bloodlines.js';
 import { SoulSystem } from './systems/soul.js';
 import { TalentSystem } from './systems/talents.js';
 import { ComprehensionSystem } from './systems/comprehension.js';
+import { DestinySystem } from './systems/destiny.js';
+import { LuckSystem } from './systems/luck.js';
 import { StatisticsSystem } from './systems/statistics.js';
 import { UpgradeSystem } from './systems/upgrades.js';
 import { TechniqueSystem } from './systems/techniques.js';
@@ -560,6 +562,38 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Destiny: single owner of the cultivator's destiny and its two
+    // future-consumer multiplier slots (data/destiny/destiny.json via the
+    // DataManager — the canonical 7-state ladder Doomed → Son of Heaven).
+    // Constructed AFTER the DataManager load (the ladder must resolve): the
+    // constructor sync writes cultivation.destinyFortuneMultiplier /
+    // cultivation.destinyCalamityMultiplier from the restored destiny's
+    // factors. NO system reads those slots yet (DESIGN.md "Destiny affects
+    // the world"; the encounter/calamity consumers land later) — qi.js,
+    // techniques.js and breakthroughs.js are deliberately untouched. It has
+    // NO loop subscription — destiny only changes through setDestiny() (the
+    // future character-gen flow, the console and tests), never on a tick.
+    const destiny = new DestinySystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
+    // Luck: single owner of the cultivator's luck and its two future-consumer
+    // multiplier slots (data/luck/luck.json via the DataManager — the
+    // canonical 7-state ladder Jinxed → Fortune's Darling). Constructed AFTER
+    // the DataManager load (the ladder must resolve): the constructor sync
+    // writes cultivation.luckCraftingMultiplier / cultivation.luckDropMultiplier
+    // from the restored luck's factors. NO system reads those slots yet
+    // (DESIGN.md "Luck affects events"; the crafting/drop/secret-realm
+    // consumers land later) — qi.js, techniques.js and breakthroughs.js are
+    // deliberately untouched. It has NO loop subscription — luck only changes
+    // through setLuck() (the future character-gen flow, the console and
+    // tests), never on a tick.
+    const luck = new LuckSystem({
+      eventBus: EventBus,
+      dataManager,
+    });
+
     // Cultivation panel: the Phase-3 play-test surface — the human player's
     // Breakthrough / Face Tribulation buttons plus the character readout.
     // The "Cultivation Realm" panel shows the realm/progress/cost bindings
@@ -645,6 +679,8 @@ async function bootstrap() {
     window.__soul = soul;
     window.__talents = talents;
     window.__comprehension = comprehension;
+    window.__destiny = destiny;
+    window.__luck = luck;
     window.__cultivationPanel = cultivationPanel;
     window.__inventoryPanel = inventoryPanel;
 

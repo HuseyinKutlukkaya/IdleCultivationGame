@@ -318,6 +318,53 @@ tuning, tests. Append a new dated bullet when the next feature is designed.
   game-state slice tests, cultivation-panel readout tests, bootstrap
   integration + E2E readout updates.
 
+- **2026-08-13 — Destiny & Luck (Phase 3, next after Talents / Comprehension).**
+  Two sibling character systems mirroring the SoulSystem precedent exactly:
+  data → system-owned state slice → FUTURE-CONSUMER multiplier slots → display
+  name. DESIGN.md lists them as distinct character systems with NO explicit
+  grade ladders and NO existing consumers (fortunate encounters / calamities,
+  critical crafting / rare drops / secret realms / events land in Phase 4-7
+  items-and-world work), so both ship as future-consumer systems — exactly
+  like Soul, Talents and Comprehension. JSON: `data/destiny/destiny.json` +
+  a `data/manifest.json` collection entry (validation.requiredFields: `id`,
+  `name`, `fortuneMultiplier`, `calamityMultiplier`; uniqueField: `id`) and
+  `data/luck/luck.json` + manifest entry (requiredFields: `id`, `name`,
+  `craftingMultiplier`, `dropMultiplier`; uniqueField: `id`). One entry per
+  DESIGN.md trait tier, file order = the placeholder ladder (see tuning).
+  State: new `state.destiny` slice owned by the DestinySystem (canonical shape
+  `{ id, name, fortuneMultiplier, calamityMultiplier }`) and new `state.luck`
+  slice owned by the LuckSystem (canonical shape `{ id, name,
+  craftingMultiplier, dropMultiplier }`); the `player.destiny` and
+  `player.luck` display-name strings (defaults `Mundane` and `Average` — the
+  data `name` fields, same precedent as player.spiritRoot / player.soul).
+  Multiplier slots: DestinySystem writes `cultivation.destinyFortuneMultiplier`
+  and `cultivation.destinyCalamityMultiplier`; LuckSystem writes
+  `cultivation.luckCraftingMultiplier` and `cultivation.luckDropMultiplier` —
+  FUTURE-CONSUMER slots (DESIGN.md "Destiny affects the world", "Luck affects
+  events / critical crafting / rare drops / secret realms"; the consumers land
+  in Phase 4-7 world/items work). NO existing consumer today, so no existing
+  system is touched. All slots use the existing neutral-1 coercion — a
+  missing/malformed/<=0 factor reads as 1, so a hostile save can never poison
+  a future consumer. IMPORTANT: both new systems MUST import the shared
+  factories (`freshCultivationSlice`, `freshPlayerSlice`, `coerceMultiplier`)
+  from `js/core/game-state.js` — the 2026-08-13 slice-factory consolidation
+  made that the law; do NOT add local copies. No events, no UI beyond the
+  cultivation-panel character readout's `player.destiny` / `player.luck`
+  display names, no character-gen roll yet (matches Soul; DESIGN.md "Random
+  Destiny" char-gen step comes with the character-gen flow). Old saves stay
+  identical: the default states read 1.0 for every slot. Tuning table (flat
+  placeholder ladders, monotonic per column — Phase 10 Balancing retunes):
+  Destiny: Doomed 0.55/0.60, Ill-Fated 0.75/0.80, Mundane 1.00/1.00,
+  Favored 1.25/1.20, Blessed 1.60/1.45, Heavenly-Favored 2.00/1.75,
+  Son of Heaven 2.50/2.10 (fortune/calamity). Luck: Jinxed 0.60/0.55,
+  Unlucky 0.80/0.75, Average 1.00/1.00, Lucky 1.20/1.25, Fortunate 1.45/1.60,
+  Heaven-Blessed 1.75/2.00, Fortune's Darling 2.10/2.50 (crafting/drop).
+  Tests in the same commit: data-validation (manifest entries + ladder shapes),
+  DestinySystem + LuckSystem unit tests (load ladder, write their slots,
+  neutral coercion, hostile-state fallback, import the shared factories),
+  game-state slice tests, cultivation-panel readout tests, bootstrap
+  integration + E2E readout updates.
+
 ## Testing Checklist
 Application loads · no console errors · no network errors · save works ·
 reload works · offline calculation works · GitHub Pages compatible.

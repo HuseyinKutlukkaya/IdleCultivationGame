@@ -136,6 +136,22 @@
         ],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "destiny",
+      "files": ["data/destiny/destiny.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "fortuneMultiplier", "calamityMultiplier"],
+        "uniqueField": "id"
+      }
+    },
+    {
+      "id": "luck",
+      "files": ["data/luck/luck.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "craftingMultiplier", "dropMultiplier"],
+        "uniqueField": "id"
+      }
     }
   ]
 }

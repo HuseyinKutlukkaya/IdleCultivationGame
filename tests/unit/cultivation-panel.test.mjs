@@ -358,7 +358,7 @@ function createFakeTribulations(overrides = {}) {
  */
 function createFakeState(overrides = {}) {
   const base = {
-    player: { spiritRoot: 'Unawakened', physique: 'Ordinary Body', meridians: 'Normal', dantian: 'Normal Dantian', bloodline: 'Ancient Human', soul: 'Stable Soul', talent: 'Ordinary', comprehension: 'Standard' },
+    player: { spiritRoot: 'Unawakened', physique: 'Ordinary Body', meridians: 'Normal', dantian: 'Normal Dantian', bloodline: 'Ancient Human', soul: 'Stable Soul', talent: 'Ordinary', comprehension: 'Standard', destiny: 'Mundane', luck: 'Average' },
     cultivation: { realm: 'Mortal', breakthroughCost: 0, realmLayer: 1, realmLayerMax: 9 },
   };
   // Deep-merge player so a partial override keeps unmentioned keys.
@@ -406,7 +406,7 @@ test('init renders the character readout, buttons and feedback; registers exactl
 
   const character = findNode(body, 'data-cultivation-character');
   assert.ok(character, 'character readout rendered');
-  assert.equal(character.textContent, 'Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: Ordinary · Comprehension: Standard');
+  assert.equal(character.textContent, 'Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: Ordinary · Comprehension: Standard · Destiny: Mundane · Luck: Average');
 
   // Layer readout is always shown.
   const layer = findNode(body, 'data-cultivation-layer');
@@ -455,7 +455,7 @@ test('character readout reads spirit root + meridians + dantian fresh from state
     root,
   });
   const character = findNode(body, 'data-cultivation-character');
-  assert.equal(character.textContent, 'Spirit Root: No Root · Physique: Ordinary Body · Meridians: Wide · Dantian: Large Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: Ordinary · Comprehension: Standard');
+  assert.equal(character.textContent, 'Spirit Root: No Root · Physique: Ordinary Body · Meridians: Wide · Dantian: Large Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: Ordinary · Comprehension: Standard · Destiny: Mundane · Luck: Average');
 });
 
 test('character readout truncates hostile very-long names on every field', () => {
@@ -466,6 +466,8 @@ test('character readout truncates hostile very-long names on every field', () =>
       meridians: 'Normal',
       talent: 'X'.repeat(4096),
       comprehension: 'X'.repeat(4096),
+      destiny: 'X'.repeat(4096),
+      luck: 'X'.repeat(4096),
     },
   });
   initCultivationPanel({
@@ -478,10 +480,10 @@ test('character readout truncates hostile very-long names on every field', () =>
   const character = findNode(body, 'data-cultivation-character');
   const text = character.textContent;
   // The rendered line stays bounded (the 64-char cap on each character
-  // field — spirit root, talent and comprehension here) so a hostile save
-  // can never churn a multi-MB string on every loop pulse.
-  assert.ok(text.length <= 353, `rendered character line length ${text.length}`);
-  assert.equal(text, `Spirit Root: ${'X'.repeat(64)} · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: ${'X'.repeat(64)} · Comprehension: ${'X'.repeat(64)}`);
+  // field — spirit root, talent, comprehension, destiny and luck here) so a
+  // hostile save can never churn a multi-MB string on every loop pulse.
+  assert.ok(text.length <= 502, `rendered character line length ${text.length}`);
+  assert.equal(text, `Spirit Root: ${'X'.repeat(64)} · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: ${'X'.repeat(64)} · Comprehension: ${'X'.repeat(64)} · Destiny: ${'X'.repeat(64)} · Luck: ${'X'.repeat(64)}`);
 });
 
 test('init without a panel warns and returns a no-op handle', () => {

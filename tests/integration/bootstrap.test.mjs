@@ -40,6 +40,8 @@ import { BloodlineSystem } from '../../js/systems/bloodlines.js';
 import { SoulSystem } from '../../js/systems/soul.js';
 import { TalentSystem } from '../../js/systems/talents.js';
 import { ComprehensionSystem } from '../../js/systems/comprehension.js';
+import { DestinySystem } from '../../js/systems/destiny.js';
+import { LuckSystem } from '../../js/systems/luck.js';
 import { NotationFormatter } from '../../js/ui/notation.js';
 import { Renderer } from '../../js/ui/renderer.js';
 import { initActivityLog } from '../../js/ui/activity-log.js';
@@ -199,6 +201,22 @@ const DATA_FILES = {
           uniqueField: 'id',
         },
       },
+      {
+        id: 'destiny',
+        files: ['data/destiny/destiny.json'],
+        validation: {
+          requiredFields: ['id', 'name', 'fortuneMultiplier', 'calamityMultiplier'],
+          uniqueField: 'id',
+        },
+      },
+      {
+        id: 'luck',
+        files: ['data/luck/luck.json'],
+        validation: {
+          requiredFields: ['id', 'name', 'craftingMultiplier', 'dropMultiplier'],
+          uniqueField: 'id',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -329,6 +347,20 @@ const DATA_FILES = {
     meta: {},
     definitions: [
       { id: 'standard', name: 'Standard', description: 'The baseline comprehension every mortal is born with — a steady, unremarkable mind.', daoProgressMultiplier: 1.0, techniqueEfficiencyMultiplier: 1.0, breakthroughEfficiencyMultiplier: 1.0 },
+    ],
+  },
+  'data/destiny/destiny.json': {
+    meta: {},
+    definitions: [
+      { id: 'mundane', name: 'Mundane', description: 'A common lot shared by most cultivators — no special favor, no unusual curse, just the long road ahead.', fortuneMultiplier: 1.00, calamityMultiplier: 1.00 },
+      { id: 'son-of-heaven', name: 'Son of Heaven', description: 'A destiny as vast as the sky — the heavens themselves conspire on their behalf, and calamity dare not touch them.', fortuneMultiplier: 2.50, calamityMultiplier: 2.10 },
+    ],
+  },
+  'data/luck/luck.json': {
+    meta: {},
+    definitions: [
+      { id: 'average', name: 'Average', description: 'No more and no less fortunate than the next cultivator — the ordinary odds of an ordinary life.', craftingMultiplier: 1.00, dropMultiplier: 1.00 },
+      { id: 'fortunes-darling', name: 'Fortune\'s Darling', description: 'Fortune itself dotes on them like a favored child — the extraordinary becomes their everyday norm.', craftingMultiplier: 2.10, dropMultiplier: 2.50 },
     ],
   },
 };
@@ -522,7 +554,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 18 definitions loaded. Game loop running.'
+    'Scaffold ready — 22 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -811,6 +843,58 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(GameState.cultivation.comprehensionTechniqueEfficiencyMultiplier, 1);
   assert.equal(GameState.cultivation.comprehensionBreakthroughEfficiencyMultiplier, 1);
   assert.equal(GameState.player.comprehension, 'Standard');
+  // The Destiny system is wired with the DataManager: the ladder comes from
+  // the loaded 'destiny' collection (2 canned entries — mundane and
+  // son-of-heaven). The boot leaves the canonical fresh neutral state: the
+  // mundane destiny (all 1.0× multipliers), the two future-consumer
+  // cultivation slots at 1 and the player display name 'Mundane' — no roll
+  // happens at boot.
+  assert.ok(globalThis.window.__destiny instanceof DestinySystem);
+  assert.equal(globalThis.window.__destiny.count, 2);
+  assert.equal(
+    globalThis.window.__destiny.byId('mundane').fortuneMultiplier,
+    1.0
+  );
+  assert.equal(
+    globalThis.window.__destiny.byId('son-of-heaven').name,
+    'Son of Heaven'
+  );
+  assert.equal(globalThis.window.__destiny.byId('missing'), null);
+  assert.deepEqual(GameState.destiny, {
+    id: 'mundane',
+    name: 'Mundane',
+    fortuneMultiplier: 1.0,
+    calamityMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.destinyFortuneMultiplier, 1);
+  assert.equal(GameState.cultivation.destinyCalamityMultiplier, 1);
+  assert.equal(GameState.player.destiny, 'Mundane');
+  // The Luck system is wired with the DataManager: the ladder comes from the
+  // loaded 'luck' collection (2 canned entries — average and
+  // fortunes-darling). The boot leaves the canonical fresh neutral state: the
+  // average luck (all 1.0× multipliers), the two future-consumer cultivation
+  // slots at 1 and the player display name 'Average' — no roll happens at
+  // boot.
+  assert.ok(globalThis.window.__luck instanceof LuckSystem);
+  assert.equal(globalThis.window.__luck.count, 2);
+  assert.equal(
+    globalThis.window.__luck.byId('average').craftingMultiplier,
+    1.0
+  );
+  assert.equal(
+    globalThis.window.__luck.byId('fortunes-darling').name,
+    'Fortune\'s Darling'
+  );
+  assert.equal(globalThis.window.__luck.byId('missing'), null);
+  assert.deepEqual(GameState.luck, {
+    id: 'average',
+    name: 'Average',
+    craftingMultiplier: 1.0,
+    dropMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.luckCraftingMultiplier, 1);
+  assert.equal(GameState.cultivation.luckDropMultiplier, 1);
+  assert.equal(GameState.player.luck, 'Average');
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -869,6 +953,8 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/soul/soul.json',
     'data/talents/talents.json',
     'data/comprehension/comprehension.json',
+    'data/destiny/destiny.json',
+    'data/luck/luck.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -960,4 +1046,6 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__soul, undefined);
   assert.equal(globalThis.window.__talents, undefined);
   assert.equal(globalThis.window.__comprehension, undefined);
+  assert.equal(globalThis.window.__destiny, undefined);
+  assert.equal(globalThis.window.__luck, undefined);
 });

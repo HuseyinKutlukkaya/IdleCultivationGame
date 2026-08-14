@@ -40,6 +40,8 @@ test('has the exact default placeholder shape', () => {
       soul: 'Stable Soul',
       talent: 'Ordinary',
       comprehension: 'Standard',
+      destiny: 'Mundane',
+      luck: 'Average',
       meridians: 'Normal',
       dantian: 'Normal Dantian',
     },
@@ -99,6 +101,20 @@ test('has the exact default placeholder shape', () => {
       breakthroughEfficiencyMultiplier: 1.0,
     },
 
+    destiny: {
+      id: 'mundane',
+      name: 'Mundane',
+      fortuneMultiplier: 1.0,
+      calamityMultiplier: 1.0,
+    },
+
+    luck: {
+      id: 'average',
+      name: 'Average',
+      craftingMultiplier: 1.0,
+      dropMultiplier: 1.0,
+    },
+
       cultivation: {
         realm: 'Mortal',
         realmTier: 0,
@@ -133,6 +149,10 @@ test('has the exact default placeholder shape', () => {
         comprehensionDaoProgressMultiplier: 1,
         comprehensionTechniqueEfficiencyMultiplier: 1,
         comprehensionBreakthroughEfficiencyMultiplier: 1,
+        destinyFortuneMultiplier: 1,
+        destinyCalamityMultiplier: 1,
+        luckCraftingMultiplier: 1,
+        luckDropMultiplier: 1,
         qi: 0,
         qiMax: 100,
         qiPerSecond: 0,
@@ -213,13 +233,15 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the twenty-one top-level state slices', () => {
+test('exposes exactly the twenty-three top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'bloodlines',
     'comprehension',
     'cultivation',
     'dantian',
+    'destiny',
     'inventory',
+    'luck',
     'meditation',
     'meridians',
     'meta',
@@ -315,6 +337,24 @@ test('placeholder values later systems build on start empty or zeroed', () => {
   assert.equal(GameState.cultivation.comprehensionTechniqueEfficiencyMultiplier, 1);
   assert.equal(GameState.cultivation.comprehensionBreakthroughEfficiencyMultiplier, 1);
   assert.equal(GameState.player.comprehension, 'Standard');
+  assert.deepEqual(GameState.destiny, {
+    id: 'mundane',
+    name: 'Mundane',
+    fortuneMultiplier: 1.0,
+    calamityMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.destinyFortuneMultiplier, 1);
+  assert.equal(GameState.cultivation.destinyCalamityMultiplier, 1);
+  assert.equal(GameState.player.destiny, 'Mundane');
+  assert.deepEqual(GameState.luck, {
+    id: 'average',
+    name: 'Average',
+    craftingMultiplier: 1.0,
+    dropMultiplier: 1.0,
+  });
+  assert.equal(GameState.cultivation.luckCraftingMultiplier, 1);
+  assert.equal(GameState.cultivation.luckDropMultiplier, 1);
+  assert.equal(GameState.player.luck, 'Average');
   // Master's parting gift — fresh-state spirit-stone endowment (50 stones).
   // The other resources still start at zero (no equivalent endowment for
   // herbs/jade/pills yet; those arrive with the Phase-4 alchemical market).
@@ -339,14 +379,14 @@ test('default settings favour offline progress and stay silent by default', () =
   assert.equal(GameState.settings.notationStyle, null);
 });
 
-test('a legacy save without the spirit-root, meridian, physique, dantian, bloodline, soul, talent and comprehension keys keeps canonical fresh values after the standard restore merge', () => {
+test('a legacy save without the spirit-root, meridian, physique, dantian, bloodline, soul, talent, comprehension, destiny and luck keys keeps canonical fresh values after the standard restore merge', () => {
   // Saves written before the SpiritRootSystem, MeridianSystem,
-  // PhysiqueSystem, DantianSystem, BloodlineSystem, SoulSystem, TalentSystem
-  // and ComprehensionSystem carry no `spiritRoot` / `meridians` / `physiques`
-  // / `dantian` / `bloodlines` / `soul` / `talents` / `comprehension` slices
-  // and no multiplier slots. Game.restore() applies a save via
-  // deepMerge(GameState, snapshot), so keys the old save does not carry are
-  // left at their current fresh defaults.
+  // PhysiqueSystem, DantianSystem, BloodlineSystem, SoulSystem, TalentSystem,
+  // ComprehensionSystem, DestinySystem and LuckSystem carry no `spiritRoot` /
+  // `meridians` / `physiques` / `dantian` / `bloodlines` / `soul` / `talents` /
+  // `comprehension` / `destiny` / `luck` slices and no multiplier slots.
+  // Game.restore() applies a save via deepMerge(GameState, snapshot), so keys
+  // the old save does not carry are left at their current fresh defaults.
   const state = structuredClone(GameState);
   const legacySave = structuredClone(GameState);
   delete legacySave.spiritRoot;
@@ -375,6 +415,12 @@ test('a legacy save without the spirit-root, meridian, physique, dantian, bloodl
   delete legacySave.cultivation.comprehensionDaoProgressMultiplier;
   delete legacySave.cultivation.comprehensionTechniqueEfficiencyMultiplier;
   delete legacySave.cultivation.comprehensionBreakthroughEfficiencyMultiplier;
+  delete legacySave.destiny;
+  delete legacySave.cultivation.destinyFortuneMultiplier;
+  delete legacySave.cultivation.destinyCalamityMultiplier;
+  delete legacySave.luck;
+  delete legacySave.cultivation.luckCraftingMultiplier;
+  delete legacySave.cultivation.luckDropMultiplier;
   legacySave.player.name = 'Ren';
   legacySave.resources.spiritStones = 42;
 
@@ -473,4 +519,24 @@ test('a legacy save without the spirit-root, meridian, physique, dantian, bloodl
   assert.equal(state.cultivation.comprehensionTechniqueEfficiencyMultiplier, 1);
   assert.equal(state.cultivation.comprehensionBreakthroughEfficiencyMultiplier, 1);
   assert.equal(state.player.comprehension, 'Standard');
+  // Missing destiny keys keep the canonical fresh values.
+  assert.deepEqual(state.destiny, {
+    id: 'mundane',
+    name: 'Mundane',
+    fortuneMultiplier: 1.0,
+    calamityMultiplier: 1.0,
+  });
+  assert.equal(state.cultivation.destinyFortuneMultiplier, 1);
+  assert.equal(state.cultivation.destinyCalamityMultiplier, 1);
+  assert.equal(state.player.destiny, 'Mundane');
+  // Missing luck keys keep the canonical fresh values.
+  assert.deepEqual(state.luck, {
+    id: 'average',
+    name: 'Average',
+    craftingMultiplier: 1.0,
+    dropMultiplier: 1.0,
+  });
+  assert.equal(state.cultivation.luckCraftingMultiplier, 1);
+  assert.equal(state.cultivation.luckDropMultiplier, 1);
+  assert.equal(state.player.luck, 'Average');
 });

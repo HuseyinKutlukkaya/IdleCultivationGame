@@ -924,11 +924,12 @@ test('human playability: a real player can complete the core loop through the UI
   // name from player.physique, the meridian name from player.meridians, the
   // dantian name from player.dantian, the bloodline name from
   // player.bloodline, the soul name from player.soul, the talent name from
-  // player.talent and the comprehension name from player.comprehension
+  // player.talent, the comprehension name from player.comprehension, the
+  // destiny name from player.destiny and the luck name from player.luck
   // (assert state-derived text, not Intl-formatted numbers — see
   // tests/README.md E2E rules).
   await expect(panel.locator('[data-cultivation-character]')).toHaveText(
-    'Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: Ordinary · Comprehension: Standard'
+    'Spirit Root: Unawakened · Physique: Ordinary Body · Meridians: Normal · Dantian: Normal Dantian · Bloodline: Ancient Human · Soul: Stable Soul · Talent: Ordinary · Comprehension: Standard · Destiny: Mundane · Luck: Average'
   );
 
   // Fresh boot at Mortal with zero realm progress: the Breakthrough button

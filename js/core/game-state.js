@@ -40,11 +40,17 @@
  * @property {number} cultivation.comprehensionDaoProgressMultiplier — comprehension Dao-progress slot, future-consumer (neutral 1 by default; written by ComprehensionSystem)
  * @property {number} cultivation.comprehensionTechniqueEfficiencyMultiplier — comprehension technique-efficiency slot, future-consumer (neutral 1 by default; written by ComprehensionSystem)
  * @property {number} cultivation.comprehensionBreakthroughEfficiencyMultiplier — comprehension breakthrough-efficiency slot, future-consumer (neutral 1 by default; written by ComprehensionSystem)
+ * @property {number} cultivation.destinyFortuneMultiplier — destiny fortune slot, future-consumer (neutral 1 by default; written by DestinySystem)
+ * @property {number} cultivation.destinyCalamityMultiplier — destiny calamity slot, future-consumer (neutral 1 by default; written by DestinySystem)
+ * @property {number} cultivation.luckCraftingMultiplier — luck crafting slot, future-consumer (neutral 1 by default; written by LuckSystem)
+ * @property {number} cultivation.luckDropMultiplier — luck drop slot, future-consumer (neutral 1 by default; written by LuckSystem)
  * @property {Object} dantian — the cultivator's dantian (id, name, capacityMultiplier, densityMultiplier, purityMultiplier, efficiencyMultiplier)
  * @property {Object} bloodlines — the cultivator's bloodline (id, name, cultivationSpeedMultiplier, qiMaxMultiplier)
  * @property {Object} soul — the cultivator's soul (id, name, stabilityMultiplier, purityMultiplier, willpowerMultiplier, comprehensionMultiplier)
  * @property {Object} talents — the cultivator's talent (id, name, learningSpeedMultiplier)
  * @property {Object} comprehension — the cultivator's comprehension (id, name, daoProgressMultiplier, techniqueEfficiencyMultiplier, breakthroughEfficiencyMultiplier)
+ * @property {Object} destiny — the cultivator's destiny (id, name, fortuneMultiplier, calamityMultiplier)
+ * @property {Object} luck — the cultivator's luck (id, name, craftingMultiplier, dropMultiplier)
  * @property {Object} resources — currency and material counts
  * @property {Object} inventory — carried items
  * @property {Object} techniques — known and active techniques
@@ -98,6 +104,8 @@ function createGameState() {
       soul: 'Stable Soul',
       talent: 'Ordinary',
       comprehension: 'Standard',
+      destiny: 'Mundane',
+      luck: 'Average',
       meridians: 'Normal',
       dantian: 'Normal Dantian',
     },
@@ -205,6 +213,25 @@ function createGameState() {
       comprehensionDaoProgressMultiplier: 1,
       comprehensionTechniqueEfficiencyMultiplier: 1,
       comprehensionBreakthroughEfficiencyMultiplier: 1,
+      // Destiny multiplier slots (consumer pattern like
+      // soulStabilityMultiplier, FUTURE-CONSUMER today): written by the
+      // DestinySystem (js/systems/destiny.js) from the current destiny's
+      // data-driven fortuneMultiplier / calamityMultiplier. No system reads
+      // them yet — DESIGN.md "Destiny affects the world"; the encounter /
+      // calamity consumers land later. Fresh default 1 (neutral — exactly
+      // today's rates); a missing/malformed value is coerced to 1 by the
+      // DestinySystem.
+      destinyFortuneMultiplier: 1,
+      destinyCalamityMultiplier: 1,
+      // Luck multiplier slots (consumer pattern like soulStabilityMultiplier,
+      // FUTURE-CONSUMER today): written by the LuckSystem (js/systems/luck.js)
+      // from the current luck's data-driven craftingMultiplier /
+      // dropMultiplier. No system reads them yet — DESIGN.md "Luck affects
+      // events"; the crafting/drop/secret-realm consumers land later. Fresh
+      // default 1 (neutral — exactly today's rates); a missing/malformed
+      // value is coerced to 1 by the LuckSystem.
+      luckCraftingMultiplier: 1,
+      luckDropMultiplier: 1,
       qi: 0,
       qiMax: 100,
       qiPerSecond: 0,
@@ -363,6 +390,37 @@ function createGameState() {
       breakthroughEfficiencyMultiplier: 1.0,
     },
 
+    destiny: {
+      // Owned by the DestinySystem (js/systems/destiny.js). The cultivator's
+      // hidden luck: id is the data-table key
+      // (data/destiny/destiny.json — 'mundane' in the ladder); name is the
+      // display name mirrored on player.destiny; fortuneMultiplier /
+      // calamityMultiplier feed the two future-consumer cultivation slots
+      // (no system reads them yet — DESIGN.md "Destiny affects the world";
+      // the encounter/calamity consumers land later); all neutral Mundane
+      // defaults, so fresh games and old saves stay numerically identical to
+      // today.
+      id: 'mundane',
+      name: 'Mundane',
+      fortuneMultiplier: 1.0,
+      calamityMultiplier: 1.0,
+    },
+
+    luck: {
+      // Owned by the LuckSystem (js/systems/luck.js). The cultivator's luck:
+      // id is the data-table key (data/luck/luck.json — 'average' in the
+      // ladder); name is the display name mirrored on player.luck;
+      // craftingMultiplier / dropMultiplier feed the two future-consumer
+      // cultivation slots (no system reads them yet — DESIGN.md "Luck affects
+      // events"; the crafting/drop/secret-realm consumers land later); all
+      // neutral Average defaults, so fresh games and old saves stay
+      // numerically identical to today.
+      id: 'average',
+      name: 'Average',
+      craftingMultiplier: 1.0,
+      dropMultiplier: 1.0,
+    },
+
     resources: {
       // The master's parting gift — the canonical xianxia origin endowment for
       // a wandering cultivator who hasn't yet joined a sect. This is the
@@ -491,6 +549,10 @@ export function freshCultivationSlice() {
     comprehensionDaoProgressMultiplier: 1,
     comprehensionTechniqueEfficiencyMultiplier: 1,
     comprehensionBreakthroughEfficiencyMultiplier: 1,
+    destinyFortuneMultiplier: 1,
+    destinyCalamityMultiplier: 1,
+    luckCraftingMultiplier: 1,
+    luckDropMultiplier: 1,
     qi: 0,
     qiMax: 100,
     qiPerSecond: 0,
@@ -519,6 +581,8 @@ export function freshPlayerSlice() {
     soul: 'Stable Soul',
     talent: 'Ordinary',
     comprehension: 'Standard',
+    destiny: 'Mundane',
+    luck: 'Average',
     meridians: 'Normal',
     dantian: 'Normal Dantian',
   };

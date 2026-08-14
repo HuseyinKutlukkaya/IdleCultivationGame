@@ -87,7 +87,7 @@ E2E updates on every package (renderer/save paths touched throughout).
 - [x] Bloodlines — done (js/systems/bloodlines.js + data/bloodlines/bloodlines.json)
 - [x] Soul — done (js/systems/soul.js + data/soul/soul.json)
 - [x] Talents / Comprehension — done (js/systems/talents.js + data/talents/talents.json; js/systems/comprehension.js + data/comprehension/comprehension.json)
-- [ ] Destiny & Luck (hidden luck, calamities vs. fortunate encounters — DESIGN.md character systems)
+- [x] Destiny & Luck (hidden luck, calamities vs. fortunate encounters — DESIGN.md character systems) — done (js/systems/destiny.js + js/systems/luck.js + data/destiny/destiny.json + data/luck/luck.json)
 - [ ] Milestones (threshold rewards: first X qi, first breakthrough, ...)
 
 ## Phase 4 — Items
