@@ -4,7 +4,7 @@ The project's automated test suite. It runs with **Node's built-in test runner**
 (`node:test`) — no build step, never shipped to GitHub Pages. The suite grows
 with the game: testing is mandatory for every feature (never skipped or
 deferred), and the full suite is run at the end of every feature cycle. Current
-coverage: **954 tests** across every existing `js/` module (see `Coverage map`
+coverage: **991 tests** across every existing `js/` module (see `Coverage map`
 below).
 
 The **shipped game stays zero-runtime-dependency, framework-free and static**
@@ -106,6 +106,7 @@ feature touching a system knows exactly which tests to run and update.
 | Notifications (queue) | `tests/unit/notification-manager.test.mjs` + `tests/dom/activity-log.test.mjs` | done |
 | Activity Log (DOM) | `tests/dom/activity-log.test.mjs` | done |
 | Settings panel | `tests/unit/settings-panel.test.mjs` | done |
+| Cultivation panel (awaken button + next-step guidance) | `tests/unit/cultivation-panel.test.mjs` + `tests/e2e/game.spec.mjs` | done |
 | Realms, Breakthroughs, Tribulations | `tests/unit/realms.test.mjs`, `tests/unit/breakthroughs.test.mjs` | pending |
 | Spirit roots, Meridians, Physiques, Bloodlines | `tests/unit/character-gen.test.mjs` | pending |
 | Game pacing (playability in minutes) | `tests/perf/pacing.test.mjs` | done |

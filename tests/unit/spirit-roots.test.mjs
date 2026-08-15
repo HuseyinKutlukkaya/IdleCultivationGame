@@ -21,8 +21,11 @@
  * restore-trust slice repair (malformed spiritRoot/cultivation/player slices
  * never abort boot), old-save compatibility (no spiritRoot slice → repaired
  * to unawakened, multiplier 1), the hostile restored multiplier coercion
- * (NaN/Infinity/negative/0 → neutral 1, never a non-finite slot write) and
- * current() being a read-only defensive snapshot (mutating it never leaks).
+ * (NaN/Infinity/negative/0 → neutral 1, never a non-finite slot write), the
+ * consumer-facing event contract (a successful roll() emits
+ * 'spirit-root:changed' exactly once with the exact rolled identity; the
+ * no-definitions rejection stays silent) and current() being a read-only
+ * defensive snapshot (mutating it never leaks).
  *
  * Each test injects a fresh deep clone of GameState (so the shared singleton
  * stays pristine) and the shared EventBus (cleared in beforeEach so event
@@ -341,6 +344,40 @@ test('roll() with a hostile random source still selects a valid entry (the last 
     assert.equal(state.cultivation.spiritRootMultiplier, 2.7);
     assert.equal(state.player.spiritRoot, 'Chaos');
   }
+});
+
+test('a successful roll() emits spirit-root:changed exactly once with the rolled identity', () => {
+  const state = structuredClone(GameState);
+  const { spiritRoots } = makeSystem({ state, random: () => 0.7 }); // mixed-root
+
+  const events = [];
+  EventBus.subscribe('spirit-root:changed', (payload) => events.push(payload));
+
+  const result = spiritRoots.roll();
+
+  // Exactly one emission, carrying the exact same identity the roll returned
+  // (the consumer contract — subscribers never read it off a state mutation).
+  assert.equal(events.length, 1);
+  assert.deepEqual(events[0], result);
+  assert.deepEqual(events[0], {
+    id: 'mixed-root',
+    name: 'Mixed Root',
+    tier: 2,
+    speedMultiplier: 0.95,
+  });
+});
+
+test('the no-definitions rejection emits nothing and mutates nothing', () => {
+  const state = structuredClone(GameState);
+  const before = structuredClone(state);
+  const { spiritRoots } = makeSystem({ state, dataManager: null });
+
+  const events = [];
+  EventBus.subscribe('spirit-root:changed', (payload) => events.push(payload));
+
+  assert.deepEqual(spiritRoots.roll(), { outcome: null, reason: 'no-definitions' });
+  assert.equal(events.length, 0);
+  assert.deepEqual(state, before);
 });
 
 test('without a dataManager the system degrades neutrally: count 0, roll rejects, zero writes', () => {

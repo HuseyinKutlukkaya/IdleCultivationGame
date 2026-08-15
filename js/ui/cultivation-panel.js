@@ -16,7 +16,13 @@
  *   - a "Face Tribulation" button ONLY when the current realm imposes a
  *     tribulation (tribulations.requirements().type non-null), enabled while
  *     the gate is pending (canFace()),
- *   - a feedback line reporting the last attempt()/face() result — including
+ *   - an "Awaken Spirit Root" button rendered ONLY while the root is
+ *     unawakened (state.spiritRoot.id === 'unawakened') — the canonical
+ *     Spirit Root Roll surface (DESIGN.md Character Generation step 4) that
+ *     gives the first minutes their meaningful decision — plus a
+ *     state-driven "next step" guidance line teaching the player what to do
+ *     next (awaken / meditate / advance / face / breakthrough),
+ *   - a feedback line reporting the last attempt()/face()/roll() result — including
  *     a BLOCKED attempt (instant feedback #4: a player clicking the button
  *     against a closed gate now sees WHY it stayed closed, instead of a
  *     silent dead button).
@@ -30,6 +36,7 @@
  *
  * Wiring model: ONE delegated `click` listener on the supplied root handles
  * every `[data-cultivation-breakthrough]` / `[data-cultivation-face]` /
+ * `[data-cultivation-advance-layer]` / `[data-cultivation-awaken]` /
  * `[data-cultivation-progress-action]` element via `event.target.closest(...)`
  * — a single delegated listener keeps the touch cheap and the destroy()
  * surface trivial. The body of the panel is rebuilt on every render()
@@ -53,12 +60,17 @@
  *                             button's enabled state follows the latest
  *                             requirements() snapshot.
  *   'ui:refresh'            — explicit post-mutation hook (also emitted by
- *                             applyBreakthrough/applyFace on success).
+ *                             applyBreakthrough/applyFace/applyAwaken on success).
  *   'loop:uiRefresh'        — the game loop's periodic pulse. The panel
  *                             subscribes so the Breakthrough button enables
  *                             live as realmProgress accrues on real ticks
  *                             (otherwise a player watching progress hit the
  *                             cap would stare at a stale disabled button).
+ *   'spirit-root:changed'   — a successful Spirit Root roll (the system's own
+ *                             write) re-renders the readout + the Awaken
+ *                             button against the fresh state — the button's
+ *                             one-shot disappearance is guaranteed by state
+ *                             (id no longer 'unawakened'), never by the panel.
  *
  * Defensive contract (every bad call is a `console.warn` + a no-op — never
  * a throw, never a mutation, never an emit):
@@ -68,6 +80,11 @@
  *     instance and returns false; the button renders disabled
  *   - missing tribulations dependency → applyFace warns ONCE per instance and
  *     returns false; no tribulation block renders
+ *   - missing spiritRoots dependency → applyAwaken warns ONCE per instance
+ *     and returns false; the Awaken button renders disabled
+ *   - a no-definitions roll rejection ({ outcome: null, reason:
+ *     'no-definitions' }) surfaces a graceful feedback line and warns ONCE
+ *     per instance (a separate once-flag from the missing-system warning)
  *   - a click that lands outside any handled selector is a no-op
  *   - the progress bar / hint lookup is optional (the panel degrades when
  *     absent — no throw, no class toggle)
@@ -78,6 +95,11 @@
  *   [data-cultivation-character]           character readout line (<p>)
  *   [data-cultivation-breakthrough]        the Breakthrough <button>
  *   [data-cultivation-reason]              gate / readiness reason line (<p>)
+ *   [data-cultivation-awaken]              the Awaken Spirit Root <button>
+ *                                          (only while state.spiritRoot.id is
+ *                                          'unawakened')
+ *   [data-cultivation-next-step]           the state-driven "next step"
+ *                                          guidance line (<p>)
  *   [data-cultivation-tribulation]         tribulation block (<div>, only when
  *                                          the current realm imposes a tribulation)
  *   [data-cultivation-tribulation-name]    tribulation type line (<p>)
@@ -119,6 +141,12 @@ const FACE_SELECTOR = '[data-cultivation-face]';
 /** CSS selector for the Advance Layer button (delegated click anchor). */
 const ADVANCE_LAYER_SELECTOR = '[data-cultivation-advance-layer]';
 
+/** CSS selector for the Awaken Spirit Root button (delegated click anchor). */
+const AWAKEN_SELECTOR = '[data-cultivation-awaken]';
+
+/** CSS selector for the state-driven "next step" guidance line (<p>). */
+const NEXT_STEP_SELECTOR = '[data-cultivation-next-step]';
+
 /**
  * CSS selector for the Cultivation Realm progress bar (outside this panel's
  * own body). The bar is the new actionable entry point: clicking it routes
@@ -145,6 +173,7 @@ const SUBSCRIBED_EVENTS = [
   'realm:changed',
   'realm:breakthrough',
   'tribulation:finished',
+  'spirit-root:changed',
   'resource:changed',
   REFRESH_EVENT,
   'loop:uiRefresh',
@@ -175,6 +204,9 @@ const NOOP_HANDLE = {
   applyAdvanceLayer() {
     return false;
   },
+  applyAwaken() {
+    return false;
+  },
   render() {},
   destroy() {},
 };
@@ -195,10 +227,12 @@ const NOOP_HANDLE = {
  * @param {object|null} [options.tribulations=null] — TribulationSystem (or a
  *        lookalike with requirements()/canFace()/face()); when null no
  *        tribulation block renders and applyFace warns once per instance.
- * @param {object|null} [options.spiritRoots=null] — accepted for signature
- *        parity with the system wiring; the readout reads the canonical
- *        display name from state.player.spiritRoot (the SpiritRootSystem is
- *        the writer of that field, never read directly here).
+ * @param {object|null} [options.spiritRoots=null] — SpiritRootSystem (or a
+ *        lookalike with roll()); powers the Awaken Spirit Root button — the
+ *        canonical Spirit Root Roll surface (DESIGN.md Character Generation
+ *        step 4). When null the button renders disabled and applyAwaken warns
+ *        once per instance. A roll() rejection ({ outcome: null, reason:
+ *        'no-definitions' }) surfaces a graceful feedback line.
  * @param {object|null} [options.notation=null] — optional NotationFormatter
  *        (.format(value, decimals)); absent → Intl.NumberFormat.
  * @param {object|null} [options.realms=null] — RealmSystem (or a lookalike
@@ -208,19 +242,20 @@ const NOOP_HANDLE = {
  *        (resolves the panel + the cross-panel progress bar) and
  *        addEventListener (the delegated click).
  * @returns {{ applyBreakthrough(): boolean, applyFace(): boolean,
- *            applyAdvanceLayer(): boolean,
+ *            applyAdvanceLayer(): boolean, applyAwaken(): boolean,
  *            render(): void, destroy(): void }} the panel handle.
- *          applyBreakthrough()/applyFace() return true when the injected
- *          system accepted the action (outcome non-null); render() re-reads
- *          the systems + state and rebuilds the body; destroy() removes the
- *          delegated click listener and every event subscription (idempotent).
+ *          applyBreakthrough()/applyFace()/applyAwaken() return true when the
+ *          injected system accepted the action (outcome non-null); render()
+ *          re-reads the systems + state and rebuilds the body; destroy()
+ *          removes the delegated click listener and every event subscription
+ *          (idempotent).
  */
 export function initCultivationPanel({
   eventBus = EventBus,
   state = null,
   breakthroughs = null,
   tribulations = null,
-  spiritRoots = null, // eslint-disable-line no-unused-vars — read via state.player
+  spiritRoots = null,
   notation = null,
   realms = null,
   root = document,
@@ -261,6 +296,8 @@ export function initCultivationPanel({
   let warnedNoBreakthroughs = false;
   let warnedNoTribulations = false;
   let warnedNoRealms = false;
+  let warnedNoSpiritRoots = false;
+  let warnedNoDefinitions = false;
 
   /** @type {string} text of the last action result (persists across renders). */
   let feedbackText = '';
@@ -268,6 +305,8 @@ export function initCultivationPanel({
   /** Stable DOM references populated by mount() and updated in place. */
   let characterEl = null;
   let layerEl = null;
+  let nextStepEl = null;
+  let awakenBtnEl = null;
   let advanceLayerBtnEl = null;
   let breakthroughBtnEl = null;
   let reasonEl = null;
@@ -434,6 +473,52 @@ export function initCultivationPanel({
   }
 
   /**
+   * Whether the cultivator's spirit root is still the fresh pre-roll
+   * 'unawakened' state — the condition that shows the Awaken button and
+   * drives the first step of the guidance line. Defensive by contract: a
+   * missing / unusable state slice (no spiritRoot object, or no usable id)
+   * is treated as unawakened so a fresh player ALWAYS sees the decision;
+   * any other non-empty string id is treated as already awakened — the
+   * button must never render once a root is set.
+   *
+   * @param {object|null} gameState — the game state (spiritRoot slice).
+   * @returns {boolean} true when the root is (or reads as) unawakened.
+   */
+  function isUnawakened(gameState) {
+    const root = gameState && gameState.spiritRoot;
+    if (!root || typeof root !== 'object' || Array.isArray(root)) return true;
+    if (typeof root.id !== 'string' || root.id === '') return true;
+    return root.id === 'unawakened';
+  }
+
+  /**
+   * Compose the state-driven "next step" guidance line — the first-minutes
+   * loop teacher. Derived from the existing requirements() snapshot + state
+   * ONLY (no new gameplay logic, no direct state writes). Order matters:
+   * unawakened → awaken; progress not met → meditate; layer not max →
+   * advance; tribulation pending → face; everything else → breakthrough.
+   * A missing BreakthroughSystem degrades to an empty line (no throw).
+   *
+   * @param {object|null} req — requirements() snapshot (null → no system).
+   * @param {number} currentLayer — current sub-layer (already computed).
+   * @param {number} layerMax — max sub-layer for the current realm.
+   * @param {object|null} gameState — the game state.
+   * @returns {string} the guidance text ('' when the system is missing).
+   */
+  function nextStepText(req, currentLayer, layerMax, gameState) {
+    if (isUnawakened(gameState)) {
+      return 'Awaken your spirit root to begin your path.';
+    }
+    if (!req) return '';
+    if (!req.progressMet) return 'Meditate to fill the realm progress bar.';
+    if (currentLayer < layerMax) return 'Advance to the next layer.';
+    if (req.tribulationRequired && !req.tribulationMet) {
+      return 'Face the tribulation.';
+    }
+    return 'Breakthrough available.';
+  }
+
+  /**
    * Build a DOM node (or null when no document is available — the caller's
    * appendChild guards that case). Plain <span>/<p>/<button>/<div> children
    * only — never innerHTML (data-driven text renders as text, never markup).
@@ -512,6 +597,8 @@ export function initCultivationPanel({
 
     characterEl = makeNode('p', ['cultivation__character'], { 'data-cultivation-character': '' }, '');
     layerEl = makeNode('p', ['cultivation__layer'], { 'data-cultivation-layer': '' }, '');
+    nextStepEl = makeNode('p', ['cultivation__next-step'], { 'data-cultivation-next-step': '' }, '');
+    awakenBtnEl = makeNode('button', ['btn', 'btn--primary', 'cultivation__action'], { type: 'button', 'data-cultivation-awaken': '', hidden: 'true', disabled: 'true' }, 'Awaken Spirit Root');
     advanceLayerBtnEl = makeNode('button', ['btn', 'btn--primary', 'cultivation__action'], { type: 'button', 'data-cultivation-advance-layer': '', hidden: 'true' }, 'Advance Layer');
     breakthroughBtnEl = makeNode('button', ['btn', 'btn--primary', 'cultivation__action'], { type: 'button', 'data-cultivation-breakthrough': '' }, 'Breakthrough');
     reasonEl = makeNode('p', ['cultivation__reason'], { 'data-cultivation-reason': '' }, '');
@@ -524,7 +611,7 @@ export function initCultivationPanel({
       if (tribulationNameEl) tribulationBlockEl.appendChild(tribulationNameEl);
       if (faceBtnEl) tribulationBlockEl.appendChild(faceBtnEl);
     }
-    for (const node of [characterEl, layerEl, advanceLayerBtnEl, breakthroughBtnEl, reasonEl, tribulationBlockEl, feedbackEl]) {
+    for (const node of [characterEl, layerEl, nextStepEl, awakenBtnEl, advanceLayerBtnEl, breakthroughBtnEl, reasonEl, tribulationBlockEl, feedbackEl]) {
       if (node) body.appendChild(node);
     }
   }
@@ -552,6 +639,36 @@ export function initCultivationPanel({
       ? breakthroughs.requirements()
       : null;
     const desc = describeBreakthrough(req, state);
+
+    // Awaken Spirit Root button: shown ONLY while the root is unawakened
+    // (state.spiritRoot.id === 'unawakened'). A non-matching/unknown id is
+    // treated as already awakened; an unusable state slice is treated as
+    // unawakened so a fresh player always sees the decision — but the button
+    // never renders once a root is set. Always disabled when hidden so a
+    // Playwright toBeDisabled() check sees the correct state regardless of
+    // visibility (the DOM [disabled] attribute is the source of truth).
+    const unawakened = isUnawakened(state);
+    if (awakenBtnEl) {
+      if (unawakened) {
+        if (typeof awakenBtnEl.removeAttribute === 'function') {
+          awakenBtnEl.removeAttribute('hidden');
+        } else if (awakenBtnEl.attrs) {
+          delete awakenBtnEl.attrs.hidden;
+        }
+        const noSystem =
+          !spiritRoots || typeof spiritRoots.roll !== 'function';
+        if (noSystem) {
+          awakenBtnEl.setAttribute('disabled', 'true');
+        } else if (typeof awakenBtnEl.removeAttribute === 'function') {
+          awakenBtnEl.removeAttribute('disabled');
+        } else if (awakenBtnEl.attrs) {
+          delete awakenBtnEl.attrs.disabled;
+        }
+      } else {
+        awakenBtnEl.setAttribute('hidden', 'true');
+        awakenBtnEl.setAttribute('disabled', 'true');
+      }
+    }
 
     // Advance Layer button: shown when progress is full and layer < max.
     // Hidden when at layer max (breakthrough button takes over).
@@ -597,6 +714,13 @@ export function initCultivationPanel({
       }
     }
     if (reasonEl) reasonEl.textContent = desc.reason;
+
+    // Next-step guidance line: the state-driven loop teacher. Derives from
+    // the existing req snapshot + state only; a missing BreakthroughSystem
+    // degrades to an empty line (no throw).
+    if (nextStepEl) {
+      nextStepEl.textContent = nextStepText(req, currentLayer, layerMax, state);
+    }
 
     const tribReq = tribulations && typeof tribulations.requirements === 'function'
       ? tribulations.requirements()
@@ -742,7 +866,64 @@ export function initCultivationPanel({
   }
 
   /**
-   * Delegated click handler. Routes clicks on any of the three action
+   * Awaken the spirit root through the injected SpiritRootSystem — the
+   * canonical Spirit Root Roll (DESIGN.md Character Generation step 4) and
+   * the first-minutes decision this panel surfaces. Returns the system's
+   * acceptance (true when the roll produced a root). On success the panel
+   * renders the result in the feedback line, re-renders (the readout now
+   * reads the rolled root from state.player.spiritRoot and the button
+   * disappears because state.spiritRoot.id is no longer 'unawakened' — the
+   * one-shot is guaranteed by state, not by the panel) and emits 'ui:refresh'.
+   *
+   * Defensive contract: a missing system warns ONCE per instance and returns
+   * false; the empty-ladder rejection ({ outcome: null, reason:
+   * 'no-definitions' }) surfaces a graceful feedback line and warns ONCE per
+   * instance (a separate once-flag from the missing-system warning) — never
+   * a throw, never a state mutation.
+   *
+   * @returns {boolean} true when the roll produced a root.
+   */
+  function applyAwaken() {
+    if (!spiritRoots || typeof spiritRoots.roll !== 'function') {
+      if (!warnedNoSpiritRoots) {
+        warnedNoSpiritRoots = true;
+        console.warn(
+          'CultivationPanel: no SpiritRootSystem — applyAwaken ignored.'
+        );
+      }
+      return false;
+    }
+    const result = spiritRoots.roll();
+    if (!result || result.outcome === null) {
+      // Empty ladder: the roll produced no root and mutated nothing. Surface
+      // a graceful feedback line (no crash, no dead silent click).
+      if (result && result.reason === 'no-definitions') {
+        if (!warnedNoDefinitions) {
+          warnedNoDefinitions = true;
+          console.warn(
+            'CultivationPanel: no spirit root definitions — applyAwaken rejected.'
+          );
+        }
+        const text = 'No spirit root available';
+        if (feedbackText !== text) {
+          feedbackText = text;
+          update();
+        }
+      }
+      return false;
+    }
+    const name =
+      typeof result.name === 'string' && result.name !== ''
+        ? result.name
+        : 'a new spirit root';
+    feedbackText = `Spirit root awakened: ${name}!`;
+    update();
+    eventBus.emit(REFRESH_EVENT);
+    return true;
+  }
+
+  /**
+   * Delegated click handler. Routes clicks on any of the four action
    * anchors to the matching apply method via event.target.closest(...);
    * other clicks are ignored.
    *
@@ -752,6 +933,10 @@ export function initCultivationPanel({
   function onRootClick(event) {
     const target = event && event.target;
     if (!target || typeof target.closest !== 'function') return;
+    if (target.closest(AWAKEN_SELECTOR)) {
+      applyAwaken();
+      return;
+    }
     if (target.closest(ADVANCE_LAYER_SELECTOR)) {
       applyAdvanceLayer();
       return;
@@ -789,6 +974,7 @@ export function initCultivationPanel({
     applyBreakthrough,
     applyFace,
     applyAdvanceLayer,
+    applyAwaken,
     render,
     destroy() {
       root.removeEventListener('click', onRootClick);

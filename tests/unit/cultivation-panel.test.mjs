@@ -29,13 +29,27 @@
  *   - Tribulation block: absent when the realm imposes no type; visible with
  *     an enabled face button while pending; applyFace renders survived /
  *     overwhelmed feedback.
+ *   - Awaken Spirit Root button: rendered ONLY while state.spiritRoot.id is
+ *     'unawakened' (an unusable slice is treated as unawakened so a fresh
+ *     player always sees the decision); hidden + disabled once a root is set;
+ *     a click drives the injected spiritRoots.roll() through the delegation
+ *     and updates the feedback + readout; the no-definitions rejection
+ *     surfaces graceful feedback; a missing spiritRoots dependency disables
+ *     the button and applyAwaken warns once.
+ *   - Next-step guidance line: the state-driven loop teacher — unawakened /
+ *     progress-not-met / advance-layer / tribulation-pending /
+ *     breakthrough-ready wording, derived from the requirements() snapshot +
+ *     state only.
+ *   - The 'spirit-root:changed' event (the system's own write announcement)
+ *     re-renders the readout + the Awaken button from the fresh state.
  *   - Missing breakthroughs / tribulations dependencies warn ONCE per apply
  *     call and return false; the panel degrades (disabled button / no block).
  *   - destroy() removes the click listener and unsubscribes every subscribed
  *     event (idempotent).
  *   - Every subscribed event ('realm:changed', 'realm:breakthrough',
- *     'tribulation:finished', 'resource:changed', 'ui:refresh',
- *     'loop:uiRefresh') re-renders the panel from the fresh system snapshots.
+ *     'tribulation:finished', 'spirit-root:changed', 'resource:changed',
+ *     'ui:refresh', 'loop:uiRefresh') re-renders the panel from the fresh
+ *     system snapshots.
  *   - NO console warnings/errors during a normal session; NO innerHTML usage
  *     anywhere in the module source.
  *
@@ -59,6 +73,12 @@ const BREAKTHROUGH_SELECTOR = '[data-cultivation-breakthrough]';
 /** CSS selector for the Face Tribulation button (delegated click anchor). */
 const FACE_SELECTOR = '[data-cultivation-face]';
 
+/** CSS selector for the Awaken Spirit Root button (delegated click anchor). */
+const AWAKEN_SELECTOR = '[data-cultivation-awaken]';
+
+/** CSS selector for the state-driven "next step" guidance line (<p>). */
+const NEXT_STEP_SELECTOR = '[data-cultivation-next-step]';
+
 /** CSS selector for the cross-panel actionable progress bar. */
 const PROGRESS_ACTION_SELECTOR = '[data-cultivation-progress-action]';
 
@@ -70,6 +90,7 @@ const SUBSCRIBED_EVENTS = [
   'realm:changed',
   'realm:breakthrough',
   'tribulation:finished',
+  'spirit-root:changed',
   'resource:changed',
   'ui:refresh',
   'loop:uiRefresh',
@@ -350,16 +371,29 @@ function createFakeTribulations(overrides = {}) {
 }
 
 /**
- * A minimal but healthy fake game state (the panel reads player.* and
- * cultivation.breakthroughCost).
+ * A minimal but healthy fake game state (the panel reads player.*,
+ * cultivation.breakthroughCost and the spiritRoot slice).
  *
- * @param {object} [overrides] — partial overrides (player / cultivation).
+ * @param {object} [overrides] — partial overrides (player / cultivation /
+ *        spiritRoot).
  * @returns {object} the fake state.
  */
 function createFakeState(overrides = {}) {
   const base = {
     player: { spiritRoot: 'Unawakened', physique: 'Ordinary Body', meridians: 'Normal', dantian: 'Normal Dantian', bloodline: 'Ancient Human', soul: 'Stable Soul', talent: 'Ordinary', comprehension: 'Standard', destiny: 'Mundane', luck: 'Average' },
     cultivation: { realm: 'Mortal', breakthroughCost: 0, realmLayer: 1, realmLayerMax: 9 },
+    spiritRoot: {
+      id: 'unawakened',
+      name: 'Unawakened',
+      tier: -1,
+      elements: [],
+      purity: 0,
+      stability: 0,
+      growth: 0,
+      mutation: 0,
+      compatibility: 0,
+      speedMultiplier: 1,
+    },
   };
   // Deep-merge player so a partial override keeps unmentioned keys.
   return {
@@ -368,6 +402,34 @@ function createFakeState(overrides = {}) {
       ...base.cultivation,
       ...(overrides.cultivation || {}),
     },
+    spiritRoot: {
+      ...base.spiritRoot,
+      ...(overrides.spiritRoot || {}),
+    },
+  };
+}
+
+/**
+ * Build a fake SpiritRootSystem handle exposing roll(). The fake records
+ * roll() calls; a `roll` override still goes through the recording wrapper
+ * so rollCalls stays the single source of truth for "the panel asked the
+ * system" (the override only changes the fake's return/mutation — mirroring
+ * the createFakeBreakthroughs attempt() double).
+ *
+ * @param {object} [overrides] — partial overrides.
+ * @returns {object} the fake.
+ */
+function createFakeSpiritRoots(overrides = {}) {
+  const rollCalls = [];
+  const { roll: overrideRoll, ...rest } = overrides;
+  return {
+    rollCalls,
+    roll() {
+      rollCalls.push(1);
+      if (typeof overrideRoll === 'function') return overrideRoll();
+      return { outcome: null, reason: 'no-definitions' };
+    },
+    ...rest,
   };
 }
 
@@ -1224,6 +1286,401 @@ test('a failed face renders the overwhelmed feedback and the gate stays pending'
   const block = findNode(body, 'data-cultivation-tribulation');
   const face = findNode(block, 'data-cultivation-face');
   assert.equal(face.attrs.disabled, undefined, 'pending gate → face still available');
+  handle.destroy();
+});
+
+// ---------- Awaken Spirit Root button (P0) + next-step guidance (P1) ----------
+
+test('Awaken button renders only while state.spiritRoot.id is unawakened', () => {
+  // Pre-roll state (id 'unawakened'): the button is present, visible and
+  // enabled (spiritRoots injected).
+  const { root: root1, body: body1 } = createFakeRoot();
+  initCultivationPanel({
+    eventBus: EventBus,
+    state: createFakeState(),
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    spiritRoots: createFakeSpiritRoots(),
+    root: root1,
+  });
+  const awaken1 = findNode(body1, 'data-cultivation-awaken');
+  assert.ok(awaken1, 'awaken button rendered while unawakened');
+  assert.equal(awaken1.attrs.hidden, undefined, 'visible while unawakened');
+  assert.equal(awaken1.attrs.disabled, undefined, 'enabled while unawakened');
+
+  // A set root (any non-unawakened id): the element is permanently mounted
+  // but hidden + disabled — the one-shot is guaranteed by state.
+  const { root: root2, body: body2 } = createFakeRoot();
+  const state2 = createFakeState({
+    spiritRoot: {
+      id: 'no-root', name: 'No Root', tier: 0, elements: [],
+      purity: 0, stability: 0.05, growth: 0, mutation: 0,
+      compatibility: 0.1, speedMultiplier: 0.85,
+    },
+  });
+  state2.player.spiritRoot = 'No Root';
+  initCultivationPanel({
+    eventBus: EventBus,
+    state: state2,
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    spiritRoots: createFakeSpiritRoots(),
+    root: root2,
+  });
+  const awaken2 = findNode(body2, 'data-cultivation-awaken');
+  assert.ok(awaken2, 'awaken button element always mounted');
+  assert.equal(awaken2.attrs.hidden, 'true', 'hidden once a root is set');
+  assert.equal(awaken2.attrs.disabled, 'true', 'disabled once a root is set');
+});
+
+test('an unusable spiritRoot state slice still shows the Awaken button (defensive)', () => {
+  // A fresh player whose state lacks a usable spiritRoot slice must still
+  // see the decision — the panel treats the unusable slice as unawakened.
+  const { root, body } = createFakeRoot();
+  const state = createFakeState();
+  delete state.spiritRoot;
+  initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    spiritRoots: createFakeSpiritRoots(),
+    root,
+  });
+  const awaken = findNode(body, 'data-cultivation-awaken');
+  assert.ok(awaken, 'awaken button rendered for the unusable slice');
+  assert.equal(awaken.attrs.hidden, undefined, 'visible');
+  assert.equal(awaken.attrs.disabled, undefined, 'enabled');
+});
+
+test('clicking the Awaken button calls spiritRoots.roll(), updates the feedback + readout, and hides the button', () => {
+  const { root, body, listeners } = createFakeRoot();
+  const state = createFakeState();
+  const spiritRoots = createFakeSpiritRoots({
+    roll() {
+      // The fake system writes the rolled root into state (as the real
+      // SpiritRootSystem does) and returns its identity.
+      state.spiritRoot = {
+        id: 'no-root', name: 'No Root', tier: 0, elements: [],
+        purity: 0, stability: 0.05, growth: 0, mutation: 0,
+        compatibility: 0.1, speedMultiplier: 0.85,
+      };
+      state.player.spiritRoot = 'No Root';
+      return { id: 'no-root', name: 'No Root', tier: 0, speedMultiplier: 0.85 };
+    },
+  });
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    spiritRoots,
+    root,
+  });
+
+  const uiRefresh = [];
+  EventBus.subscribe('ui:refresh', () => uiRefresh.push(1));
+
+  const fakeAwaken = {
+    closest(selector) {
+      return selector === AWAKEN_SELECTOR ? this : null;
+    },
+  };
+  listeners.click[0]({ target: fakeAwaken });
+
+  assert.equal(spiritRoots.rollCalls.length, 1, 'roll() called through the click');
+  const feedback = findNode(body, 'data-cultivation-feedback');
+  assert.equal(feedback.textContent, 'Spirit root awakened: No Root!');
+  const character = findNode(body, 'data-cultivation-character');
+  assert.ok(
+    character.textContent.startsWith('Spirit Root: No Root'),
+    'readout updated from state.player.spiritRoot'
+  );
+  const awaken = findNode(body, 'data-cultivation-awaken');
+  assert.equal(awaken.attrs.hidden, 'true', 'button hidden once the root is set');
+  assert.equal(awaken.attrs.disabled, 'true', 'button disabled once the root is set');
+  assert.equal(uiRefresh.length, 1, 'success emits ui:refresh');
+  handle.destroy();
+});
+
+test('applyAwaken returns true on a successful roll and false on the rejection paths', () => {
+  // Success → true, with the feedback line reporting the rolled name.
+  const { root, body } = createFakeRoot();
+  const state = createFakeState();
+  const spiritRoots = createFakeSpiritRoots({
+    roll() {
+      state.spiritRoot = {
+        id: 'no-root', name: 'No Root', tier: 0, elements: [],
+        purity: 0, stability: 0.05, growth: 0, mutation: 0,
+        compatibility: 0.1, speedMultiplier: 0.85,
+      };
+      state.player.spiritRoot = 'No Root';
+      return { id: 'no-root', name: 'No Root', tier: 0, speedMultiplier: 0.85 };
+    },
+  });
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    spiritRoots,
+    root,
+  });
+  assert.equal(handle.applyAwaken(), true, 'success returns true');
+  assert.equal(
+    findNode(body, 'data-cultivation-feedback').textContent,
+    'Spirit root awakened: No Root!'
+  );
+  handle.destroy();
+
+  // no-definitions → false (the graceful-feedback test asserts the copy;
+  // capture the once-warning so it does not leak into the test output).
+  const warnCalls = [];
+  const savedWarn = console.warn;
+  console.warn = (...args) => warnCalls.push(args);
+  try {
+    const { root: root2 } = createFakeRoot();
+    const handle2 = initCultivationPanel({
+      eventBus: EventBus,
+      state: createFakeState(),
+      breakthroughs: createFakeBreakthroughs(),
+      tribulations: createFakeTribulations(),
+      spiritRoots: createFakeSpiritRoots({
+        roll() {
+          return { outcome: null, reason: 'no-definitions' };
+        },
+      }),
+      root: root2,
+    });
+    assert.equal(handle2.applyAwaken(), false, 'no-definitions returns false');
+    assert.equal(warnCalls.length, 1, 'no-definitions warns once');
+    handle2.destroy();
+  } finally {
+    console.warn = savedWarn;
+  }
+});
+
+test('a no-definitions roll rejection surfaces graceful feedback, warns once, returns false (no crash)', () => {
+  const warnCalls = [];
+  const savedWarn = console.warn;
+  console.warn = (...args) => warnCalls.push(args);
+  try {
+    const { root, body } = createFakeRoot();
+    const spiritRoots = createFakeSpiritRoots({
+      roll() {
+        return { outcome: null, reason: 'no-definitions' };
+      },
+    });
+    const handle = initCultivationPanel({
+      eventBus: EventBus,
+      state: createFakeState(),
+      breakthroughs: createFakeBreakthroughs(),
+      tribulations: createFakeTribulations(),
+      spiritRoots,
+      root,
+    });
+
+    assert.equal(handle.applyAwaken(), false, 'rejected roll returns false');
+    assert.equal(spiritRoots.rollCalls.length, 1, 'the system was still asked');
+    const feedback = findNode(body, 'data-cultivation-feedback');
+    assert.equal(feedback.textContent, 'No spirit root available');
+    assert.equal(warnCalls.length, 1, 'warns once');
+    assert.match(String(warnCalls[0][0]), /no spirit root definitions/);
+    handle.applyAwaken();
+    assert.equal(warnCalls.length, 1, 'warns once per instance');
+    // No ui:refresh on a rejection — no state mutation succeeded.
+    let refreshCount = 0;
+    EventBus.subscribe('ui:refresh', () => refreshCount++);
+    handle.applyAwaken();
+    assert.equal(refreshCount, 0, 'rejection does NOT emit ui:refresh');
+  } finally {
+    console.warn = savedWarn;
+  }
+});
+
+test('missing spiritRoots degrades: disabled button, applyAwaken warns once', () => {
+  const warnCalls = [];
+  const savedWarn = console.warn;
+  console.warn = (...args) => warnCalls.push(args);
+  try {
+    const { root, body } = createFakeRoot();
+    const handle = initCultivationPanel({
+      eventBus: EventBus,
+      state: createFakeState(),
+      breakthroughs: createFakeBreakthroughs(),
+      tribulations: createFakeTribulations(),
+      root, // no spiritRoots injected
+    });
+
+    // No warning at init — the button renders disabled, not missing.
+    assert.equal(warnCalls.length, 0);
+    const awaken = findNode(body, 'data-cultivation-awaken');
+    assert.ok(awaken, 'button still rendered while unawakened');
+    assert.equal(awaken.attrs.hidden, undefined, 'visible while unawakened');
+    assert.equal(awaken.attrs.disabled, 'true', 'disabled without the system');
+
+    assert.equal(handle.applyAwaken(), false, 'missing system returns false');
+    assert.equal(warnCalls.length, 1);
+    assert.match(String(warnCalls[0][0]), /SpiritRootSystem/);
+    // Warns once per instance only.
+    handle.applyAwaken();
+    assert.equal(warnCalls.length, 1);
+  } finally {
+    console.warn = savedWarn;
+  }
+});
+
+test('the next-step guidance line teaches the right step for every state', () => {
+  // Helper: a state whose root is already set (so the guidance leaves the
+  // awakening branch). Keeps the player display name consistent.
+  const awakenedState = (overrides = {}) => {
+    const state = createFakeState({
+      spiritRoot: {
+        id: 'no-root', name: 'No Root', tier: 0, elements: [],
+        purity: 0, stability: 0.05, growth: 0, mutation: 0,
+        compatibility: 0.1, speedMultiplier: 0.85,
+      },
+      ...overrides,
+    });
+    state.player.spiritRoot = 'No Root';
+    return state;
+  };
+
+  const cases = [
+    {
+      label: 'unawakened (fresh state)',
+      state: createFakeState(), // root id 'unawakened', layer 1, no progress
+      breakthroughs: createFakeBreakthroughs(),
+      text: 'Awaken your spirit root to begin your path.',
+    },
+    {
+      label: 'progress not met',
+      state: awakenedState({ cultivation: { realmLayer: 9 } }),
+      // Default fake snapshot: progressMet false.
+      breakthroughs: createFakeBreakthroughs(),
+      text: 'Meditate to fill the realm progress bar.',
+    },
+    {
+      label: 'advance layer (progress met, layer below max)',
+      state: awakenedState(), // layer 1 < 9
+      breakthroughs: createFakeBreakthroughs({
+        requirements: () => ({
+          realmId: 'mortal',
+          requiredProgress: 1000,
+          progress: 1000,
+          progressMet: true,
+          cost: { spiritStones: 0 },
+          costMet: true,
+          bottleneck: [],
+          bottleneckMet: true,
+          tribulationRequired: false,
+          tribulationMet: true,
+          layer: 1,
+          layerMax: 9,
+          layerMet: false,
+          canAttempt: false,
+        }),
+      }),
+      text: 'Advance to the next layer.',
+    },
+    {
+      label: 'tribulation pending (all other gates met)',
+      state: awakenedState({ cultivation: { realmLayer: 9 } }),
+      breakthroughs: createFakeBreakthroughs({
+        requirements: () => ({
+          realmId: 'core-formation',
+          requiredProgress: 2000,
+          progress: 2000,
+          progressMet: true,
+          cost: { spiritStones: 400 },
+          costMet: true,
+          bottleneck: [{ id: 'spirit-herb', count: 2 }],
+          bottleneckMet: true,
+          tribulationRequired: true,
+          tribulationMet: false,
+          layer: 9,
+          layerMax: 9,
+          layerMet: true,
+          canAttempt: false,
+        }),
+      }),
+      tribulations: createFakeTribulations({
+        requirements: () => ({
+          realmId: 'core-formation',
+          type: 'lightning',
+          pending: true,
+          survived: false,
+          canFace: true,
+        }),
+      }),
+      text: 'Face the tribulation.',
+    },
+    {
+      label: 'breakthrough ready (every gate met)',
+      state: awakenedState({ cultivation: { realmLayer: 9 } }),
+      breakthroughs: createFakeBreakthroughs({
+        requirements: ALL_MET_REQUIREMENTS,
+        canAttempt: () => true,
+      }),
+      text: 'Breakthrough available.',
+    },
+  ];
+
+  for (const entry of cases) {
+    const { root, body } = createFakeRoot();
+    initCultivationPanel({
+      eventBus: EventBus,
+      state: entry.state,
+      breakthroughs: entry.breakthroughs,
+      tribulations: entry.tribulations || createFakeTribulations(),
+      spiritRoots: createFakeSpiritRoots(),
+      root,
+    });
+    const nextStep = findNode(body, 'data-cultivation-next-step');
+    assert.ok(nextStep, `${entry.label}: next-step line rendered`);
+    assert.equal(nextStep.textContent, entry.text, `${entry.label}: guidance text`);
+  }
+});
+
+test("the 'spirit-root:changed' event re-renders the readout and hides the Awaken button", () => {
+  const { root, body } = createFakeRoot();
+  const state = createFakeState();
+  const handle = initCultivationPanel({
+    eventBus: EventBus,
+    state,
+    breakthroughs: createFakeBreakthroughs(),
+    tribulations: createFakeTribulations(),
+    spiritRoots: createFakeSpiritRoots(),
+    root,
+  });
+
+  // Pre-event: unawakened → button visible.
+  assert.equal(
+    findNode(body, 'data-cultivation-awaken').attrs.hidden,
+    undefined,
+    'button visible before the announcement'
+  );
+
+  // The system announces a change after writing state (a future character-gen
+  // consumer's path) — the panel must re-render from the fresh state.
+  state.spiritRoot = {
+    id: 'no-root', name: 'No Root', tier: 0, elements: [],
+    purity: 0, stability: 0.05, growth: 0, mutation: 0,
+    compatibility: 0.1, speedMultiplier: 0.85,
+  };
+  state.player.spiritRoot = 'No Root';
+  EventBus.emit('spirit-root:changed', {
+    id: 'no-root', name: 'No Root', tier: 0, speedMultiplier: 0.85,
+  });
+
+  const character = findNode(body, 'data-cultivation-character');
+  assert.ok(
+    character.textContent.startsWith('Spirit Root: No Root'),
+    'readout follows the announced root'
+  );
+  const awaken = findNode(body, 'data-cultivation-awaken');
+  assert.equal(awaken.attrs.hidden, 'true', 'button hidden after the announcement');
+  assert.equal(awaken.attrs.disabled, 'true', 'button disabled after the announcement');
   handle.destroy();
 });
 

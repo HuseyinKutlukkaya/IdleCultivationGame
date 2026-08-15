@@ -659,6 +659,18 @@ button.upgrade {
   justify-content: center;
 }
 
+/* Override the `.btn { display: inline-block; }` author rule so the UA
+   `[hidden] { display: none }` behavior actually wins when the panel sets
+   the `hidden` attribute on an action button — the Awaken button's one-shot
+   disappearance after the roll and the hidden Breakthrough / Advance Layer
+   buttons must be genuinely invisible (same reasoning as the
+   `.cultivation__tribulation[hidden]` override below: author rules at equal
+   specificity beat UA rules, so without this override `hidden` is set but
+   the button stays rendered). */
+.cultivation__action[hidden] {
+  display: none;
+}
+
 .cultivation__reason {
   margin: 0;
   font-size: 0.8rem;
@@ -694,6 +706,13 @@ button.upgrade {
   margin: 0;
   font-size: 0.85rem;
   color: var(--color-accent-bright);
+  font-style: italic;
+}
+
+.cultivation__next-step {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
   font-style: italic;
 }
 

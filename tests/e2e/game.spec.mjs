@@ -39,6 +39,12 @@
  *      through the delegation, and entering a tribulation realm renders
  *      the Face button whose click opens the gate and un-blocks the
  *      breakthrough.
+ *  12. the spirit root awakening flow is wired — the Awaken Spirit Root
+ *      button drives the real SpiritRootSystem through the Cultivation
+ *      panel's delegation: a fresh boot shows the button + the next-step
+ *      guidance line, a click rolls 'no-root' (Math.random → 0), the
+ *      readout updates, the button disappears, the achievement popup/log
+ *      entry appears, and the one-shot persists across a save round-trip.
  *
  * These run against the dependency-free static server (static-server.mjs),
  * never inside the node:test suite — the `.spec.mjs` suffix keeps them out of
@@ -935,6 +941,99 @@ test('spirit roots system is wired and roll() writes a rolled root into state', 
   expect(await stateValue(page, 'spiritRoot.tier')).toBe(0);
   expect(await stateValue(page, 'cultivation.spiritRootMultiplier')).toBe(0.85);
   expect(await stateValue(page, 'player.spiritRoot')).toBe('No Root');
+
+  // The spirit-root:changed → notification translation (main.js) surfaced an
+  // achievement popup entry for the awakening in the notification queue —
+  // the same P2 popup/log pipeline the milestone test exercises above.
+  await expect
+    .poll(() => page.evaluate(() => window.__notifications.queue.find(
+      (e) => e && typeof e.message === 'string' && e.message.startsWith('Spirit root awakened: ')
+    )))
+    .toMatchObject({ type: 'achievement', popup: true });
+
+  expect(errors).toEqual([]);
+});
+
+test('spirit root awakening flow: the Awaken button rolls a root through the real system, one-shot across saves', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  // Determinism: roll() uses the injectable random source defaulting to
+  // Math.random (js/systems/spirit-roots.js, verified by grep). With
+  // Math.random → 0 the roll = 0 × totalWeight lands in the FIRST bucket of
+  // the ladder ('no-root' — the worst tier), so the rolled root below is
+  // deterministic (mirrors the existing spirit-roots spec).
+  page.addInitScript(() => {
+    Math.random = () => 0;
+  });
+  await page.goto('/');
+
+  // Stop the default-active meditation so the loop's realm-progress accrual
+  // can never race the guidance-line reads below (a tick landing between the
+  // click and a single-shot read could shift the guidance off "Meditate…").
+  await page.waitForFunction(() => Boolean(window.__meditation));
+  await page.evaluate(() => window.__meditation.stop());
+
+  // Fresh boot at the unawakened pre-roll state: the Cultivation panel
+  // renders the Awaken Spirit Root button (visible + enabled) and the
+  // next-step guidance line teaches the first decision (assert state first,
+  // then the DOM — see tests/README.md E2E rules).
+  expect(await stateValue(page, 'spiritRoot.id')).toBe('unawakened');
+  const panel = page.locator('[data-cultivation-panel]');
+  await expect(panel).toBeVisible();
+  const awaken = panel.locator('[data-cultivation-awaken]');
+  await expect(awaken).toBeVisible();
+  await expect(awaken).toBeEnabled();
+  await expect(panel.locator('[data-cultivation-next-step]')).toHaveText(
+    'Awaken your spirit root to begin your path.'
+  );
+
+  // A player-like click on the button drives the REAL SpiritRootSystem
+  // through the panel's delegated listener: Math.random → 0 rolls 'no-root'
+  // and the system writes all three owned locations (assert state, not
+  // formatted text — see tests/README.md E2E rules).
+  await awaken.click();
+  await expect
+    .poll(() => stateValue(page, 'spiritRoot.id'))
+    .toBe('no-root');
+  expect(await stateValue(page, 'spiritRoot.name')).toBe('No Root');
+  expect(await stateValue(page, 'cultivation.spiritRootMultiplier')).toBe(0.85);
+  expect(await stateValue(page, 'player.spiritRoot')).toBe('No Root');
+
+  // The readout now reflects the rolled root, the Awaken button disappears
+  // (one-shot guaranteed by state — spiritRoot.id is no longer 'unawakened'),
+  // and the feedback + guidance lines follow.
+  await expect(panel.locator('[data-cultivation-character]')).toContainText(
+    'Spirit Root: No Root'
+  );
+  await expect(awaken).toBeHidden();
+  await expect(awaken).toBeDisabled();
+  await expect(panel.locator('[data-cultivation-feedback]')).toHaveText(
+    'Spirit root awakened: No Root!'
+  );
+  await expect(panel.locator('[data-cultivation-next-step]')).toHaveText(
+    'Meditate to fill the realm progress bar.'
+  );
+
+  // P2 — the spirit-root:changed → notification translation (main.js)
+  // surfaced an achievement popup + log entry for the awakening.
+  await expect
+    .poll(() => page.evaluate(() => window.__notifications.queue.find(
+      (e) => e && typeof e.message === 'string' && e.message.startsWith('Spirit root awakened: ')
+    )))
+    .toMatchObject({ type: 'achievement', popup: true });
+
+  // One-shot persists through the save path: save + reload keeps the rolled
+  // root (player.spiritRoot and spiritRoot.id are part of the save), and the
+  // Awaken button never reappears.
+  const saved = await page.evaluate(() => window.__saveManager.save());
+  expect(saved).toBe(true);
+  await page.reload();
+  await expect(page.locator('#status-text')).toContainText('Save restored.');
+  expect(await stateValue(page, 'spiritRoot.id')).toBe('no-root');
+  expect(await stateValue(page, 'player.spiritRoot')).toBe('No Root');
+  await expect(page.locator('[data-cultivation-awaken]')).toBeHidden();
+  await expect(page.locator('[data-cultivation-awaken]')).toBeDisabled();
 
   expect(errors).toEqual([]);
 });

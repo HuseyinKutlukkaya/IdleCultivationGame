@@ -45,9 +45,13 @@
  * (elements copied fresh), cultivation.spiritRootMultiplier = the rolled
  * speedMultiplier and player.spiritRoot = the rolled name. An empty
  * ladder returns { outcome: null, reason: 'no-definitions' } and mutates
- * nothing. roll() emits NO events — PLANS.md defines no spirit-root event
- * and there is no consumer (the system holds the injected bus for the
- * future event contract only).
+ * nothing. On a successful roll the system emits 'spirit-root:changed' with
+ * the rolled identity { id, name, tier, speedMultiplier } through the
+ * injected bus (the same payload it returns) — a consumer-facing event so
+ * the awakening (Character Generation step 4, a first-minutes identity
+ * moment) can be announced through the same P2 popup/log pipeline as
+ * 'milestone:reached' and 'realm:breakthrough'. The event fires ONLY on
+ * success: the empty-ladder rejection stays silent and mutates nothing.
  *
  * State owned (writes): state.spiritRoot (the full canonical shape),
  * cultivation.spiritRootMultiplier (the speed slot) and
@@ -95,10 +99,9 @@ export class SpiritRootSystem {
    *        dependency-injection pattern as QiSystem, RealmSystem,
    *        TribulationSystem, BreakthroughSystem and Renderer).
    * @param {object} [options.eventBus] — pub/sub bus for lifecycle events;
-   *        defaults to the shared EventBus singleton. Held for the future
-   *        event contract only — the system currently emits nothing
-   *        (PLANS.md defines no spirit-root event), so the reference is
-   *        reserved, never subscribed.
+   *        defaults to the shared EventBus singleton. The system emits
+   *        'spirit-root:changed' on every successful roll() through this
+   *        injected bus (never the DOM/storage); it never subscribes.
    * @param {object|null} [options.dataManager=null] — DataManager (or a
    *        lookalike with `getAll(collection)`) resolving the spirit root
    *        ladder from the 'spirit-roots' collection. When absent the ladder
@@ -111,7 +114,7 @@ export class SpiritRootSystem {
   constructor(options = {}) {
     /** @type {object} game state the system reads from and writes to. */
     this._state = options.state || GameState;
-    /** @type {object} pub/sub bus for lifecycle events (reserved; unused). */
+    /** @type {object} pub/sub bus for lifecycle events (emits on roll). */
     this._eventBus = options.eventBus || EventBus;
     /** @type {object|null} definition resolver ('spirit-roots' collection). */
     this._dataManager = options.dataManager || null;
@@ -210,9 +213,13 @@ export class SpiritRootSystem {
    * On success writes ALL three owned locations: state.spiritRoot is
    * REPLACED with the canonical root object (elements copied fresh),
    * cultivation.spiritRootMultiplier = the rolled speedMultiplier and
-   * player.spiritRoot = the rolled name. Emits NO events (PLANS.md defines
-   * no spirit-root event and there is no consumer). An empty ladder returns
-   * { outcome: null, reason: 'no-definitions' } and mutates nothing.
+   * player.spiritRoot = the rolled name. It then emits
+   * 'spirit-root:changed' with the rolled identity { id, name, tier,
+   * speedMultiplier } (the same object it returns) so consumers — e.g. the
+   * main.js → notification pipeline announcing the awakening — never read
+   * the return value off a state mutation. An empty ladder returns
+   * { outcome: null, reason: 'no-definitions' } and mutates nothing, and
+   * that rejection emits NO event (a silent no-op, exactly as before).
    *
    * @returns {{ id: string, name: string, tier: number, speedMultiplier: number }|
    *            { outcome: null, reason: 'no-definitions' }} the rolled root's
@@ -256,12 +263,19 @@ export class SpiritRootSystem {
     this._state.cultivation.spiritRootMultiplier = selected.speedMultiplier;
     this._state.player.spiritRoot = selected.name;
 
-    return {
+    // Consumer-facing awakening event: the rolled identity, emitted ONLY on
+    // success (the empty-ladder rejection above returned without reaching
+    // this point). Same payload as the return value — subscribers never read
+    // the identity off a state mutation.
+    const identity = {
       id: selected.id,
       name: selected.name,
       tier: selected.tier,
       speedMultiplier: selected.speedMultiplier,
     };
+    this._eventBus.emit('spirit-root:changed', identity);
+
+    return identity;
   }
 
   /**

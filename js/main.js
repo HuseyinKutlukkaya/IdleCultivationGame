@@ -470,6 +470,26 @@ async function bootstrap() {
       dataManager,
     });
 
+    // Spirit-root awakening → notification. The SpiritRootSystem already
+    // emits 'spirit-root:changed' on every successful roll() (Character
+    // Generation step 4 — a first-minutes identity moment, like the master's
+    // parting gift); we translate that single stream into one popup + log
+    // entry here so gameplay systems stay free of notification concerns
+    // (mirroring the milestone:reached block above). Subscribed BEFORE the
+    // SpiritRootSystem is constructed so no early roll() is ever missed, and
+    // roll() is the only writer of the spirit root.
+    EventBus.subscribe('spirit-root:changed', (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      const name =
+        typeof payload.name === 'string' && payload.name !== ''
+          ? payload.name
+          : 'a new spirit root';
+      notifications.add(`Spirit root awakened: ${name}!`, {
+        type: 'achievement',
+        popup: true,
+      });
+    });
+
     // Spirit Roots: single owner of the cultivator's spirit root and its
     // cultivation-speed slot (data/spirit-roots/spirit-roots.json via the
     // DataManager — the canonical 10-type ladder, weighted Spirit Root Roll
@@ -634,22 +654,24 @@ async function bootstrap() {
     });
 
     // Cultivation panel: the Phase-3 play-test surface — the human player's
-    // Breakthrough / Face Tribulation buttons plus the character readout.
-    // The "Cultivation Realm" panel shows the realm/progress/cost bindings
-    // read-only; THIS panel is where the loop is actually driven, through the
-    // injected system primitives (breakthroughs.attempt() /
-    // tribulations.face()) — the panel never mutates state directly.
-    // Constructed AFTER the Breakthrough, Tribulation and Spirit Root systems
-    // (it only consumes their public APIs — requirements()/attempt()/face() —
-    // and the SpiritRootSystem is the writer of player.spiritRoot) and BEFORE
-    // game.start() so the very first tick finds it subscribed to
-    // 'loop:uiRefresh' (the Breakthrough button's enabled state follows
-    // accrued realm progress live).
+    // Awaken Spirit Root / Breakthrough / Face Tribulation / Advance Layer
+    // buttons, the character readout and the state-driven next-step guidance
+    // line. The "Cultivation Realm" panel shows the realm/progress/cost
+    // bindings read-only; THIS panel is where the loop is actually driven,
+    // through the injected system primitives (spiritRoots.roll() /
+    // breakthroughs.attempt() / tribulations.face()) — the panel never
+    // mutates state directly. Constructed AFTER the Breakthrough, Tribulation
+    // and Spirit Root systems (it only consumes their public APIs —
+    // roll()/requirements()/attempt()/face() — and the SpiritRootSystem is
+    // the writer of player.spiritRoot) and BEFORE game.start() so the very
+    // first tick finds it subscribed to 'loop:uiRefresh' (the Breakthrough
+    // button's enabled state follows accrued realm progress live).
     const cultivationPanel = initCultivationPanel({
       eventBus: EventBus,
       state: game.state,
       breakthroughs,
       tribulations,
+      spiritRoots,
       notation,
       realms,
     });

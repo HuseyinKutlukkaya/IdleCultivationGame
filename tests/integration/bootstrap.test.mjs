@@ -992,6 +992,37 @@ test('successful bootstrap wires the app globals and reports the definition coun
   );
 });
 
+test('spirit-root:changed fires on roll() with the exact rolled identity', async (t) => {
+  const statusElement = createFakeElement();
+  installDocument({ statusElement });
+  installWindow();
+  makeFetch();
+  const errorMock = t.mock.method(console, 'error', () => {});
+
+  await domContentLoaded();
+
+  assert.equal(errorMock.mock.callCount(), 0);
+
+  // Consumer contract: subscribe on the shared bus, roll through the
+  // bootstrapped system, and the event arrives carrying the exact identity
+  // the roll returned — the same payload main.js translates into the
+  // awakening notification (mirrors the milestone:reached pipeline, which
+  // is exercised end-to-end by the E2E spec).
+  const events = [];
+  EventBus.subscribe('spirit-root:changed', (payload) => events.push(payload));
+  const rolled = globalThis.window.__spiritRoots.roll();
+
+  assert.equal(events.length, 1);
+  assert.deepEqual(events[0], rolled);
+  // The payload is exactly the minimal rolled identity — nothing more.
+  assert.deepEqual(Object.keys(events[0]).sort(), [
+    'id',
+    'name',
+    'speedMultiplier',
+    'tier',
+  ]);
+});
+
 test('bootstrap applies offline progress from a restored save and reports the gains', async (t) => {
   const statusElement = createFakeElement();
   installDocument({ statusElement });
