@@ -182,7 +182,7 @@ test('meditation is active by default and Qi climbs in state and DOM', async ({ 
   await expect
     .poll(() => page.evaluate(() => Boolean(window.__qi)))
     .toBe(true);
-  expect(await stateValue(page, 'cultivation.qiSources.meditation')).toBe(2);
+  expect(await stateValue(page, 'cultivation.qiSources.meditation')).toBe(20);
 
   // The rendered text followed the state (no longer the static "0" shell).
   const rendered = await qiBinding.textContent();
@@ -501,7 +501,7 @@ test('Statistics: system is wired, playtime grows, panel renders the four counte
   // The text-mode bindings render an integer (or an em dash for null —
   // none of these are null on a healthy fresh state). The notation
   // formatter thresholds above ~1000; a couple of seconds of qi at the
-  // 2 qi/s rate stay well below that, so an integer regex is fine.
+  // 20 qi/s rate stay well below that, so an integer regex is fine.
   const qiText = await panel
     .locator('[data-bind="statistics.qiGenerated"]')
     .textContent();
@@ -667,8 +667,8 @@ test('breakthrough system is wired: gates block, a synced attempt advances the r
     .toBe(15);
 
   // Boot sync wrote the current (Mortal) realm's entry gates into the
-  // cultivation slice: required progress 1000, zero-cost breakthrough.
-  expect(await stateValue(page, 'cultivation.realmProgressMax')).toBe(1000);
+  // cultivation slice: required progress 125, zero-cost breakthrough.
+  expect(await stateValue(page, 'cultivation.realmProgressMax')).toBe(125);
   expect(await stateValue(page, 'cultivation.breakthroughCost')).toBe(0);
   expect(await stateValue(page, 'cultivation.realmProgress')).toBe(0);
 
@@ -682,13 +682,13 @@ test('breakthrough system is wired: gates block, a synced attempt advances the r
   expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(0);
 
   // A manually-synced qi rate flows into realm progress on real ticks: the
-  // mortal entry requires 1000 progress; at 10 qi/s it clears in ~100s, so
-  // a wait that long is impractical. Instead the E2E exercises the attempt
-  // path directly with the gate satisfied (as the player's click would
-  // once progress accrues) — the real per-second accrual curve is covered
-  // by the unit suite, which drives fake loop:update emissions.
+  // mortal entry requires 125 progress; at 20 qi/s it clears in ~6s, but
+  // the E2E exercises the attempt path directly with the gate satisfied
+  // (as the player's click would once progress accrues) — the real
+  // per-second accrual curve is covered by the unit suite, which drives
+  // fake loop:update emissions.
   await page.evaluate(() => {
-    window.__game.state.cultivation.realmProgress = 1000;
+    window.__game.state.cultivation.realmProgress = 125;
     window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
   });
 
@@ -701,12 +701,12 @@ test('breakthrough system is wired: gates block, a synced attempt advances the r
   );
 
   // The realm advanced through RealmSystem, progress reset, and the post-
-  // success sync pulled the NEW realm's entry (Qi Gathering: 1000 progress
+  // success sync pulled the NEW realm's entry (Qi Gathering: 250 progress
   // cost 50 stones — matching data/breakthroughs/breakthroughs.json).
   expect(await stateValue(page, 'cultivation.realm')).toBe('Qi Gathering');
   expect(await stateValue(page, 'cultivation.realmTier')).toBe(1);
   expect(await stateValue(page, 'cultivation.realmProgress')).toBe(0);
-  expect(await stateValue(page, 'cultivation.realmProgressMax')).toBe(1000);
+  expect(await stateValue(page, 'cultivation.realmProgressMax')).toBe(250);
   expect(await stateValue(page, 'cultivation.breakthroughCost')).toBe(50);
   expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(1);
   // The realm-name DOM binding follows the state (rendered through its
@@ -714,11 +714,11 @@ test('breakthrough system is wired: gates block, a synced attempt advances the r
   const realmName = page.locator('.realm-name');
   await expect(realmName).toHaveText('Qi Gathering Realm');
 
-  // A second attempt is now blocked by the 50-stone cost (the fresh wallet
-  // spent 0 on the mortal attempt, so it still holds 50 — but the fresh
-  // qi-gathering entry demands a bottleneck-free cost exactly equal to the
-  // wallet, so it CAN afford it; progress is 0 < 1000 → the progress gate
-  // blocks first). Verify the deterministic reason with zero mutation.
+  // A second attempt is now blocked by the progress gate (the fresh
+  // qi-gathering entry demands 250 progress and 50 stones, but the wallet
+  // still holds 50 — so it CAN afford the cost; progress is 0 < 250 → the
+  // progress gate blocks first). Verify the deterministic reason with zero
+  // mutation.
   expect(
     await page.evaluate(() => window.__breakthroughs.attempt())
   ).toEqual({ outcome: null, advanced: false, reason: 'progress' });
@@ -779,11 +779,11 @@ test('tribulation system is wired: entering a gated realm blocks the breakthroug
   });
 
   // Satisfy every non-tribulation gate of the core-formation entry
-  // (requiredProgress 2000, cost 400 stones, 2 spirit-herb bottleneck) and
+  // (requiredProgress 1200, cost 400 stones, 2 spirit-herb bottleneck) and
   // attempt: the tribulation gate blocks with the dedicated reason and
   // mutates nothing.
   await page.evaluate(() => {
-    window.__game.state.cultivation.realmProgress = 2000;
+    window.__game.state.cultivation.realmProgress = 1200;
     window.__resources.add('spiritStones', 400);
     window.__inventory.add('spirit-herb', 2);
     window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
@@ -955,7 +955,7 @@ test('human playability: a real player can complete the core loop through the UI
   // active qi (every progress value is set manually).
   await page.evaluate(() => {
     window.__meditation.stop();
-    window.__game.state.cultivation.realmProgress = 1000;
+    window.__game.state.cultivation.realmProgress = 125;
     window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer to attempt
   });
   await expect(breakthrough).toBeEnabled();
@@ -1013,13 +1013,13 @@ test('human playability: a real player can complete the core loop through the UI
   // previous realm's cap, and the loop's accrual clamp would fight the
   // progress we set below.)
 
-  // Qi Gathering → Foundation Establishment (gates: 1500 progress, 150
+  // Qi Gathering → Foundation Establishment (gates: 250 progress, 150
   // stones, 1 qi-condensation-pill). Mortal's breakthrough is free (cost 0
   // in data/breakthroughs/breakthroughs.json); the Qi Gathering attempt
   // just spent the 50-stone wallet, so top the stones back up for the next
   // entry's 150-stone cost.
   await page.evaluate(() => {
-    window.__game.state.cultivation.realmProgress = 1500;
+    window.__game.state.cultivation.realmProgress = 250;
     window.__resources.add('spiritStones', 150);
     window.__inventory.add('qi-condensation-pill', 1);
     window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
@@ -1033,11 +1033,11 @@ test('human playability: a real player can complete the core loop through the UI
   expect(await stateValue(page, 'cultivation.realmProgress')).toBe(0);
   await expect(breakthrough).toBeDisabled();
 
-  // Foundation Establishment → Core Formation (gates: 2000 progress, 400
+  // Foundation Establishment → Core Formation (gates: 600 progress, 400
   // stones, 2 spirit-herb). The post-success sync pulls the Core Formation
-  // entry (max 2000, cost 400) and the tribulation gate opens.
+  // entry (max 1200, cost 400) and the tribulation gate opens.
   await page.evaluate(() => {
-    window.__game.state.cultivation.realmProgress = 2000;
+    window.__game.state.cultivation.realmProgress = 600;
     window.__resources.add('spiritStones', 400);
     window.__inventory.add('spirit-herb', 2);
     window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
@@ -1048,7 +1048,7 @@ test('human playability: a real player can complete the core loop through the UI
     .poll(() => page.evaluate(() => window.__game.state.cultivation.realm))
     .toBe('Core Formation');
   expect(await stateValue(page, 'statistics.breakthroughsTotal')).toBe(3);
-  expect(await stateValue(page, 'cultivation.realmProgressMax')).toBe(2000);
+  expect(await stateValue(page, 'cultivation.realmProgressMax')).toBe(1200);
   expect(await stateValue(page, 'cultivation.realmProgress')).toBe(0);
   await expect(breakthrough).toBeDisabled();
 
@@ -1068,7 +1068,7 @@ test('human playability: a real player can complete the core loop through the UI
   // ONLY unmet gate left is the pending tribulation, and the reason line
   // (re-rendered from the systems on the next loop pulse) names it.
   await page.evaluate(() => {
-    window.__game.state.cultivation.realmProgress = 2000;
+    window.__game.state.cultivation.realmProgress = 1200;
     window.__resources.add('spiritStones', 400);
     window.__inventory.add('spirit-herb', 2);
     window.__game.state.cultivation.realmLayer = 9; // P4: must be at final layer
@@ -1226,7 +1226,7 @@ test('Cultivation Realm progress bar at full: clicking it rolls a breakthrough a
   // Set progress to the realm max so the gate is open.
   await page.evaluate(() => {
     window.__game.state.cultivation.realmLayer = 9;
-    window.__game.state.cultivation.realmProgress = 1000;
+    window.__game.state.cultivation.realmProgress = 125;
   });
 
   // Wait for the loop:uiRefresh repaint so the bar carries the actionable

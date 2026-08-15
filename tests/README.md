@@ -4,7 +4,7 @@ The project's automated test suite. It runs with **Node's built-in test runner**
 (`node:test`) — no build step, never shipped to GitHub Pages. The suite grows
 with the game: testing is mandatory for every feature (never skipped or
 deferred), and the full suite is run at the end of every feature cycle. Current
-coverage: **397 tests** across every existing `js/` module (see `Coverage map`
+coverage: **954 tests** across every existing `js/` module (see `Coverage map`
 below).
 
 The **shipped game stays zero-runtime-dependency, framework-free and static**
@@ -60,7 +60,7 @@ npm run test:e2e        # or: npx playwright test
 | `tests/data/` | content validation of every `data/` JSON collection | Data Author |
 | `tests/integration/` | cross-system contracts (EventBus pipelines) | whoever owns the systems involved |
 | `tests/e2e/` | real-browser smoke tests (Playwright, dev-only): boot, live Qi, save round-trip, standing human-playability spec | shared |
-| `tests/perf/` | scalability smoke checks (1,000+ definitions) | Core Engineer |
+| `tests/perf/` | scalability smoke checks (1,000+ definitions) + pacing guards (headless playthrough sims) | Core Engineer |
 | `tests/fixtures/` | canned data: legacy saves, exports, event streams | Core Engineer |
 | `tests/reporters/` | custom node:test reporters (compact output; dev-only) | Architect |
 | `tests/helpers/` | shared test doubles (fake DOM, raf stub, intersection-observer stub; more to come) | shared |
@@ -108,6 +108,7 @@ feature touching a system knows exactly which tests to run and update.
 | Settings panel | `tests/unit/settings-panel.test.mjs` | done |
 | Realms, Breakthroughs, Tribulations | `tests/unit/realms.test.mjs`, `tests/unit/breakthroughs.test.mjs` | pending |
 | Spirit roots, Meridians, Physiques, Bloodlines | `tests/unit/character-gen.test.mjs` | pending |
+| Game pacing (playability in minutes) | `tests/perf/pacing.test.mjs` | done |
 | Pills, Alchemy, Artifacts, Crafting | `tests/unit/items.test.mjs` | pending |
 | Sects, NPCs, Events, Exploration | `tests/unit/world.test.mjs` | pending |
 | Automation | `tests/unit/automation.test.mjs` | pending |
@@ -211,6 +212,22 @@ feature touching a system knows exactly which tests to run and update.
    two regression tests in `tests/unit/popup-stack.test.mjs` assert that an
    auto‑dismissed popup stays gone after a re‑emit and that a cap‑evicted
    popup never re‑appears (both tagged “incident → guard”).
+- **2026-08-15 — P0 rebalance: the shipped numbers made the first breakthrough
+   take ~2 HOURS, not minutes (pacing gap).** Found by gameplay review after
+   the user reported the first minutes of play feel dead: with `baseQiPerSecond
+   2` and Mortal `requiredProgress 1000`, each realm takes 9 sub-layer fills
+   (layer N max = base × (1 + 0.15 × (N−1))), so the first breakthrough needed
+   1000 × 14.4 = 14,400 realm progress at 2/s ≈ 2h. The data tests could NOT
+   catch this — the values were finite, positive and monotonic, so the curve
+   looked healthy. Guard: a data shape test is no longer enough for pacing —
+   `tests/perf/pacing.test.mjs` now simulates a headless playthrough of the
+   REAL systems (MeditationSystem → RealmSystem → QiSystem →
+   BreakthroughSystem) against the REAL shipped config + data and asserts the
+   first breakthrough lands in under 2 minutes. The rebalance itself (raised
+   `baseQiPerSecond` 2 → 20, `baseMaxQi` 100 → 2000, retuned the
+   `requiredProgress` ladder 125 → 800,000) is documented in the config and
+   breakthroughs meta comments. Any future retune that pushes the first
+   breakthrough past 2 minutes fails here.
 
 ## Writing a new test
 

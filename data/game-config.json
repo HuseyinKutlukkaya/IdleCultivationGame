@@ -38,12 +38,12 @@
     ]
   },
   "meditation": {
-    "comment": "MeditationSystem tuning (Phase 2 — First Gameplay). baseQiPerSecond is the qi produced per second of active meditation before future multipliers (spirit root, realm, technique, ...). Placeholder balancing.",
-    "baseQiPerSecond": 2
+    "comment": "MeditationSystem tuning (Phase 2 — First Gameplay). baseQiPerSecond is the qi produced per second of active meditation before future multipliers (spirit root, realm, technique, ...). P0 rebalance (2026-08-15, user-directed): raised 2 -> 20 so the qi number visibly climbs and the first breakthrough lands in ~1 minute instead of ~2 hours. Note: the panel's Advance Layer gate lights at the realm entry's BASE requiredProgress (125 at Mortal), so a player clears each of the 9 sub-layers at ~7s per layer → ~63s to the first breakthrough (guarded by tests/perf/pacing.test.mjs, which asserts < 2 min).",
+    "baseQiPerSecond": 20
   },
     "qi": {
-    "comment": "QiSystem tuning (Phase 2 — First Gameplay). baseMaxQi is the qi cap (derived tuning; future realm/root multipliers stack in _computeQiMax). sources declares every per-second qi income source: ratePath is the state path of that source's current rate contribution (owned by the source's own system, e.g. MeditationSystem writes cultivation.qiSources.meditation). Add a source whenever a new qi-producing system lands — no code changes required.",
-    "baseMaxQi": 100,
+    "comment": "QiSystem tuning (Phase 2 — First Gameplay). baseMaxQi is the qi cap (derived tuning; future realm/root multipliers stack in _computeQiMax). sources declares every per-second qi income source: ratePath is the state path of that source's current rate contribution (owned by the source's own system, e.g. MeditationSystem writes cultivation.qiSources.meditation). Add a source whenever a new qi-producing system lands — no code changes required. P0 rebalance (2026-08-15): 100 -> 2000 so the pool no longer caps ~1 minute into a session at the new 20 qi/s rate (the 'screen goes dead' complaint).",
+    "baseMaxQi": 2000,
     "sources": [
       { "id": "meditation", "label": "Meditation", "ratePath": "cultivation.qiSources.meditation" },
       { "id": "upgrades", "label": "Upgrades", "ratePath": "cultivation.qiSources.upgrades" },
