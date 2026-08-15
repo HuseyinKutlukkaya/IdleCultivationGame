@@ -63,6 +63,7 @@
  * @property {boolean} settings.notifications — surface browser/UI notifications
  * @property {?string} settings.notationStyle — null = the data-driven default style (see config.notation); a string = a style id from config.notation.styles (overrides the default)
  * @property {Object} statistics — lifetime counters
+ * @property {Object} milestones — one-shot threshold rewards (reached map keyed by milestone id → epoch-ms timestamp of the grant)
  */
 
 /**
@@ -450,6 +451,13 @@ function createGameState() {
       purchased: {},
     },
 
+    milestones: {
+      // Owned by the MilestoneSystem (js/systems/milestones.js). Each entry
+      // is keyed by milestone id with the epoch-ms timestamp when the
+      // milestone was reached (grants fire once, ever). Empty on a fresh game.
+      reached: {},
+    },
+
     techniques: {
       // Owned by the TechniqueSystem (js/systems/techniques.js). Each entry
       // is keyed by technique id with { level, proficiencyXp, lastActivationMs }.
@@ -603,6 +611,21 @@ export function freshStatisticsSlice() {
     meditationsCompleted: 0,
     breakthroughsTotal: 0,
     qiGenerated: 0,
+  };
+}
+
+/**
+ * The canonical fresh milestones slice — the single source of truth for the
+ * restore-trust fallback (mirrors the `milestones` block above field-for-
+ * field). Every gameplay system imports this factory instead of declaring a
+ * local copy. Used to repair a restored milestones slice that is unusable
+ * (null, a primitive, an array, or one whose `reached` is not an object).
+ *
+ * @returns {object} a NEW canonical milestones slice.
+ */
+export function freshMilestonesSlice() {
+  return {
+    reached: {},
   };
 }
 

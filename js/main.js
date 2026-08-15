@@ -27,6 +27,7 @@ import { BreakthroughSystem } from './systems/breakthroughs.js';
 import { TribulationSystem } from './systems/tribulations.js';
 import { SpiritRootSystem } from './systems/spirit-roots.js';
 import { MeridianSystem } from './systems/meridians.js';
+import { MilestoneSystem } from './systems/milestones.js';
 import { PhysiqueSystem } from './systems/physiques.js';
 import { DantianSystem } from './systems/dantian.js';
 import { BloodlineSystem } from './systems/bloodlines.js';
@@ -368,6 +369,44 @@ async function bootstrap() {
       }
     });
 
+    // Milestone → notification. The MilestoneSystem already emits
+    // 'milestone:reached' on every one-shot threshold grant; we translate
+    // that single stream into one popup + log entry here so gameplay systems
+    // stay free of notification concerns (mirroring the realm:breakthrough
+    // and tribulation:finished blocks above). Subscribed BEFORE the
+    // MilestoneSystem is constructed so the constructor's retroactive grants
+    // (a restored save whose counters already crossed thresholds) are
+    // announced too — a restored save must never get silent grants.
+    EventBus.subscribe('milestone:reached', (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      const name =
+        typeof payload.name === 'string' && payload.name !== ''
+          ? payload.name
+          : 'Milestone';
+      notifications.add(`Milestone reached: ${name}!`, {
+        type: 'achievement',
+        popup: true,
+      });
+    });
+
+    // Milestones: single owner of the one-shot threshold rewards
+    // (data/milestones/milestones.json via the DataManager — first X qi,
+    // first breakthrough, first meditation, playtime milestones, ...).
+    // Constructed AFTER the save restore + offline apply (a restored save
+    // whose counters already crossed thresholds grants retroactively in the
+    // constructor), AFTER resources/notifications/statistics (the wallet
+    // accepts the reward grants and the milestone:reached → notification
+    // subscriber above is already registered), and BEFORE game.start() so
+    // the first 'statistics:changed' emission finds it subscribed. It has
+    // NO loop subscription — thresholds only change through the lifetime
+    // counters.
+    const milestones = new MilestoneSystem({
+      eventBus: EventBus,
+      state: game.state,
+      dataManager,
+      resourceSystem: resources,
+    });
+
     // Settings panel: wires the three boolean switches (offlineProgress,
     // sound, notifications), the notation-style <select> and the
     // destructive Reset save button inside the Settings game panel. The
@@ -681,6 +720,7 @@ async function bootstrap() {
     window.__comprehension = comprehension;
     window.__destiny = destiny;
     window.__luck = luck;
+    window.__milestones = milestones;
     window.__cultivationPanel = cultivationPanel;
     window.__inventoryPanel = inventoryPanel;
 

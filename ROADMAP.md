@@ -88,7 +88,7 @@ E2E updates on every package (renderer/save paths touched throughout).
 - [x] Soul — done (js/systems/soul.js + data/soul/soul.json)
 - [x] Talents / Comprehension — done (js/systems/talents.js + data/talents/talents.json; js/systems/comprehension.js + data/comprehension/comprehension.json)
 - [x] Destiny & Luck (hidden luck, calamities vs. fortunate encounters — DESIGN.md character systems) — done (js/systems/destiny.js + js/systems/luck.js + data/destiny/destiny.json + data/luck/luck.json)
-- [ ] Milestones (threshold rewards: first X qi, first breakthrough, ...)
+- [x] Milestones (threshold rewards: first X qi, first breakthrough, ...) — done (js/systems/milestones.js + data/milestones/milestones.json)
 
 ## Phase 4 — Items
 - [ ] Inventory (full: filter/sort/search)

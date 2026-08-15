@@ -195,6 +195,10 @@ test('has the exact default placeholder shape', () => {
       purchased: {},
     },
 
+    milestones: {
+      reached: {},
+    },
+
     techniques: {
       owned: {},
     },
@@ -233,7 +237,7 @@ test('has the exact default placeholder shape', () => {
   });
 });
 
-test('exposes exactly the twenty-three top-level state slices', () => {
+test('exposes exactly the twenty-four top-level state slices', () => {
   assert.deepEqual(Object.keys(GameState).sort(), [
     'bloodlines',
     'comprehension',
@@ -245,6 +249,7 @@ test('exposes exactly the twenty-three top-level state slices', () => {
     'meditation',
     'meridians',
     'meta',
+    'milestones',
     'physiques',
     'player',
     'resources',
@@ -265,6 +270,11 @@ test('exposes exactly the twenty-three top-level state slices', () => {
 test('placeholder values later systems build on start empty or zeroed', () => {
   assert.deepEqual(GameState.inventory.items, []);
   assert.deepEqual(GameState.techniques.owned, {});
+  // The milestones slice starts empty: no milestone has been reached on a
+  // fresh game (the MilestoneSystem fills state.milestones.reached[id] with
+  // the epoch-ms grant timestamp the moment a lifetime counter crosses a
+  // catalog threshold — grants fire once, ever).
+  assert.deepEqual(GameState.milestones.reached, {});
   assert.deepEqual(GameState.world.unlockedRegions, ['Mortal Plains']);
 
   assert.equal(GameState.player.meridians, 'Normal');

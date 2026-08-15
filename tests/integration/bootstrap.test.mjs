@@ -27,6 +27,7 @@ import { SaveManager } from '../../js/managers/save-manager.js';
 import { NotificationManager } from '../../js/managers/notification-manager.js';
 import { SAVE_KEY } from '../../js/core/storage.js';
 import { MeditationSystem } from '../../js/systems/meditation.js';
+import { MilestoneSystem } from '../../js/systems/milestones.js';
 import { QiSystem } from '../../js/systems/qi.js';
 import { RealmSystem } from '../../js/systems/realms.js';
 import { ResourceSystem } from '../../js/systems/resources.js';
@@ -217,6 +218,14 @@ const DATA_FILES = {
           uniqueField: 'id',
         },
       },
+      {
+        id: 'milestones',
+        files: ['data/milestones/milestones.json'],
+        validation: {
+          requiredFields: ['id', 'name', 'stat', 'threshold', 'reward'],
+          uniqueField: 'id',
+        },
+      },
     ],
   },
   'data/realms/realms.json': {
@@ -361,6 +370,13 @@ const DATA_FILES = {
     definitions: [
       { id: 'average', name: 'Average', description: 'No more and no less fortunate than the next cultivator — the ordinary odds of an ordinary life.', craftingMultiplier: 1.00, dropMultiplier: 1.00 },
       { id: 'fortunes-darling', name: 'Fortune\'s Darling', description: 'Fortune itself dotes on them like a favored child — the extraordinary becomes their everyday norm.', craftingMultiplier: 2.10, dropMultiplier: 2.50 },
+    ],
+  },
+  'data/milestones/milestones.json': {
+    meta: {},
+    definitions: [
+      { id: 'first-qi', name: 'First Qi Gathered', description: 'Gather 100 total qi.', stat: 'qiGenerated', threshold: 100, reward: { spiritStones: 5 } },
+      { id: 'first-breakthrough', name: 'First Breakthrough', description: 'Complete your first breakthrough.', stat: 'breakthroughsTotal', threshold: 1, reward: { spiritStones: 25 } },
     ],
   },
 };
@@ -554,7 +570,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(errorMock.mock.callCount(), 0);
   assert.equal(
     statusElement.textContent,
-    'Scaffold ready — 22 definitions loaded. Game loop running.'
+    'Scaffold ready — 24 definitions loaded. Game loop running.'
   );
   // Debug globals exposed for the developer console.
   assert.ok(globalThis.window.__game instanceof Game);
@@ -895,6 +911,18 @@ test('successful bootstrap wires the app globals and reports the definition coun
   assert.equal(GameState.cultivation.luckCraftingMultiplier, 1);
   assert.equal(GameState.cultivation.luckDropMultiplier, 1);
   assert.equal(GameState.player.luck, 'Average');
+  // The Milestone system is wired with the DataManager: the catalog comes
+  // from the loaded 'milestones' collection (2 canned entries — first-qi
+  // and first-breakthrough). A fresh boot's lifetime counters are all 0,
+  // so no threshold has been crossed: the reached map stays empty, the
+  // catalog entries all report reached=false and no milestone notification
+  // fires (the master's-parting-gift queue count below is unchanged).
+  assert.ok(globalThis.window.__milestones instanceof MilestoneSystem);
+  assert.equal(globalThis.window.__milestones.list().length, 2);
+  assert.deepEqual(globalThis.window.__milestones.reached(), {});
+  assert.equal(globalThis.window.__milestones.isReached('first-qi'), false);
+  assert.equal(globalThis.window.__milestones.isReached('first-breakthrough'), false);
+  assert.deepEqual(GameState.milestones, { reached: {} });
   // The notification manager is wired: the queue is empty, the cap and the
   // type catalog come straight from config.notifications — no hardcoded
   // values. The initial queue is empty because the bootstrap has not yet
@@ -955,6 +983,7 @@ test('successful bootstrap wires the app globals and reports the definition coun
     'data/comprehension/comprehension.json',
     'data/destiny/destiny.json',
     'data/luck/luck.json',
+    'data/milestones/milestones.json',
   ]);
   // Autosave interval comes from config.save.autosaveIntervalMs (30000).
   assert.deepEqual(
@@ -1048,4 +1077,5 @@ test('config-load failure sets the error status and logs to the console', async 
   assert.equal(globalThis.window.__comprehension, undefined);
   assert.equal(globalThis.window.__destiny, undefined);
   assert.equal(globalThis.window.__luck, undefined);
+  assert.equal(globalThis.window.__milestones, undefined);
 });

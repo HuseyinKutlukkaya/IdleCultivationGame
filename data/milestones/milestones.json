@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "meta": {
+    "comment": "PHASE 3 milestone catalog (ROADMAP 'Milestones (threshold rewards: first X qi, first breakthrough, ...)'). Each milestone grants a ONE-SHOT reward when a lifetime statistics counter crosses its threshold. LORE DISCIPLINE: milestone rewards are one-shot gifts — the canonical 'breakthrough gifts' in DESIGN.md 'Spirit Stone Acquisition' (personal cultivation produces qi, not stones; gifts are one-time, NEVER a per-second producer, NEVER repeatable — a reached milestone fires exactly once, ever, and the reached map persists in state). stat MUST be one of the four lifetime counter keys (playtimeMs, meditationsCompleted, breakthroughsTotal, qiGenerated — STATISTICS_KEYS in js/systems/statistics.js); threshold is a finite positive number; reward maps resourceId → amount, every id resolving in config.resources.items (data/game-config.json). Placeholder balancing — Phase 10 Balancing retunes."
+  },
+  "definitions": [
+    {
+      "id": "first-qi",
+      "name": "First Qi Gathered",
+      "description": "Gather 100 total qi.",
+      "stat": "qiGenerated",
+      "threshold": 100,
+      "reward": { "spiritStones": 5 }
+    },
+    {
+      "id": "qi-generation-1000",
+      "name": "A Thousand Qi",
+      "description": "Gather 1,000 total qi.",
+      "stat": "qiGenerated",
+      "threshold": 1000,
+      "reward": { "spiritStones": 10 }
+    },
+    {
+      "id": "first-breakthrough",
+      "name": "First Breakthrough",
+      "description": "Complete your first breakthrough.",
+      "stat": "breakthroughsTotal",
+      "threshold": 1,
+      "reward": { "spiritStones": 25 }
+    },
+    {
+      "id": "breakthrough-5",
+      "name": "Five Breakthroughs",
+      "description": "Complete five breakthroughs.",
+      "stat": "breakthroughsTotal",
+      "threshold": 5,
+      "reward": { "qiCondensationPills": 2 }
+    },
+    {
+      "id": "first-meditation",
+      "name": "First Meditation",
+      "description": "Complete your first meditation session.",
+      "stat": "meditationsCompleted",
+      "threshold": 1,
+      "reward": { "herbs": 3 }
+    },
+    {
+      "id": "meditation-25",
+      "name": "Diligent Meditator",
+      "description": "Complete 25 meditation sessions.",
+      "stat": "meditationsCompleted",
+      "threshold": 25,
+      "reward": { "jade": 2 }
+    },
+    {
+      "id": "playtime-hour",
+      "name": "An Hour of Cultivation",
+      "description": "Cultivate for one hour.",
+      "stat": "playtimeMs",
+      "threshold": 3600000,
+      "reward": { "spiritStones": 15 }
+    },
+    {
+      "id": "playtime-day",
+      "name": "A Day of Cultivation",
+      "description": "Cultivate for a full day.",
+      "stat": "playtimeMs",
+      "threshold": 86400000,
+      "reward": { "herbs": 5 }
+    }
+  ]
+}

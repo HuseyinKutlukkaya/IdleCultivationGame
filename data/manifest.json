@@ -152,6 +152,14 @@
         "requiredFields": ["id", "name", "craftingMultiplier", "dropMultiplier"],
         "uniqueField": "id"
       }
+    },
+    {
+      "id": "milestones",
+      "files": ["data/milestones/milestones.json"],
+      "validation": {
+        "requiredFields": ["id", "name", "stat", "threshold", "reward"],
+        "uniqueField": "id"
+      }
     }
   ]
 }

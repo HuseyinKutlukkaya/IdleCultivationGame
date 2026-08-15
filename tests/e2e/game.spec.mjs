@@ -537,6 +537,62 @@ test('Statistics: system is wired, playtime grows, panel renders the four counte
   expect(errors).toEqual([]);
 });
 
+test('milestones system is wired: crossing a lifetime counter threshold grants the milestone and surfaces a notification', async ({
+  page,
+}) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+
+  // MilestoneSystem is exposed after bootstrap; the catalog is the data-
+  // driven one from data/milestones/milestones.json (8 starter milestones).
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__milestones)))
+    .toBe(true);
+  expect(
+    await page.evaluate(() => window.__milestones.list().length)
+  ).toBeGreaterThan(0);
+
+  // Fresh boot: no threshold crossed yet — the reached map is empty. The
+  // default-active meditation accrues 20 qi/s, so the first-qi threshold
+  // (100 qiGenerated) WOULD be crossed within seconds — stop meditation at
+  // boot so the reads below are deterministic (assert state, not formatted
+  // text — see tests/README.md E2E rules).
+  await page.waitForFunction(() => Boolean(window.__meditation));
+  await page.evaluate(() => window.__meditation.stop());
+  expect(await page.evaluate(() => window.__milestones.reached())).toEqual({});
+  expect(
+    await page.evaluate(() => window.__milestones.isReached('first-qi'))
+  ).toBe(false);
+
+  // Cross the first-qi threshold by writing the lifetime counter directly
+  // (the StatisticsSystem picks it up on the next loop tick and emits
+  // 'statistics:changed'; the MilestoneSystem grants on that emission —
+  // the same path a real player's qi gains take).
+  await page.evaluate(() => {
+    window.__game.state.statistics.qiGenerated = 5000;
+  });
+
+  // The grant lands in the reached map with an epoch-ms stamp (the write
+  // also crosses qi-generation-1000 at 1000 — the reached map guards the
+  // once-ever semantics either way).
+  await expect
+    .poll(() => page.evaluate(() => window.__milestones.reached()))
+    .toMatchObject({ 'first-qi': expect.any(Number) });
+  expect(
+    await page.evaluate(() => window.__milestones.isReached('first-qi'))
+  ).toBe(true);
+
+  // The milestone:reached → notification translation (main.js) surfaced an
+  // achievement popup entry for the milestone in the notification queue.
+  await expect
+    .poll(() => page.evaluate(() => window.__notifications.queue.find(
+      (e) => e && typeof e.message === 'string' && e.message.startsWith('Milestone reached: ')
+    )))
+    .toMatchObject({ type: 'achievement', popup: true });
+
+  expect(errors).toEqual([]);
+});
+
 test('upgrades system renders data-driven rows, buying one levels it up and grows qi', async ({
   page,
 }) => {
